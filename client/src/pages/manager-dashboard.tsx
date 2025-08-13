@@ -96,9 +96,10 @@ export default function ManagerDashboard() {
       });
     },
     onError: (error: any) => {
+      console.error('Upload error:', error);
       toast({
-        title: "Upload failed",
-        description: error.message,
+        title: "CSV Upload Failed",
+        description: error.message || "Please check your CSV format and try again",
         variant: "destructive",
       });
     },
@@ -117,7 +118,9 @@ export default function ManagerDashboard() {
 
   const onSubmit = (data: UploadForm) => {
     const fileInput = document.getElementById("csv-upload") as HTMLInputElement;
-    if (!fileInput?.files?.[0]) {
+    const file = fileInput?.files?.[0];
+    
+    if (!file) {
       toast({
         title: "No file selected",
         description: "Please select a CSV file to upload",
@@ -126,9 +129,33 @@ export default function ManagerDashboard() {
       return;
     }
 
+    // Basic file validation
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      toast({
+        title: "Invalid file format",
+        description: "Please select a .csv file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      toast({
+        title: "File too large",
+        description: "CSV file must be smaller than 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Uploading CSV...",
+      description: "Validating and processing your file",
+    });
+
     uploadMutation.mutate({
       ...data,
-      file: fileInput.files[0],
+      file,
     });
   };
 
@@ -216,25 +243,42 @@ export default function ManagerDashboard() {
                   )}
                 />
 
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  <div className="bg-primary-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CloudUpload className="text-primary-600 text-2xl" />
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <div className="bg-primary-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CloudUpload className="text-primary-600 text-2xl" />
+                    </div>
+                    <p className="text-gray-600 mb-4">Drop CSV file here or click to browse</p>
+                    <input
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      id="csv-upload"
+                      data-testid="input-csv-file"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => document.getElementById("csv-upload")?.click()}
+                      data-testid="button-select-file"
+                    >
+                      Select File
+                    </Button>
                   </div>
-                  <p className="text-gray-600 mb-4">Drop CSV file here or click to browse</p>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    className="hidden"
-                    id="csv-upload"
-                    data-testid="input-csv-file"
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => document.getElementById("csv-upload")?.click()}
-                    data-testid="button-select-file"
-                  >
-                    Select File
-                  </Button>
+                  
+                  {/* CSV Format Guide */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-medium text-blue-900 mb-2">CSV Format Requirements</h4>
+                    <p className="text-blue-800 text-sm mb-3">Your CSV file must contain these exact column headers:</p>
+                    <div className="bg-white border border-blue-200 rounded text-xs p-2 font-mono mb-3">
+                      BarCode,Product Name,Qty,CustomerName
+                    </div>
+                    <div className="text-blue-700 text-sm space-y-1">
+                      <p><strong>BarCode:</strong> Product barcode (required)</p>
+                      <p><strong>Product Name:</strong> Name of the product (required)</p>
+                      <p><strong>Qty:</strong> Quantity as a positive number (required)</p>
+                      <p><strong>CustomerName:</strong> Customer destination name (required)</p>
+                    </div>
+                  </div>
                 </div>
 
                 {uploadSuccess && (

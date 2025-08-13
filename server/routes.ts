@@ -198,23 +198,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const csvData: any[] = [];
       const stream = Readable.from(req.file.buffer);
       
+      const validationErrors: string[] = [];
+      let rowIndex = 0;
+      
       await new Promise((resolve, reject) => {
         stream
           .pipe(csv())
           .on('data', (row) => {
+            rowIndex++;
             try {
               const validatedRow = csvRowSchema.parse(row);
               csvData.push(validatedRow);
-            } catch (error) {
-              reject(new Error(`Invalid CSV row: ${JSON.stringify(row)}`));
+            } catch (error: any) {
+              const errorMsg = `Row ${rowIndex}: ${error.errors?.map((e: any) => e.message).join(', ') || 'Invalid data format'}`;
+              validationErrors.push(errorMsg);
+              
+              // Stop processing if too many errors
+              if (validationErrors.length >= 10) {
+                reject(new Error(`CSV validation failed with ${validationErrors.length} errors. First errors: ${validationErrors.slice(0, 5).join('; ')}`));
+                return;
+              }
             }
           })
-          .on('end', resolve)
+          .on('end', () => {
+            if (validationErrors.length > 0) {
+              reject(new Error(`CSV validation failed with ${validationErrors.length} errors: ${validationErrors.slice(0, 5).join('; ')}`));
+            } else {
+              resolve(undefined);
+            }
+          })
           .on('error', reject);
       });
 
       if (csvData.length === 0) {
-        return res.status(400).json({ message: 'CSV file is empty or invalid' });
+        return res.status(400).json({ 
+          message: 'CSV file is empty or contains no valid data',
+          details: 'Expected columns: BarCode, Product Name, Qty, CustomerName'
+        });
       }
 
       // Create job
@@ -242,9 +262,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createProducts(products);
 
       res.json({ job, productsCount: products.length });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Job creation error:', error);
-      res.status(400).json({ message: 'Failed to create job from CSV' });
+      res.status(400).json({ 
+        message: error.message || 'Failed to create job from CSV',
+        details: error.message?.includes('validation') ? 'Please check your CSV format. Expected columns: BarCode, Product Name, Qty, CustomerName' : undefined
+      });
     }
   });
 
