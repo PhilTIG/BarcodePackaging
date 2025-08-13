@@ -1,0 +1,185 @@
+import { useParams, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/use-auth";
+import { useWebSocket } from "@/hooks/use-websocket";
+import { ArrowLeft, Package } from "lucide-react";
+import { CustomerBoxGrid } from "@/components/customer-box-grid";
+import { PerformanceDashboard } from "@/components/performance-dashboard";
+
+export default function SupervisorView() {
+  const { jobId } = useParams();
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+
+  // Fetch job details
+  const { data: jobData, isLoading } = useQuery({
+    queryKey: ["/api/jobs", jobId],
+    enabled: !!jobId && !!user,
+  });
+
+  // Fetch job progress
+  const { data: progressData } = useQuery({
+    queryKey: ["/api/jobs", jobId, "progress"],
+    enabled: !!jobId && !!user,
+    refetchInterval: 5000, // Refresh every 5 seconds
+  });
+
+  // Connect to WebSocket for real-time updates
+  const { isConnected } = useWebSocket(jobId);
+
+  if (!user || (user.role !== "supervisor" && user.role !== "manager")) {
+    setLocation("/login");
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading job details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!jobData?.job) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Job not found</p>
+          <Button onClick={() => setLocation("/manager")} className="mt-4">
+            Back to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const { job, products } = jobData;
+  const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/manager")}
+                data-testid="button-back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Job Monitor</h1>
+                <p className="text-sm text-gray-600">{job.name}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-900">{completionPercentage}% Complete</p>
+              <p className="text-xs text-gray-600">
+                {job.completedItems} of {job.totalProducts} items
+              </p>
+              <div className="flex items-center mt-1">
+                <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-success-500' : 'bg-gray-400'}`}></div>
+                <span className={`text-xs ${isConnected ? 'text-success-600' : 'text-gray-600'}`}>
+                  {isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="p-4 space-y-6">
+        {/* Overall Progress */}
+        <Card data-testid="overall-progress">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Overall Progress</CardTitle>
+              <div className="flex items-center space-x-4 text-sm">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-success-500 rounded-full mr-2"></div>
+                  <span className="text-gray-600">Active ({progressData?.progress?.activeSessions || 0})</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
+                  <span className="text-gray-600">Waiting ({progressData?.progress?.waitingSessions || 0})</span>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Progress value={completionPercentage} className="h-4 mb-4" />
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>{job.completedItems} items completed</span>
+              <span>{job.totalProducts - job.completedItems} items remaining</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Customer Boxes Grid */}
+        <Card data-testid="customer-boxes">
+          <CardHeader>
+            <CardTitle>Customer Boxes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CustomerBoxGrid
+              products={products}
+              jobId={job.id}
+              supervisorView={true}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Worker Performance */}
+        <Card data-testid="worker-performance">
+          <CardHeader>
+            <CardTitle>Worker Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PerformanceDashboard
+              jobId={job.id}
+              supervisorView={true}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Job Statistics */}
+        <Card data-testid="job-statistics">
+          <CardHeader>
+            <CardTitle>Job Statistics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary-600">{job.totalProducts}</div>
+                <p className="text-sm text-gray-600">Total Products</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary-600">{job.totalCustomers}</div>
+                <p className="text-sm text-gray-600">Customers</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-success-600">{job.completedItems}</div>
+                <p className="text-sm text-gray-600">Completed</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-warning-600">{job.totalProducts - job.completedItems}</div>
+                <p className="text-sm text-gray-600">Remaining</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

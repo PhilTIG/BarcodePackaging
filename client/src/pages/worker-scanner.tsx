@@ -1,0 +1,443 @@
+import { useState, useEffect, useRef } from "react";
+import { useParams, useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useWebSocket } from "@/hooks/use-websocket";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { calculateScore } from "@/lib/scoring";
+import { Settings, LogOut, Package, Undo, RotateCcw, Save, Check } from "lucide-react";
+import { CustomerBoxGrid } from "@/components/customer-box-grid";
+import { BarcodeScanner } from "@/components/barcode-scanner";
+
+export default function WorkerScanner() {
+  const { jobId } = useParams();
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [lastScanEvent, setLastScanEvent] = useState<any>(null);
+  const [scanStats, setScanStats] = useState({
+    totalScans: 0,
+    scansPerHour: 0,
+    accuracy: 100,
+    score: 0,
+  });
+
+  // Fetch job details
+  const { data: jobData } = useQuery({
+    queryKey: ["/api/jobs", jobId],
+    enabled: !!jobId && !!user,
+  });
+
+  // Fetch active session
+  const { data: sessionData } = useQuery({
+    queryKey: ["/api/scan-sessions/my-active"],
+    enabled: !!user,
+  });
+
+  // Connect to WebSocket
+  const { sendMessage } = useWebSocket(jobId);
+
+  // Auto-focus barcode input
+  useEffect(() => {
+    if (barcodeInputRef.current) {
+      barcodeInputRef.current.focus();
+    }
+  }, []);
+
+  // Create scan session mutation
+  const createSessionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/scan-sessions", {
+        jobId,
+        sessionData: {},
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setActiveSession(data.session);
+      toast({
+        title: "Session started",
+        description: "Ready to scan barcodes",
+      });
+    },
+  });
+
+  // Scan event mutation
+  const scanMutation = useMutation({
+    mutationFn: async (barcode: string) => {
+      if (!activeSession) throw new Error("No active session");
+      
+      const response = await apiRequest("POST", "/api/scan-events", {
+        sessionId: activeSession.id,
+        barCode: barcode,
+        eventType: "scan",
+        jobId,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setLastScanEvent(data.scanEvent);
+      
+      // Send WebSocket update
+      sendMessage({
+        type: "scan_event",
+        data: data.scanEvent,
+        jobId,
+        sessionId: activeSession.id,
+      });
+
+      // Update stats
+      setScanStats(prev => ({
+        ...prev,
+        totalScans: prev.totalScans + 1,
+        scansPerHour: calculateScansPerHour(prev.totalScans + 1, activeSession?.startTime),
+        score: calculateScore(prev.totalScans + 1, Date.now() - new Date(activeSession?.startTime).getTime()),
+      }));
+
+      // Flash success feedback
+      showScanFeedback(true);
+      
+      // Clear input
+      if (barcodeInputRef.current) {
+        barcodeInputRef.current.value = "";
+        barcodeInputRef.current.focus();
+      }
+
+      toast({
+        title: "Item scanned successfully",
+        description: `${data.scanEvent.productName} added to box`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Scan error",
+        description: error.message,
+        variant: "destructive",
+      });
+      showScanFeedback(false);
+    },
+  });
+
+  // Undo mutation
+  const undoMutation = useMutation({
+    mutationFn: async (count = 1) => {
+      if (!activeSession) throw new Error("No active session");
+      
+      const response = await apiRequest("POST", "/api/scan-events/undo", {
+        sessionId: activeSession.id,
+        count,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: `Undid ${data.undoneEvents.length} scan(s)`,
+        description: "Scan history updated",
+      });
+      
+      // Update stats
+      setScanStats(prev => ({
+        ...prev,
+        totalScans: Math.max(0, prev.totalScans - data.undoneEvents.length),
+      }));
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+    },
+  });
+
+  // Save session mutation
+  const saveSessionMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeSession) throw new Error("No active session");
+      
+      const response = await apiRequest("PATCH", `/api/scan-sessions/${activeSession.id}/status`, {
+        status: "paused",
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Session saved",
+        description: "You can resume later",
+      });
+    },
+  });
+
+  // Complete session mutation
+  const finishSessionMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeSession) throw new Error("No active session");
+      
+      const response = await apiRequest("PATCH", `/api/scan-sessions/${activeSession.id}/status`, {
+        status: "completed",
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Session completed",
+        description: "Great work! Session has been finished.",
+      });
+      setLocation("/manager");
+    },
+  });
+
+  const calculateScansPerHour = (totalScans: number, startTime: string) => {
+    const elapsed = Date.now() - new Date(startTime).getTime();
+    const hours = elapsed / (1000 * 60 * 60);
+    return hours > 0 ? Math.round(totalScans / hours) : 0;
+  };
+
+  const showScanFeedback = (success: boolean) => {
+    // Visual feedback for successful/failed scans
+    const flashElement = document.getElementById("scan-flash-target");
+    if (flashElement) {
+      flashElement.style.backgroundColor = success ? "#10B981" : "#EF4444";
+      flashElement.style.transform = "scale(1.05)";
+      setTimeout(() => {
+        flashElement.style.backgroundColor = "";
+        flashElement.style.transform = "";
+      }, 200);
+    }
+  };
+
+  const handleBarcodeSubmit = (barcode: string) => {
+    if (!barcode.trim()) return;
+    scanMutation.mutate(barcode.trim());
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      const input = e.target as HTMLInputElement;
+      handleBarcodeSubmit(input.value);
+    }
+  };
+
+  const startSession = () => {
+    if (jobId) {
+      createSessionMutation.mutate();
+    }
+  };
+
+  if (!user || user.role !== "worker") {
+    setLocation("/login");
+    return null;
+  }
+
+  if (!jobData?.job) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">No job assigned</p>
+          <Button onClick={() => setLocation("/login")} className="mt-4">
+            Back to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const { job, products } = jobData;
+  const session = sessionData?.session || activeSession;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-primary-100 w-10 h-10 rounded-lg flex items-center justify-center">
+                <Package className="text-primary-600" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Scanner</h1>
+                <p className="text-sm text-gray-600">{job.name}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/settings")}
+                data-testid="button-settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/login")}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="p-4 space-y-6">
+        {/* Performance Dashboard */}
+        <Card data-testid="performance-dashboard">
+          <CardHeader>
+            <CardTitle>Session Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary-600" data-testid="stat-items-scanned">
+                  {scanStats.totalScans}
+                </div>
+                <p className="text-sm text-gray-600">Items Scanned</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary-600" data-testid="stat-scans-per-hour">
+                  {scanStats.scansPerHour}
+                </div>
+                <p className="text-sm text-gray-600">Scans/Hour</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-success-600" data-testid="stat-accuracy">
+                  {scanStats.accuracy}%
+                </div>
+                <p className="text-sm text-gray-600">Accuracy</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary-600" data-testid="stat-score">
+                  {scanStats.score.toFixed(1)}
+                </div>
+                <p className="text-sm text-gray-600">Score (1-10)</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Scanner Input */}
+        <Card data-testid="scanner-input">
+          <CardHeader>
+            <CardTitle>Barcode Scanner</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!session ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600 mb-4">Start a scanning session to begin</p>
+                <Button
+                  onClick={startSession}
+                  disabled={createSessionMutation.isPending}
+                  data-testid="button-start-session"
+                >
+                  {createSessionMutation.isPending ? "Starting..." : "Start Session"}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="relative">
+                  <Input
+                    ref={barcodeInputRef}
+                    placeholder="Scan or type barcode here..."
+                    className="text-lg font-mono h-12"
+                    onKeyPress={handleKeyPress}
+                    data-testid="input-barcode"
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Package className="text-gray-400 text-xl" />
+                  </div>
+                </div>
+
+                <BarcodeScanner onScan={handleBarcodeSubmit} />
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => undoMutation.mutate(1)}
+                    disabled={undoMutation.isPending || scanStats.totalScans === 0}
+                    data-testid="button-undo"
+                  >
+                    <Undo className="mr-2 h-4 w-4" />
+                    Undo
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => undoMutation.mutate(5)}
+                    disabled={undoMutation.isPending || scanStats.totalScans < 5}
+                    data-testid="button-bulk-undo"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Bulk Undo
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => saveSessionMutation.mutate()}
+                    disabled={saveSessionMutation.isPending}
+                    data-testid="button-save"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => finishSessionMutation.mutate()}
+                    disabled={finishSessionMutation.isPending}
+                    data-testid="button-finish"
+                  >
+                    <Check className="mr-2 h-4 w-4" />
+                    Finish
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Customer Boxes Grid */}
+        <Card data-testid="customer-boxes">
+          <CardHeader>
+            <CardTitle>Customer Boxes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CustomerBoxGrid
+              products={products}
+              jobId={job.id}
+              supervisorView={false}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Current Scan Info */}
+        {lastScanEvent && (
+          <Card data-testid="scan-info">
+            <CardHeader>
+              <CardTitle>Last Scanned Item</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-4 p-4 bg-success-50 border border-success-200 rounded-lg">
+                <div className="text-4xl font-bold text-success-600">✓</div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">{lastScanEvent.productName}</h3>
+                  <p className="text-sm text-gray-600">Barcode: {lastScanEvent.barCode}</p>
+                  <p className="text-sm text-success-600 font-medium">
+                    Added to {lastScanEvent.customerName} - Box {lastScanEvent.boxNumber}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-success-600">
+                    {/* Current/Total count would be calculated here */}
+                  </div>
+                  <p className="text-xs text-gray-600">items</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
