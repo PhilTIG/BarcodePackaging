@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -29,6 +29,19 @@ export default function ManagerDashboard() {
   const { toast } = useToast();
   const { user, logout } = useAuth();
   const [uploadSuccess, setUploadSuccess] = useState<any>(null);
+
+  // Redirect if not authenticated or wrong role
+  useEffect(() => {
+    if (!user) {
+      setLocation("/login");
+    } else if (user.role !== "manager") {
+      setLocation("/login");
+    }
+  }, [user, setLocation]);
+
+  if (!user || user.role !== "manager") {
+    return null;
+  }
 
   const form = useForm<UploadForm>({
     resolver: zodResolver(uploadFormSchema),

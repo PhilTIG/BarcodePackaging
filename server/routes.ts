@@ -123,7 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post('/api/auth/login', async (req, res) => {
     try {
-      const { staffId, pin, role } = loginSchema.parse(req.body);
+      const { staffId, pin } = loginSchema.parse(req.body);
       
       const user = await storage.getUserByStaffId(staffId);
       if (!user) {
@@ -131,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const validPin = await bcrypt.compare(pin, user.pin);
-      if (!validPin || user.role !== role) {
+      if (!validPin) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
@@ -245,6 +245,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Job creation error:', error);
       res.status(400).json({ message: 'Failed to create job from CSV' });
+    }
+  });
+
+  app.get('/api/auth/me', requireAuth, async (req, res) => {
+    try {
+      res.json({ 
+        user: {
+          id: req.user!.id,
+          staffId: req.user!.staffId,
+          name: req.user!.name,
+          role: req.user!.role,
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get user info' });
     }
   });
 

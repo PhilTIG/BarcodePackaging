@@ -174,7 +174,6 @@ export const insertJobAssignmentSchema = createInsertSchema(jobAssignments).omit
 export const loginSchema = z.object({
   staffId: z.string().min(1, "Staff ID is required"),
   pin: z.string().min(1, "PIN is required"),
-  role: z.enum(["manager", "supervisor", "worker"]),
 });
 
 // CSV upload schema
