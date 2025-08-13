@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
@@ -23,7 +23,7 @@ import bcrypt from "bcryptjs";
 // Setup multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
 
-interface AuthenticatedRequest extends Express.Request {
+interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
@@ -91,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Authentication middleware
-  const requireAuth = async (req: AuthenticatedRequest, res: Express.Response, next: Express.NextFunction) => {
+  const requireAuth = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -112,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Role-based authorization
   const requireRole = (roles: string[]) => {
-    return (req: AuthenticatedRequest, res: Express.Response, next: Express.NextFunction) => {
+    return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       if (!req.user || !roles.includes(req.user.role)) {
         return res.status(403).json({ message: 'Insufficient permissions' });
       }
@@ -222,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: req.body.name || `Job ${new Date().toISOString().split('T')[0]}`,
         description: req.body.description || '',
         totalProducts: csvData.length,
-        totalCustomers: [...new Set(csvData.map(row => row.CustomerName))].length,
+        totalCustomers: Array.from(new Set(csvData.map(row => row.CustomerName))).length,
         csvData,
         createdBy: req.user!.id
       };

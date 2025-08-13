@@ -128,7 +128,7 @@ export class DatabaseStorage implements IStorage {
 
     // Calculate overall progress
     const totalItems = jobProducts.reduce((sum, p) => sum + p.qty, 0);
-    const scannedItems = jobProducts.reduce((sum, p) => sum + p.scannedQty, 0);
+    const scannedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
 
     // Get worker performance data
     const workersData = await Promise.all(
@@ -166,13 +166,13 @@ export class DatabaseStorage implements IStorage {
   private getCurrentBox(products: Product[], userId: string): number | null {
     // Find the box number for products currently being scanned by this user
     // This would need more sophisticated logic based on session data
-    const activeProducts = products.filter(p => p.scannedQty > 0 && p.scannedQty < p.qty);
+    const activeProducts = products.filter(p => (p.scannedQty || 0) > 0 && (p.scannedQty || 0) < p.qty);
     return activeProducts.length > 0 ? activeProducts[0].boxNumber : null;
   }
 
   private getCurrentCustomer(products: Product[], userId: string): string | null {
     // Find the customer for products currently being scanned by this user
-    const activeProducts = products.filter(p => p.scannedQty > 0 && p.scannedQty < p.qty);
+    const activeProducts = products.filter(p => (p.scannedQty || 0) > 0 && (p.scannedQty || 0) < p.qty);
     return activeProducts.length > 0 ? activeProducts[0].customerName : null;
   }
 
@@ -200,8 +200,8 @@ export class DatabaseStorage implements IStorage {
 
     // Apply customer priority logic - fulfill first customer's quantity before moving to next
     for (const product of jobProducts) {
-      if (product.scannedQty < product.qty) {
-        const newScannedQty = Math.min(product.scannedQty + increment, product.qty);
+      if ((product.scannedQty || 0) < product.qty) {
+        const newScannedQty = Math.min((product.scannedQty || 0) + increment, product.qty);
         const [updatedProduct] = await db
           .update(products)
           .set({ 
