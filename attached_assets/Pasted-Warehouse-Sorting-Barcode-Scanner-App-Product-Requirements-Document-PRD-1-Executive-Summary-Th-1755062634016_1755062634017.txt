@@ -1,0 +1,225 @@
+Warehouse Sorting Barcode Scanner App
+Product Requirements Document (PRD)
+1. Executive Summary
+The Warehouse Sorting Barcode Scanner App is a web-based application designed to streamline the sorting process of purchased goods with different customer destinations. The app enables warehouse staff to efficiently sort items using barcode scanning technology while providing real-time visual feedback and performance tracking.
+2. Product Goals
+•	Primary Goal: Eliminate manual sorting errors and increase warehouse sorting efficiency
+•	Secondary Goals: 
+o	Provide real-time visual feedback for sorting operations
+o	Track staff performance and efficiency metrics
+o	Enable session-based sorting with save/resume functionality
+o	Generate detailed performance reports
+3. Target Users
+•	Primary Users: Warehouse sorting staff
+•	Secondary Users: Warehouse supervisors and managers (for reports)
+4. Key Features & Requirements
+4.1 CSV Data Import & Management
+Requirements:
+•	Upload CSV files with the following mandatory columns: 
+o	BarCode
+o	Product Name
+o	Qty
+o	CustomerName
+•	Process customers in CSV order for barcode priority handling
+•	Start fresh session with each new CSV upload
+•	Store existing CSV in system including user metrics for reporting
+•	Ability to allocate CSV Order to staff.
+•	Validate CSV format and provide error messaging for invalid formats
+User Stories:
+•	As a warehouse worker, I want to see the uploaded CSV jobs assigned to me so that I can pack the day's sorting requirements
+•	As a warehouse worker, I want to see validation errors so that I can correct CSV formatting issues
+•	As a warehouse Supervisor Manager, I want to select a CSV job on my screen and see the progress of the packing into each box
+4.2 Customer Box Assignment
+Requirements:
+•	Auto-assign customers to boxes based on CSV order
+•	Use responsive flexbox layout that adapts to screen orientation
+•	Display customer name, expected quantity, and completion percentage for each box
+•	Show visual progress bar indicating completion percentage
+User Stories:
+•	As a warehouse worker, I want to see customers automatically assigned to boxes so that I can start sorting immediately
+•	As a warehouse worker, I want to reassign customers to different boxes so that I can optimize my physical workspace layout
+4.3 Barcode Scanning & Sorting Logic
+Requirements:
+•	Support both camera-based scanning (phone/tablet) and dedicated USB/Bluetooth HID scanner hardware
+•	Handle duplicate barcodes with customer priority logic: 
+o	Process customers in CSV order
+o	Fulfill first customer's expected quantity before moving to next customer
+o	Display active customer for each barcode
+•	Increment count by 1 unit per scan
+•	Provide immediate visual feedback (green light) when item is scanned correctly
+•	Show current customer receiving the scanned item for duplicate barcodes
+Advanced Logic for Duplicate Barcodes:
+•	Display format: "Customer A: 3 remaining, then Customer B: 5 remaining"
+•	Automatically switch to next customer when previous customer's quantity is fulfilled
+User Stories:
+•	As a warehouse worker, I want to scan barcodes quickly so that I can sort items efficiently
+•	As a warehouse worker, I want to see which customer gets the scanned item so that I can place it in the correct box
+•	As a warehouse worker, I want immediate feedback when I scan so that I know the scan was successful
+4.4 Error Handling & Validation
+Requirements:
+•	Over-quantity Error: If scanned quantity exceeds expected total across all customers for a barcode: 
+o	Display red screen with error message
+o	Show "Unexpected stock scanned"
+o	If barcode matches existing product, display product name
+o	If unknown barcode, display "unknown stock"
+•	Unknown Barcode Error: Handle scans of items not in the CSV
+•	Provide "Undo Last Scan" functionality
+•	Support bulk undo (undo last N scans)
+•	When using undo on duplicate barcodes, revert active customer status appropriately
+User Stories:
+•	As a warehouse worker, I want clear error messages so that I can understand what went wrong
+•	As a warehouse worker, I want to undo mistakes so that my counts remain accurate
+•	As a warehouse worker, I want to undo multiple scans so that I can correct bulk mistakes
+4.5 Visual Interface & Box Status
+Requirements:
+•	Display 8-box grid using responsive flexbox layout
+•	Box Information Display: 
+o	Customer name
+o	Current count / Expected quantity (e.g., "3/10")
+o	Progress bar showing completion percentage
+o	Completion percentage as text
+•	Box Status Indicators: 
+o	Active boxes: Normal display with green flash on scan
+o	Complete boxes: Different color + lock icon, reject further scans
+o	Show relative bar chart of item quantities within each box
+•	Real-time updates as items are scanned
+User Stories:
+•	As a warehouse worker, I want to see completion status at a glance so that I know which boxes are finished
+•	As a warehouse worker, I want visual confirmation when I scan items so that I know they were recorded correctly
+•	As a warehouse worker, I want completed boxes to be locked so that I don't accidentally add extra items
+4.6 Session Management
+Requirements:
+•	One sorting session at a time
+•	Session data includes: 
+o	CSV data and customer assignments
+o	Current progress (all scan counts and status)
+o	Staff member name
+o	Session start time and timestamps
+•	Save session functionality for resuming later
+•	Load saved sessions with full state restoration
+User Stories:
+•	As a warehouse worker, I want to save my progress so that I can resume later if interrupted
+•	As a warehouse worker, I want to load my saved session so that I don't lose work
+4.7 Performance Tracking & Scoring
+Scoring Algorithm: Based on industry research, the scoring system uses these factors:
+•	Base Metrics:
+o	Scans per hour (industry average: ~71 items/hour)
+o	Time per scan (target: <1 second = 10/10, >20 seconds = 1/10)
+o	Accuracy rate (successful scans vs errors/undos)
+o	Session completion percentage
+•	Scoring Scale (1-10):
+o	10/10: >3600 items/hour (faster than 1 second per item)
+o	8-9/10: 180-3600 items/hour (2-20 seconds per item)
+o	6-7/10: 71-180 items/hour (industry average to good performance)
+o	4-5/10: 36-71 items/hour (below average)
+o	2-3/10: 18-36 items/hour (poor performance)
+o	1/10: <18 items/hour (slower than 20 seconds per item)
+•	Score Penalties:
+o	Reduce score for each undo operation
+o	Reduce score for over-quantity errors
+o	Reduce score for extended idle time between scans
+Performance Data Tracked:
+•	Total session time
+•	Time per individual scan
+•	Number of successful scans
+•	Number of undo operations
+•	Number of errors
+•	Completion percentage
+•	Staff member name and session timestamp
+User Stories:
+•	As a warehouse worker, I want to see my efficiency score so that I can track my performance
+•	As a warehouse manager, I want detailed performance reports so that I can identify training needs
+4.8 Reporting & Export
+End-of-Session Report Requirements:
+•	Summary Statistics: 
+o	Total items sorted by customer
+o	Items remaining (incomplete sorting)
+o	Session duration
+o	Average time per scan
+o	Efficiency score (1-10)
+o	Staff member name and session details
+•	Performance Metrics: 
+o	Scans per hour
+o	Accuracy percentage
+o	Number of corrections/undos
+o	Error breakdown by type
+•	Export Options: 
+o	JSON file download
+o	Email functionality for sending reports
+o	Save to device storage
+User Stories:
+•	As a warehouse worker, I want to see my session summary so that I know what I accomplished
+•	As a warehouse supervisor, I want to export reports so that I can track team performance over time
+•	As a warehouse manager, I want to email reports so that I can share performance data with stakeholders
+5. Technical Requirements
+5.1 Platform & Compatibility
+•	Platform: Web application (PWA) optimized for Android phones and tablets
+•	Browsers: Chrome, Firefox, Safari (mobile and desktop)
+•	Scanner Support: 
+o	Camera-based scanning via WebRTC
+o	USB HID barcode scanners
+o	Bluetooth HID barcode scanners
+5.2 Performance Requirements
+•	App must handle rapid scanning (sub-second response time)
+•	Support for up to 1000+ products per session
+•	Responsive design for various screen sizes (Mobile first)
+5.3 Data Storage
+•	Use app database
+•	JSON-based data format for easy export/import
+5.4 Security & Privacy
+•	Multi-user session support
+•	Users with ability to add User Roles
+•	Local data storage only
+•	Staff names stored locally with session data
+6. User Experience Flow
+1.	Session Start: Staff member enters their name and uploads CSV file
+2.	Setup: Review auto-assigned customer-to-box assignments, adjust via drag-and-drop if needed
+3.	Sorting: Begin scanning barcodes, receive immediate visual feedback
+4.	Monitoring: Track progress via visual box status and completion percentages
+5.	Error Handling: Handle errors and corrections as needed using undo functionality
+6.	Completion: Complete session and review performance report
+7.	Export: Save/email session report and optionally save session for later
+7. Success Metrics
+•	Operational Metrics:
+o	Reduction in sorting errors (target: <1% error rate)
+o	Increase in sorting speed (target: beat industry average of 71 items/hour)
+o	User satisfaction scores from warehouse staff
+•	Technical Metrics:
+o	App response time <500ms for scan processing
+o	<1% scan failure rate
+o	99%+ uptime during operational hours
+8. Enhancements
+•	Cloud synchronization and backup
+•	Advanced analytics and historical trending
+•	Integration with warehouse management systems (WMS)
+•	Voice commands and audio feedback
+•	Barcode generation for new products
+•	Multi-language support
+•	User role management and authentication
+9. Constraints & Assumptions
+Constraints:
+•	Web-based application (no native mobile app)
+Assumptions:
+•	Warehouse has Wi-Fi for initial setup and reporting
+•	Staff are familiar with basic mobile device operation
+•	Barcodes are clearly visible and scannable
+•	Physical boxes are numbered and positioned consistently
+10. Acceptance Criteria
+MVP Launch Criteria:
+•	[ ] Successfully import and validate CSV files
+•	[ ] Assign customers to their boxes
+•	[ ] Scan barcodes using camera or dedicated scanner
+•	[ ] Handle duplicate barcode logic correctly
+•	[ ] Provide real-time visual feedback for all scan operations
+•	[ ] Display completion status and progress for all boxes
+•	[ ] Generate accurate performance scores and end-of-session reports
+•	[ ] Export reports in JSON format and via email
+•	[ ] Handle all specified error conditions gracefully
+•	[ ] Provide undo functionality for scan corrections
+•	[ ] Save and restore sessions reliably
+Performance Acceptance Criteria:
+•	[ ] Scan response time <500ms under normal conditions
+•	[ ] Handle 1000+ products per session without performance degradation
+•	[ ] Work reliably across target Android devices and browsers
+•	[ ] Maintain accurate counts and customer assignments throughout session
+
