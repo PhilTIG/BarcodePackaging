@@ -34,6 +34,7 @@ export const products = pgTable("products", {
   productName: text("product_name").notNull(),
   qty: integer("qty").notNull(),
   customerName: text("customer_name").notNull(),
+  groupName: text("group_name"),
   scannedQty: integer("scanned_qty").default(0),
   boxNumber: integer("box_number"),
   isComplete: boolean("is_complete").default(false),
@@ -181,7 +182,10 @@ export const csvRowSchema = z.object({
   BarCode: z.string().min(1, "BarCode is required"),
   "Product Name": z.string().min(1, "Product Name is required"),
   Qty: z.coerce.number().int().positive("Qty must be a positive integer"),
-  CustomerName: z.string().min(1, "CustomerName is required"),
+  CustomName: z.string().min(1, "CustomName is required"),
+  Group: z.string().optional().refine((val) => val === undefined || val === "" || val.length > 0, {
+    message: "Group must not be empty when provided"
+  }),
 });
 
 // Theme schema

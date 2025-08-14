@@ -28,7 +28,11 @@ export default function ManagerDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, logout, isLoading } = useAuth();
-  const [uploadSuccess, setUploadSuccess] = useState<any>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<{
+    productsCount: number;
+    customersCount: number;
+    job: any;
+  } | null>(null);
 
   // Redirect if not authenticated or not a manager
   useEffect(() => {
@@ -89,12 +93,16 @@ export default function ManagerDashboard() {
       return response.json();
     },
     onSuccess: (data) => {
-      setUploadSuccess(data);
+      setUploadSuccess({
+        productsCount: data.productsCount,
+        customersCount: data.customersCount,
+        job: data.job
+      });
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       toast({
         title: "CSV uploaded successfully",
-        description: `${data.productsCount} products loaded for ${data.job.totalCustomers} customers`,
+        description: `${data.productsCount} products loaded for ${data.customersCount} customers`,
       });
     },
     onError: (error: any) => {
@@ -209,12 +217,46 @@ export default function ManagerDashboard() {
       </header>
 
       <div className="p-4 space-y-6">
-        {/* CSV Upload Section */}
+        {/* CSV Upload Section or Success Display */}
         <Card data-testid="upload-section">
-          <CardHeader>
-            <CardTitle>Upload New Job</CardTitle>
-          </CardHeader>
-          <CardContent>
+          {uploadSuccess ? (
+            // Success Banner
+            <CardContent className="p-6">
+              <div className="border-2 border-dashed border-green-300 rounded-lg p-6 bg-green-50 text-center">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-green-800">CSV Loaded Successfully</h3>
+                </div>
+                <p className="text-green-700 mb-4">
+                  {uploadSuccess.productsCount} products, {uploadSuccess.customersCount} customers
+                </p>
+                <div className="flex justify-center space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setUploadSuccess(null)}
+                    data-testid="button-upload-new"
+                  >
+                    Upload New CSV
+                  </Button>
+                  <Button
+                    onClick={() => setLocation(`/supervisor/${uploadSuccess.job.id}`)}
+                    data-testid="button-monitor-job"
+                  >
+                    Monitor Job
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          ) : (
+            <>
+              <CardHeader>
+                <CardTitle>Upload New Job</CardTitle>
+              </CardHeader>
+              <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -272,30 +314,19 @@ export default function ManagerDashboard() {
                     <h4 className="font-medium text-blue-900 mb-2">CSV Format Requirements</h4>
                     <p className="text-blue-800 text-sm mb-3">Your CSV file must contain these exact column headers:</p>
                     <div className="bg-white border border-blue-200 rounded text-xs p-2 font-mono mb-3">
-                      BarCode,Product Name,Qty,CustomerName
+                      BarCode,Product Name,Qty,CustomName,Group
                     </div>
                     <div className="text-blue-700 text-sm space-y-1">
                       <p><strong>BarCode:</strong> Product barcode (required)</p>
                       <p><strong>Product Name:</strong> Name of the product (required)</p>
                       <p><strong>Qty:</strong> Quantity as a positive number (required)</p>
-                      <p><strong>CustomerName:</strong> Customer destination name (required)</p>
+                      <p><strong>CustomName:</strong> Customer destination name (required)</p>
+                      <p><strong>Group:</strong> Product grouping (optional)</p>
                     </div>
                   </div>
                 </div>
 
-                {uploadSuccess && (
-                  <div className="p-4 bg-success-50 border border-success-200 rounded-lg" data-testid="upload-success">
-                    <div className="flex items-center">
-                      <div className="text-success-600 mr-3">✓</div>
-                      <div>
-                        <p className="text-success-800 font-medium">CSV Uploaded Successfully</p>
-                        <p className="text-success-700 text-sm">
-                          {uploadSuccess.productsCount} products, {uploadSuccess.job.totalCustomers} customers loaded
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+
 
                 <Button
                   type="submit"
@@ -306,7 +337,9 @@ export default function ManagerDashboard() {
                 </Button>
               </form>
             </Form>
-          </CardContent>
+              </CardContent>
+            </>
+          )}
         </Card>
 
         {/* Active Jobs */}

@@ -54,6 +54,7 @@ export default function Settings() {
     targetScansPerHour: 71,
     autoSaveSessions: true,
     showRealtimeStats: true,
+    detailedErrorMessages: false,
   });
 
   // Redirect if not authenticated or not a manager
@@ -419,6 +420,18 @@ export default function Settings() {
                 checked={settings.showRealtimeStats}
                 onCheckedChange={(checked) => handleSettingChange("showRealtimeStats", checked)}
                 data-testid="switch-realtime-stats"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-gray-900">Detailed Error Messaging</h3>
+                <p className="text-sm text-gray-600">Show detailed CSV validation errors instead of summary</p>
+              </div>
+              <Switch
+                checked={settings.detailedErrorMessages}
+                onCheckedChange={(checked) => handleSettingChange("detailedErrorMessages", checked)}
+                data-testid="switch-detailed-errors"
               />
             </div>
           </CardContent>

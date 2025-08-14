@@ -242,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: req.body.name || `Job ${new Date().toISOString().split('T')[0]}`,
         description: req.body.description || '',
         totalProducts: csvData.length,
-        totalCustomers: Array.from(new Set(csvData.map(row => row.CustomerName))).length,
+        totalCustomers: Array.from(new Set(csvData.map(row => row.CustomName))).length,
         csvData,
         createdBy: req.user!.id
       };
@@ -255,18 +255,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         barCode: row.BarCode,
         productName: row['Product Name'],
         qty: row.Qty,
-        customerName: row.CustomerName,
+        customerName: row.CustomName,
+        groupName: row.Group || null,
         boxNumber: Math.floor(index / 8) + 1 // Auto-assign to boxes (8 boxes max)
       }));
 
       await storage.createProducts(products);
 
-      res.json({ job, productsCount: products.length });
+      res.status(201).json({ 
+        job, 
+        products: products,
+        productsCount: products.length,
+        customersCount: jobData.totalCustomers,
+        message: 'CSV uploaded and job created successfully' 
+      });
     } catch (error: any) {
       console.error('Job creation error:', error);
       res.status(400).json({ 
         message: error.message || 'Failed to create job from CSV',
-        details: error.message?.includes('validation') ? 'Please check your CSV format. Expected columns: BarCode, Product Name, Qty, CustomerName' : undefined
+        details: error.message?.includes('validation') ? 'Please check your CSV format. Expected columns: BarCode, Product Name, Qty, CustomName, Group (optional)' : undefined
       });
     }
   });
