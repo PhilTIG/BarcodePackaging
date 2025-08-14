@@ -612,36 +612,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Initialize test user endpoint (development only)
-  app.post('/api/init-test-user', async (req, res) => {
-    try {
-      // Check if user already exists
-      const existingUser = await storage.getUserByStaffId('M001');
-      if (existingUser) {
-        return res.json({ message: 'Test user already exists', user: { staffId: 'M001' } });
-      }
-
-      const hashedPin = await bcrypt.hash('1234', 10);
-      const testUser = await storage.createUser({
-        staffId: 'M001',
-        name: 'Test Manager',
-        role: 'manager',
-        pin: hashedPin
-      });
-
-      res.json({ 
-        message: 'Test user created successfully',
-        user: {
-          staffId: testUser.staffId,
-          name: testUser.name,
-          role: testUser.role
-        }
-      });
-    } catch (error) {
-      console.error('Error creating test user:', error);
-      res.status(500).json({ message: 'Failed to create test user' });
-    }
-  });
-
   return httpServer;
 }

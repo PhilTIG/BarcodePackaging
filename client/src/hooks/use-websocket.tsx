@@ -20,10 +20,8 @@ export function useWebSocket(jobId?: string) {
 
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws`;
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
       
-      console.log("Attempting WebSocket connection to:", wsUrl);
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
