@@ -16,8 +16,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useErrorContext } from "@/lib/error-context";
 import { ErrorDialog } from "@/components/ui/error-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus } from "lucide-react";
+import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown } from "lucide-react";
 import { z } from "zod";
 
 const uploadFormSchema = z.object({
@@ -417,21 +418,31 @@ export default function ManagerDashboard() {
                     )}
                   </div>
 
-                  {/* CSV Format Guide */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-medium text-blue-900 mb-2">CSV Format Requirements</h4>
-                    <p className="text-blue-800 text-sm mb-3">Your CSV file must contain these exact column headers:</p>
-                    <div className="bg-white border border-blue-200 rounded text-xs p-2 font-mono mb-3">
-                      BarCode,Product Name,Qty,CustomName,Group
+                  {/* CSV Format Guide - Collapsible */}
+                  <Collapsible defaultOpen={false}>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <CollapsibleTrigger className="w-full">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-blue-900">CSV Format Requirements</h4>
+                          <ChevronDown className="h-4 w-4 text-blue-600 transition-transform duration-200 data-[state=open]:rotate-180" />
+                        </div>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent className="mt-2">
+                        <p className="text-blue-800 text-sm mb-3">Your CSV file must contain these exact column headers:</p>
+                        <div className="bg-white border border-blue-200 rounded text-xs p-2 font-mono mb-3">
+                          BarCode,Product Name,Qty,CustomName,Group
+                        </div>
+                        <div className="text-blue-700 text-sm space-y-1">
+                          <p><strong>BarCode:</strong> Product barcode (required)</p>
+                          <p><strong>Product Name:</strong> Name of the product (required)</p>
+                          <p><strong>Qty:</strong> Quantity as a positive number (required)</p>
+                          <p><strong>CustomName:</strong> Customer destination name (required)</p>
+                          <p><strong>Group:</strong> Product grouping (optional)</p>
+                        </div>
+                      </CollapsibleContent>
                     </div>
-                    <div className="text-blue-700 text-sm space-y-1">
-                      <p><strong>BarCode:</strong> Product barcode (required)</p>
-                      <p><strong>Product Name:</strong> Name of the product (required)</p>
-                      <p><strong>Qty:</strong> Quantity as a positive number (required)</p>
-                      <p><strong>CustomName:</strong> Customer destination name (required)</p>
-                      <p><strong>Group:</strong> Product grouping (optional)</p>
-                    </div>
-                  </div>
+                  </Collapsible>
                 </div>
 
 
