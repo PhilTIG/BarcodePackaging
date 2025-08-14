@@ -650,8 +650,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/jobs/:id/progress', requireAuth, async (req, res) => {
     try {
-      const progress = await storage.getJobProgress(req.params.id);
-      res.json({ progress });
+      const progressData = await storage.getJobProgress(req.params.id);
+      res.json(progressData);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch job progress' });
     }

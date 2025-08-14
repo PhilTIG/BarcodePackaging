@@ -144,51 +144,61 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobProgress(id: string): Promise<any> {
-    // Get job with products
-    const job = await this.getJobById(id);
-    const jobProducts = await this.getProductsByJobId(id);
-    const sessions = await this.getScanSessionsByJobId(id);
-    const assignments = await this.getJobAssignmentsWithUsers(id);
+    try {
+      // Get job with products
+      const job = await this.getJobById(id);
+      const jobProducts = await this.getProductsByJobId(id);
+      const sessions = await this.getScanSessionsByJobId(id);
+      const assignments = await this.getJobAssignmentsWithUsers(id);
 
-    if (!job) return null;
+      if (!job) return null;
 
-    // Calculate overall progress
-    const totalItems = jobProducts.reduce((sum, p) => sum + p.qty, 0);
-    const scannedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+      // Remove debug logs after fixing
 
-    // Get worker performance data for all assigned workers
-    const workersData = await Promise.all(
-      assignments.map(async (assignment) => {
-        const session = sessions.find(s => s.userId === assignment.userId);
-        const events = session ? await this.getScanEventsBySessionId(session.id) : [];
-        const performance = session ? await this.getSessionPerformance(session.id) : null;
+      // Calculate overall progress
+      const totalItems = jobProducts.reduce((sum, p) => sum + p.qty, 0);
+      const scannedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
 
-        return {
-          id: assignment.userId,
-          name: assignment.assignee.name,
-          isActive: session?.status === 'active' || false,
-          scansPerHour: performance?.scansPerHour || 0,
-          score: performance?.score || 0,
-          totalScans: session?.totalScans || 0,
-          currentBox: this.getCurrentBox(jobProducts, assignment.userId),
-          currentCustomer: this.getCurrentCustomer(jobProducts, assignment.userId),
-          lastScan: events.length > 0 ? events[events.length - 1].scanTime : null,
-          assignedColor: assignment.assignedColor,
-        };
-      })
-    );
+      // Get worker performance data for all assigned workers
+      const workersData = await Promise.all(
+        assignments.map(async (assignment) => {
+          // Processing assignment
+          const session = sessions.find(s => s.userId === assignment.userId);
+          const events = session ? await this.getScanEventsBySessionId(session.id) : [];
+          const performance = session ? await this.getSessionPerformance(session.id) : null;
 
-    return {
-      progress: {
-        totalItems,
-        scannedItems,
-        completionPercentage: totalItems > 0 ? Math.round((scannedItems / totalItems) * 100) : 0,
-        activeSessions: sessions.filter(s => s.status === 'active').length,
-        waitingSessions: sessions.filter(s => s.status === 'paused').length,
-        totalAssignedWorkers: assignments.length,
-        workers: workersData,
-      },
-    };
+          return {
+            id: assignment.userId,
+            name: assignment.assignee.name,
+            isActive: session?.status === 'active' || false,
+            scansPerHour: performance?.scansPerHour || 0,
+            score: performance?.score || 0,
+            totalScans: session?.totalScans || 0,
+            currentBox: this.getCurrentBox(jobProducts, assignment.userId),
+            currentCustomer: this.getCurrentCustomer(jobProducts, assignment.userId),
+            lastScan: events.length > 0 ? events[events.length - 1].scanTime : null,
+            assignedColor: assignment.assignedColor,
+          };
+        })
+      );
+
+      // Final workers data built successfully
+
+      return {
+        progress: {
+          totalItems,
+          scannedItems,
+          completionPercentage: totalItems > 0 ? Math.round((scannedItems / totalItems) * 100) : 0,
+          activeSessions: sessions.filter(s => s.status === 'active').length,
+          waitingSessions: sessions.filter(s => s.status === 'paused').length,
+          totalAssignedWorkers: assignments.length,
+          workers: workersData,
+        },
+      };
+    } catch (error) {
+      console.error(`[ERROR] getJobProgress failed for job ${id}:`, error);
+      throw error;
+    }
   }
 
   private getCurrentBox(products: Product[], userId: string): number | null {

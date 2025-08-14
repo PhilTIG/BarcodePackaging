@@ -15,28 +15,10 @@ export function PerformanceDashboard({ jobId, supervisorView = false }: Performa
     refetchInterval: 5000,
   });
 
-  // TEST ELEMENT - This will help identify if we're in the right component
-  if (true) {
+  if (!progressData?.progress?.workers || progressData.progress.workers.length === 0) {
     return (
-      <div className="border-2 border-red-500 p-4 bg-red-50">
-        <h3 className="text-red-800 font-bold">🔍 TEST ELEMENT - PerformanceDashboard Component</h3>
-        <div className="mt-2 text-sm">
-          <p><strong>JobId:</strong> {jobId}</p>
-          <p><strong>SupervisorView:</strong> {supervisorView ? 'true' : 'false'}</p>
-          <p><strong>progressData exists:</strong> {progressData ? 'YES' : 'NO'}</p>
-          {progressData && (
-            <>
-              <p><strong>progressData.progress exists:</strong> {progressData.progress ? 'YES' : 'NO'}</p>
-              {progressData.progress && (
-                <>
-                  <p><strong>workers array exists:</strong> {progressData.progress.workers ? 'YES' : 'NO'}</p>
-                  <p><strong>workers length:</strong> {progressData.progress.workers?.length || 0}</p>
-                  <p><strong>totalAssignedWorkers:</strong> {progressData.progress.totalAssignedWorkers || 0}</p>
-                </>
-              )}
-            </>
-          )}
-        </div>
+      <div className="text-center py-8 text-gray-500">
+        No assigned workers found
       </div>
     );
   }
