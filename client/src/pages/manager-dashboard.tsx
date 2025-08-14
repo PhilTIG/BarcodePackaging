@@ -78,11 +78,7 @@ export default function ManagerDashboard() {
       formData.append("name", data.name);
       formData.append("description", data.description || "");
 
-      const response = await fetch("/api/jobs", {
-        method: "POST",
-        body: formData,
-        credentials: 'include', // Use session-based auth instead of Bearer token
-      });
+      const response = await apiRequest("POST", "/api/jobs", formData);
 
       if (!response.ok) {
         const error = await response.json();
