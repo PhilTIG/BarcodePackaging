@@ -42,12 +42,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const connectedClients = new Map<string, { ws: WebSocket; userId: string; jobId?: string }>();
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
     const clientId = Math.random().toString(36).substring(7);
+    const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    
+    console.log(`[WebSocket Server] New connection established. ClientId: ${clientId}, IP: ${clientIP}`);
     
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message.toString()) as WSMessage;
+        console.log(`[WebSocket Server] Message received from client ${clientId}:`, data);
         
         if (data.type === 'authenticate') {
           connectedClients.set(clientId, { 
@@ -55,9 +59,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: data.data.userId,
             jobId: data.data.jobId 
           });
+          console.log(`[WebSocket Server] Client ${clientId} authenticated as user ${data.data.userId}${data.data.jobId ? ` for job ${data.data.jobId}` : ''}`);
+          
+          // Send authentication confirmation
+          ws.send(JSON.stringify({
+            type: 'authenticated',
+            data: { 
+              clientId,
+              userId: data.data.userId,
+              jobId: data.data.jobId 
+            }
+          }));
         }
         
         if (data.type === 'scan_event') {
+          console.log(`[WebSocket Server] Broadcasting scan event for job ${data.jobId}`);
           // Broadcast scan event to all clients monitoring this job
           broadcastToJob(data.jobId!, {
             type: 'scan_update',
@@ -65,21 +81,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       } catch (error) {
-        console.error('WebSocket message error:', error);
+        console.error(`[WebSocket Server] Message parsing error from client ${clientId}:`, error, 'Raw message:', message.toString());
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', (code, reason) => {
+      console.log(`[WebSocket Server] Client ${clientId} disconnected. Code: ${code}, Reason: ${reason}`);
       connectedClients.delete(clientId);
     });
+
+    ws.on('error', (error) => {
+      console.error(`[WebSocket Server] Error for client ${clientId}:`, error);
+    });
+
+    // Send welcome message
+    ws.send(JSON.stringify({
+      type: 'connected',
+      data: { 
+        clientId,
+        message: 'WebSocket connection established successfully'
+      }
+    }));
   });
 
   function broadcastToJob(jobId: string, message: WSMessage) {
-    connectedClients.forEach((client) => {
+    let broadcastCount = 0;
+    connectedClients.forEach((client, clientId) => {
       if (client.jobId === jobId && client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(JSON.stringify(message));
+        try {
+          client.ws.send(JSON.stringify(message));
+          broadcastCount++;
+        } catch (error) {
+          console.error(`[WebSocket Server] Failed to send message to client ${clientId}:`, error);
+          // Remove dead connection
+          connectedClients.delete(clientId);
+        }
       }
     });
+    console.log(`[WebSocket Server] Broadcasted message to ${broadcastCount} clients for job ${jobId}:`, message);
   }
 
   function broadcastToUser(userId: string, message: WSMessage) {

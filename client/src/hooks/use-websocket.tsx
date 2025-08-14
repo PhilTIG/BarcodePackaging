@@ -19,58 +19,101 @@ export function useWebSocket(jobId?: string) {
     if (!user || wsRef.current?.readyState === WebSocket.OPEN) return;
 
     try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      // Robust WebSocket URL construction with environment detection
+      const getWebSocketUrl = (): string => {
+        // Ensure we're in a browser environment
+        if (typeof window === 'undefined') {
+          throw new Error('WebSocket can only be used in browser environment');
+        }
+
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const host = window.location.host;
+        
+        // Validate host exists and is not empty
+        if (!host || host.trim() === '' || host.includes('undefined')) {
+          console.error('Invalid host detected:', host);
+          throw new Error(`Invalid host for WebSocket connection: ${host}`);
+        }
+
+        // Construct and validate URL
+        const wsUrl = `${protocol}//${host}/ws`;
+        console.log(`[WebSocket] Attempting connection to: ${wsUrl}`);
+        
+        // Basic URL validation
+        try {
+          new URL(wsUrl);
+          return wsUrl;
+        } catch (urlError) {
+          console.error('[WebSocket] Invalid URL constructed:', wsUrl, urlError);
+          throw new Error(`Invalid WebSocket URL: ${wsUrl}`);
+        }
+      };
+
+      const wsUrl = getWebSocketUrl();
+      console.log(`[WebSocket] Creating connection for user ${user.id}${jobId ? ` on job ${jobId}` : ''}`);
       
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
+        console.log(`[WebSocket] Connection established successfully`);
         setIsConnected(true);
         
         // Authenticate with the WebSocket server
-        if (wsRef.current) {
-          wsRef.current.send(JSON.stringify({
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          const authMessage = {
             type: "authenticate",
             data: {
               userId: user.id,
               jobId,
             },
-          }));
+          };
+          console.log(`[WebSocket] Sending authentication:`, authMessage);
+          wsRef.current.send(JSON.stringify(authMessage));
         }
       };
 
       wsRef.current.onmessage = (event) => {
         try {
           const message: WSMessage = JSON.parse(event.data);
+          console.log(`[WebSocket] Message received:`, message);
           handleMessage(message);
         } catch (error) {
-          console.error("Failed to parse WebSocket message:", error);
+          console.error("[WebSocket] Failed to parse message:", error, "Raw data:", event.data);
         }
       };
 
       wsRef.current.onclose = (event) => {
+        console.log(`[WebSocket] Connection closed. Code: ${event.code}, Reason: ${event.reason}, Clean: ${event.wasClean}`);
         setIsConnected(false);
         
-        // Only attempt to reconnect if it wasn't a manual close
-        if (event.code !== 1000) {
+        // Only attempt to reconnect if it wasn't a manual close (code 1000)
+        if (event.code !== 1000 && user) {
+          const delay = Math.min(3000 * Math.pow(1.5, 0), 30000); // Exponential backoff with max 30s
+          console.log(`[WebSocket] Scheduling reconnection in ${delay}ms`);
           reconnectTimeoutRef.current = setTimeout(() => {
+            console.log(`[WebSocket] Attempting reconnection...`);
             void connect();
-          }, 3000);
+          }, delay);
         }
       };
 
       wsRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
+        console.error("[WebSocket] Connection error:", error);
+        console.error("[WebSocket] Error details - ReadyState:", wsRef.current?.readyState, "URL:", wsRef.current?.url);
         setIsConnected(false);
       };
     } catch (error) {
-      console.error("Failed to create WebSocket connection:", error);
+      console.error("[WebSocket] Failed to create connection:", error);
+      console.error("[WebSocket] Error context - User:", user?.id, "JobId:", jobId, "Location:", window?.location?.href);
       setIsConnected(false);
       
-      // Retry connection after delay
+      // Retry connection after delay with exponential backoff
+      const retryDelay = 5000;
+      console.log(`[WebSocket] Scheduling retry in ${retryDelay}ms due to connection creation failure`);
       reconnectTimeoutRef.current = setTimeout(() => {
+        console.log(`[WebSocket] Retrying connection after creation failure...`);
         void connect();
-      }, 5000);
+      }, retryDelay);
     }
   }, [user, jobId]);
 
@@ -107,17 +150,24 @@ export function useWebSocket(jobId?: string) {
 
   const sendMessage = (message: WSMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      console.log(`[WebSocket] Sending message:`, message);
       wsRef.current.send(JSON.stringify(message));
+    } else {
+      console.warn(`[WebSocket] Cannot send message - connection not open. ReadyState: ${wsRef.current?.readyState}`, message);
     }
   };
 
   const disconnect = () => {
+    console.log(`[WebSocket] Manual disconnection requested`);
+    
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = undefined;
     }
     
     if (wsRef.current) {
-      wsRef.current.close();
+      // Close with code 1000 (normal closure) to prevent reconnection
+      wsRef.current.close(1000, "Manual disconnect");
       wsRef.current = null;
     }
     
