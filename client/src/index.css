@@ -312,3 +312,71 @@
   color: white !important;
   border: 1px solid #374151 !important;
 }
+
+/* Ensure all popup forms have solid backgrounds */
+[data-radix-dialog-content] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+[data-radix-alert-dialog-content] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+[data-radix-popover-content] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-vaul-drawer] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Dark mode variants for all popup forms */
+.dark [data-radix-dialog-content] {
+  background: #1f2937 !important;
+  color: white !important;
+  border: 1px solid #374151 !important;
+}
+
+.dark [data-radix-alert-dialog-content] {
+  background: #1f2937 !important;
+  color: white !important;
+  border: 1px solid #374151 !important;
+}
+
+.dark [data-radix-popover-content] {
+  background: #1f2937 !important;
+  color: white !important;
+  border: 1px solid #374151 !important;
+}
+
+.dark [data-vaul-drawer] {
+  background: #1f2937 !important;
+  color: white !important;
+  border: 1px solid #374151 !important;
+}
+
+/* Sheet/sidebar popup forms */
+[data-radix-dialog-content][data-side] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.dark [data-radix-dialog-content][data-side] {
+  background: #1f2937 !important;
+  color: white !important;
+  border: 1px solid #374151 !important;
+}
