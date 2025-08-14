@@ -490,5 +490,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User management routes (Manager only)
+  app.get('/api/users', requireAuth, requireRole(['manager']), async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json({ users });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  });
+
+  app.post('/api/users', requireAuth, requireRole(['manager']), async (req, res) => {
+    try {
+      const { staffId, name, role, pin } = req.body;
+      
+      // Validate required fields
+      if (!staffId || !name || !role || !pin) {
+        return res.status(400).json({ message: 'All fields are required' });
+      }
+
+      // Check if staffId already exists
+      const existingUser = await storage.getUserByStaffId(staffId);
+      if (existingUser) {
+        return res.status(400).json({ message: 'Staff ID already exists' });
+      }
+
+      // Validate role
+      if (!['manager', 'supervisor', 'worker'].includes(role)) {
+        return res.status(400).json({ message: 'Invalid role' });
+      }
+
+      const hashedPin = await bcrypt.hash(pin, 10);
+      const userData = {
+        staffId,
+        name,
+        role,
+        pin: hashedPin
+      };
+
+      const user = await storage.createUser(userData);
+      res.json({ 
+        user: {
+          id: user.id,
+          staffId: user.staffId,
+          name: user.name,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to create user' });
+    }
+  });
+
+  app.put('/api/users/:id', requireAuth, requireRole(['manager']), async (req, res) => {
+    try {
+      const { staffId, name, role, pin } = req.body;
+      const userId = req.params.id;
+
+      // Validate required fields (pin is optional for updates)
+      if (!staffId || !name || !role) {
+        return res.status(400).json({ message: 'Staff ID, name, and role are required' });
+      }
+
+      // Check if staffId already exists for other users
+      const existingUser = await storage.getUserByStaffId(staffId);
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(400).json({ message: 'Staff ID already exists' });
+      }
+
+      // Validate role
+      if (!['manager', 'supervisor', 'worker'].includes(role)) {
+        return res.status(400).json({ message: 'Invalid role' });
+      }
+
+      const updateData: any = {
+        staffId,
+        name,
+        role,
+      };
+
+      // Only update PIN if provided
+      if (pin) {
+        updateData.pin = await bcrypt.hash(pin, 10);
+      }
+
+      const user = await storage.updateUser(userId, updateData);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      res.json({ 
+        user: {
+          id: user.id,
+          staffId: user.staffId,
+          name: user.name,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update user' });
+    }
+  });
+
+  app.delete('/api/users/:id', requireAuth, requireRole(['manager']), async (req, res) => {
+    try {
+      const userId = req.params.id;
+
+      // Prevent deleting self
+      if (userId === req.user!.id) {
+        return res.status(400).json({ message: 'Cannot delete your own account' });
+      }
+
+      const deleted = await storage.deleteUser(userId);
+      if (!deleted) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete user' });
+    }
+  });
+
   return httpServer;
 }
