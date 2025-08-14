@@ -132,32 +132,44 @@ export function useWebSocket(jobId?: string) {
 
   const handleMessage = useCallback((message: WSMessage) => {
     switch (message.type) {
+      case "connected":
+        // Server welcome message - acknowledge connection
+        console.log("[WebSocket] Server connection confirmed:", message.data);
+        break;
+        
+      case "authenticated":
+        // Authentication confirmation from server
+        console.log("[WebSocket] Authentication confirmed:", message.data);
+        break;
+        
       case "scan_update":
         // Invalidate relevant queries to refresh data
+        console.log("[WebSocket] Scan update received:", message.data);
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
         break;
       
       case "scan_event":
         // Real-time scan event received
-        console.log("Scan event received:", message.data);
+        console.log("[WebSocket] Scan event received:", message.data);
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
         break;
       
       case "undo_event":
         // Undo operation received
-        console.log("Undo event received:", message.data);
+        console.log("[WebSocket] Undo event received:", message.data);
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
         break;
       
       case "job_status_update":
         // Job status changed
+        console.log("[WebSocket] Job status update received:", message.data);
         queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", message.data.jobId] });
         break;
       
       default:
-        console.log("Unknown message type:", message.type);
+        console.log("[WebSocket] Unknown message type received:", message.type, message.data);
     }
   }, [jobId]);
 
