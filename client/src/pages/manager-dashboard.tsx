@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -567,6 +567,9 @@ export default function ManagerDashboard() {
         <DialogContent className="sm:max-w-md" data-testid="assign-worker-dialog">
           <DialogHeader>
             <DialogTitle>Assign Worker to Job</DialogTitle>
+            <DialogDescription>
+              Select a worker and choose their identification color for this job assignment.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
