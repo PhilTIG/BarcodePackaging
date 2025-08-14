@@ -103,7 +103,7 @@ export default function WorkerScanner() {
         ...prev,
         totalScans: prev.totalScans + 1,
         scansPerHour: calculateScansPerHour(prev.totalScans + 1, activeSession?.startTime),
-        score: calculateScore(prev.totalScans + 1, Date.now() - new Date(activeSession?.startTime).getTime()),
+        score: calculateScore(prev.totalScans + 1, Date.now() - new Date(activeSession?.startTime || "").getTime()),
       }));
 
       // Flash success feedback
@@ -120,7 +120,7 @@ export default function WorkerScanner() {
         description: `${data.scanEvent.productName} added to box`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Scan error",
         description: error.message,
@@ -194,13 +194,13 @@ export default function WorkerScanner() {
     },
   });
 
-  const calculateScansPerHour = (totalScans: number, startTime: string) => {
+  const calculateScansPerHour = (totalScans: number, startTime: string): number => {
     const elapsed = Date.now() - new Date(startTime).getTime();
     const hours = elapsed / (1000 * 60 * 60);
     return hours > 0 ? Math.round(totalScans / hours) : 0;
   };
 
-  const showScanFeedback = (success: boolean) => {
+  const showScanFeedback = (success: boolean): void => {
     // Visual feedback for successful/failed scans
     const flashElement = document.getElementById("scan-flash-target");
     if (flashElement) {

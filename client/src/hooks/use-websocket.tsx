@@ -72,9 +72,9 @@ export function useWebSocket(jobId?: string) {
         void connect();
       }, 5000);
     }
-  }, [user?.id, jobId]);
+  }, [user, jobId]);
 
-  const handleMessage = (message: WSMessage) => {
+  const handleMessage = useCallback((message: WSMessage) => {
     switch (message.type) {
       case "scan_update":
         // Invalidate relevant queries to refresh data
@@ -103,7 +103,7 @@ export function useWebSocket(jobId?: string) {
       default:
         console.log("Unknown message type:", message.type);
     }
-  };
+  }, [jobId]);
 
   const sendMessage = (message: WSMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -132,7 +132,7 @@ export function useWebSocket(jobId?: string) {
     return () => {
       disconnect();
     };
-  }, [connect, user]);
+  }, [connect]);
 
   return {
     isConnected,
