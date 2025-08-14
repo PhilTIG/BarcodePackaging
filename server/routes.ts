@@ -200,12 +200,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validationErrors: string[] = [];
       let rowIndex = 0;
+      let headerValidated = false;
       
       await new Promise((resolve, reject) => {
         stream
           .pipe(csv())
           .on('data', (row) => {
             rowIndex++;
+            
+            // Validate headers on first row
+            if (!headerValidated) {
+              headerValidated = true;
+              const headers = Object.keys(row);
+              const expectedHeaders = ['BarCode', 'Product Name', 'Qty', 'CustomName', 'Group'];
+              const requiredHeaders = ['BarCode', 'Product Name', 'Qty', 'CustomName'];
+              
+              const missingRequired = requiredHeaders.filter(h => !headers.includes(h));
+              const hasOldCustomerName = headers.includes('CustomerName');
+              
+              if (missingRequired.length > 0 || hasOldCustomerName) {
+                let errorMsg = '';
+                if (hasOldCustomerName) {
+                  errorMsg = `CSV header error: Found "CustomerName" but expected "CustomName". Please update your CSV header.`;
+                } else if (missingRequired.length > 0) {
+                  errorMsg = `CSV header error: Missing required columns: ${missingRequired.join(', ')}. Expected: ${expectedHeaders.join(', ')}`;
+                }
+                reject(new Error(errorMsg));
+                return;
+              }
+            }
+            
             try {
               const validatedRow = csvRowSchema.parse(row);
               csvData.push(validatedRow);
@@ -215,14 +239,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Stop processing if too many errors
               if (validationErrors.length >= 10) {
-                reject(new Error(`CSV validation failed with ${validationErrors.length} errors. First errors: ${validationErrors.slice(0, 5).join('; ')}`));
+                reject(new Error(`CSV validation failed with ${validationErrors.length}+ errors. First errors: ${validationErrors.slice(0, 3).join('; ')}`));
                 return;
               }
             }
           })
           .on('end', () => {
             if (validationErrors.length > 0) {
-              reject(new Error(`CSV validation failed with ${validationErrors.length} errors: ${validationErrors.slice(0, 5).join('; ')}`));
+              reject(new Error(`CSV validation failed with ${validationErrors.length} errors: ${validationErrors.slice(0, 3).join('; ')}`));
             } else {
               resolve(undefined);
             }
@@ -233,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (csvData.length === 0) {
         return res.status(400).json({ 
           message: 'CSV file is empty or contains no valid data',
-          details: 'Expected columns: BarCode, Product Name, Qty, CustomerName'
+          details: 'Expected columns: BarCode, Product Name, Qty, CustomName, Group (optional)'
         });
       }
 

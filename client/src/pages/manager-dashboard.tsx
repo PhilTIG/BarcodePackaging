@@ -106,9 +106,14 @@ export default function ManagerDashboard() {
     },
     onError: (error: any) => {
       console.error('Upload error:', error);
+      
+      // Show detailed error for header issues
+      const isHeaderError = error.message?.includes('header error');
+      const showDetailed = isHeaderError || error.message?.includes('CustomerName');
+      
       toast({
         title: "CSV Upload Failed",
-        description: error.message || "Please check your CSV format and try again",
+        description: showDetailed ? error.message : "Please check your CSV format and try again",
         variant: "destructive",
       });
     },
