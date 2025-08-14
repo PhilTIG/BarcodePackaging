@@ -74,6 +74,7 @@ export const jobAssignments = pgTable("job_assignments", {
   assignedBy: varchar("assigned_by").notNull().references(() => users.id),
   assignedAt: timestamp("assigned_at").default(sql`now()`),
   isActive: boolean("is_active").default(true),
+  assignedColor: text("assigned_color"), // Color for the worker in dashboards/reports
 });
 
 // Relations

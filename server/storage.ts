@@ -60,6 +60,7 @@ export interface IStorage {
   // Job assignment methods
   createJobAssignment(assignment: InsertJobAssignment): Promise<JobAssignment>;
   getJobAssignments(jobId: string): Promise<JobAssignment[]>;
+  getJobAssignmentsByUser(userId: string): Promise<JobAssignment[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -479,6 +480,13 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(jobAssignments)
       .where(and(eq(jobAssignments.jobId, jobId), eq(jobAssignments.isActive, true)));
+  }
+
+  async getJobAssignmentsByUser(userId: string): Promise<JobAssignment[]> {
+    return await db
+      .select()
+      .from(jobAssignments)
+      .where(and(eq(jobAssignments.userId, userId), eq(jobAssignments.isActive, true)));
   }
 }
 

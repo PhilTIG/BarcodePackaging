@@ -302,6 +302,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Worker assignment to job
+  app.post('/api/jobs/:jobId/assign', requireAuth, requireRole(['manager']), async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const { userId, assignedColor } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+      }
+
+      // Check if job exists
+      const job = await storage.getJobById(jobId);
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Check if user exists
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Create assignment
+      const assignment = await storage.createJobAssignment({
+        jobId,
+        userId,
+        assignedBy: req.user!.id,
+        assignedColor: assignedColor || '#3B82F6',
+        isActive: true,
+      });
+
+      res.status(201).json({ 
+        assignment,
+        message: 'Worker assigned to job successfully' 
+      });
+    } catch (error: any) {
+      console.error('Job assignment error:', error);
+      res.status(400).json({ 
+        message: error.message || 'Failed to assign worker to job'
+      });
+    }
+  });
+
   app.get('/api/auth/me', requireAuth, async (req, res) => {
     try {
       res.json({ 

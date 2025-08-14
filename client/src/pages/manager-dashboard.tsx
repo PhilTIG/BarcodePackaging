@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useErrorContext } from "@/lib/error-context";
@@ -39,6 +41,14 @@ export default function ManagerDashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [currentError, setCurrentError] = useState<any>(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
+  // Assignment form state
+  const [assignForm, setAssignForm] = useState({
+    userId: "",
+    assignedColor: "#3B82F6", // Default blue
+  });
 
   const form = useForm<UploadForm>({
     resolver: zodResolver(uploadFormSchema),
@@ -135,6 +145,51 @@ export default function ManagerDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
     },
   });
+
+  // Worker assignment mutation
+  const assignWorkerMutation = useMutation({
+    mutationFn: async (data: { jobId: string; userId: string; assignedColor: string }) => {
+      const response = await apiRequest("POST", `/api/jobs/${data.jobId}/assign`, {
+        userId: data.userId,
+        assignedColor: data.assignedColor,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      setAssignDialogOpen(false);
+      setAssignForm({ userId: "", assignedColor: "#3B82F6" });
+      toast({
+        title: "Worker assigned successfully",
+        description: "The worker has been assigned to this job with the selected color.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Assignment failed",
+        description: error.message || "Failed to assign worker to job",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle assignment form submission
+  const handleAssignWorker = () => {
+    if (!selectedJobId || !assignForm.userId) {
+      toast({
+        title: "Assignment incomplete",
+        description: "Please select a worker to assign",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    assignWorkerMutation.mutate({
+      jobId: selectedJobId,
+      userId: assignForm.userId,
+      assignedColor: assignForm.assignedColor,
+    });
+  };
 
   const onSubmit = (data: UploadForm) => {
     if (!selectedFile) {
@@ -433,7 +488,15 @@ export default function ManagerDashboard() {
                         <Eye className="mr-1 h-4 w-4" />
                         Monitor
                       </Button>
-                      <Button variant="outline" size="sm" data-testid={`button-assign-${job.id}`}>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedJobId(job.id);
+                          setAssignDialogOpen(true);
+                        }}
+                        data-testid={`button-assign-${job.id}`}
+                      >
                         <Users className="mr-1 h-4 w-4" />
                         Assign Workers
                       </Button>
@@ -498,6 +561,94 @@ export default function ManagerDashboard() {
         title="CSV Upload Errors"
         errors={currentError ? getErrorDetails(currentError) : []}
       />
+
+      {/* Assign Workers Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent className="sm:max-w-md" data-testid="assign-worker-dialog">
+          <DialogHeader>
+            <DialogTitle>Assign Worker to Job</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Worker Selection */}
+            <div>
+              <Label htmlFor="worker-select">Select Worker</Label>
+              <Select 
+                value={assignForm.userId}
+                onValueChange={(value) => setAssignForm(prev => ({ ...prev, userId: value }))}
+              >
+                <SelectTrigger id="worker-select" data-testid="select-worker">
+                  <SelectValue placeholder="Choose a worker..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(workersData as any)?.workers?.map((worker: any) => (
+                    <SelectItem key={worker.id} value={worker.id}>
+                      {worker.name} ({worker.staffId})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Color Selection */}
+            <div>
+              <Label htmlFor="color-picker">Worker Color</Label>
+              <div className="flex items-center space-x-3 mt-2">
+                <input
+                  type="color"
+                  id="color-picker"
+                  value={assignForm.assignedColor}
+                  onChange={(e) => setAssignForm(prev => ({ ...prev, assignedColor: e.target.value }))}
+                  className="w-12 h-12 rounded border border-gray-300 cursor-pointer"
+                  data-testid="input-worker-color"
+                />
+                <div className="flex-1">
+                  <Input
+                    value={assignForm.assignedColor}
+                    onChange={(e) => setAssignForm(prev => ({ ...prev, assignedColor: e.target.value }))}
+                    placeholder="#3B82F6"
+                    data-testid="input-color-code"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    This color will identify the worker in dashboards and reports
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Color Preview */}
+            <div className="border border-gray-200 rounded-lg p-3">
+              <Label className="text-sm font-medium">Preview</Label>
+              <div className="flex items-center space-x-2 mt-2">
+                <div 
+                  className="w-4 h-4 rounded-full border"
+                  style={{ backgroundColor: assignForm.assignedColor }}
+                ></div>
+                <span className="text-sm text-gray-600">
+                  {assignForm.userId ? (workersData as any)?.workers?.find((w: any) => w.id === assignForm.userId)?.name || "Selected Worker" : "Worker Name"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAssignDialogOpen(false)}
+              data-testid="button-cancel-assign"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignWorker}
+              disabled={!assignForm.userId || assignWorkerMutation.isPending}
+              data-testid="button-confirm-assign"
+            >
+              {assignWorkerMutation.isPending ? "Assigning..." : "Assign Worker"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
