@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
@@ -18,7 +17,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { login, user, isLoading } = useAuth();
-  
+
   const form = useForm<Login>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -33,11 +32,11 @@ export default function Login() {
         method: "POST",
         body: JSON.stringify(data),
       });
-      
+
       if (!result.success) {
         throw new Error(result.message || "Login failed");
       }
-      
+
       return result;
     },
     onSuccess: (data) => {
@@ -46,7 +45,7 @@ export default function Login() {
         title: "Login successful",
         description: `Welcome back, ${data.user.name}!`,
       });
-      
+
       // Redirect based on role
       switch (data.user.role) {
         case "manager":
@@ -146,7 +145,7 @@ export default function Login() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="pin"
