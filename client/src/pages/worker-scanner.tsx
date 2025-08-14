@@ -17,7 +17,7 @@ import { BarcodeScanner } from "@/components/barcode-scanner";
 export default function WorkerScanner() {
   const { jobId } = useParams();
   const [, setLocation] = useLocation();
-  const { user, isLoading } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const { toast } = useToast();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [activeSession, setActiveSession] = useState<{ id: string; startTime: string } | null>(null);
@@ -297,7 +297,10 @@ export default function WorkerScanner() {
             <h2 className="text-xl font-bold text-gray-900 mb-2">No Jobs Assigned</h2>
             <p className="text-gray-600 mb-4">You don't have any active job assignments yet.</p>
             <p className="text-sm text-gray-500 mb-6">Please contact your supervisor to be assigned to a job.</p>
-            <Button onClick={() => setLocation("/login")} variant="outline">
+            <Button onClick={() => {
+              logout();
+              setLocation("/login");
+            }} variant="outline">
               Back to Login
             </Button>
           </div>
@@ -323,7 +326,10 @@ export default function WorkerScanner() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setLocation("/login")}
+                  onClick={() => {
+                    logout();
+                    setLocation("/login");
+                  }}
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -437,7 +443,10 @@ export default function WorkerScanner() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setLocation("/login")}
+                onClick={() => {
+                  logout();
+                  setLocation("/login");
+                }}
                 data-testid="button-logout"
               >
                 <LogOut className="h-4 w-4" />

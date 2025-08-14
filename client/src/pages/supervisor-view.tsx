@@ -14,7 +14,7 @@ import { useEffect } from "react";
 export default function SupervisorView() {
   const { jobId } = useParams();
   const [, setLocation] = useLocation();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
 
   // Fetch all jobs for supervisor (job selection)
   const { data: allJobsData } = useQuery({
@@ -108,7 +108,10 @@ export default function SupervisorView() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setLocation("/login")}
+                  onClick={() => {
+                    logout();
+                    setLocation("/login");
+                  }}
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -141,11 +144,11 @@ export default function SupervisorView() {
                 {visibleJobs.map((job: any) => {
                   const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
                   const assignedWorkers = job.assignments || [];
-                  
+
                   return (
                     <Card key={job.id} className="cursor-pointer hover:shadow-lg transition-shadow">
                       <CardContent className="p-6">
-                        <div 
+                        <div
                           className="flex items-center justify-between"
                           onClick={() => setLocation(`/supervisor/${job.id}`)}
                         >
@@ -169,7 +172,7 @@ export default function SupervisorView() {
                                 {completionPercentage}% Complete
                               </Badge>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                               <div>
                                 <p className="text-sm text-gray-600">Total Items</p>
