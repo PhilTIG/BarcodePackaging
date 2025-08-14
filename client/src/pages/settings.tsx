@@ -15,6 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useErrorContext } from "@/lib/error-context";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, Trash2, Plus, Edit3, Users, Settings as SettingsIcon, Palette } from "lucide-react";
 import { z } from "zod";
@@ -44,6 +45,7 @@ export default function Settings() {
   const { toast } = useToast();
   const { user, isLoading } = useAuth();
   const { detailedErrorMessages, setDetailedErrorMessages } = useErrorContext();
+  const { preferences, updatePreference } = useUserPreferences();
   const [activeTab, setActiveTab] = useState<"general" | "users">("general");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -56,6 +58,7 @@ export default function Settings() {
     targetScansPerHour: 71,
     autoSaveSessions: true,
     showRealtimeStats: true,
+    maxBoxesPerRow: 12,
   });
 
   // Redirect if not authenticated or not a manager
@@ -380,6 +383,22 @@ export default function Settings() {
                   <SelectItem value="bluetooth">Bluetooth Scanner</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label className="text-base font-medium text-gray-900">Maximum Boxes Per Row</Label>
+              <Input
+                type="number"
+                value={preferences.maxBoxesPerRow}
+                onChange={(e) => updatePreference("maxBoxesPerRow", parseInt(e.target.value) || 12)}
+                min="4"
+                max="16"
+                className="mt-2"
+                data-testid="input-max-boxes-per-row"
+              />
+              <p className="text-sm text-gray-600 mt-1">
+                Sets maximum boxes displayed per row on wide screens (4-16). Layout automatically adjusts for smaller screens.
+              </p>
             </div>
           </CardContent>
         </Card>

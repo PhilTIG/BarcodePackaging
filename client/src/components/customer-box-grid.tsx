@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Lock } from "lucide-react";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 interface Product {
   id: string;
@@ -19,6 +20,8 @@ interface CustomerBoxGridProps {
 }
 
 export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBoxGridProps) {
+  const { preferences } = useUserPreferences();
+  
   const boxData = useMemo(() => {
     const boxes: { [key: number]: {
       boxNumber: number;
@@ -52,8 +55,9 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
       }
     });
 
-    // Fill in empty boxes up to 8
-    for (let i = 1; i <= 8; i++) {
+    // Fill in empty boxes up to maxBoxesPerRow * 2 (to allow for multiple rows)
+    const maxBoxes = Math.min(preferences.maxBoxesPerRow * 2, 16);
+    for (let i = 1; i <= maxBoxes; i++) {
       if (!boxes[i]) {
         boxes[i] = {
           boxNumber: i,
@@ -67,10 +71,33 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
     }
 
     return Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
-  }, [products]);
+  }, [products, preferences.maxBoxesPerRow]);
+
+  // Create responsive grid classes based on user preference
+  const getGridClasses = () => {
+    const maxCols = preferences.maxBoxesPerRow;
+    
+    // Base classes for mobile (always 2 columns)
+    let gridClasses = "grid grid-cols-2 gap-3";
+    
+    // Tablet and desktop responsive classes based on maxBoxesPerRow
+    if (maxCols <= 4) {
+      gridClasses += " md:grid-cols-4";
+    } else if (maxCols <= 6) {
+      gridClasses += " md:grid-cols-4 lg:grid-cols-6";
+    } else if (maxCols <= 8) {
+      gridClasses += " md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8";
+    } else if (maxCols <= 12) {
+      gridClasses += " md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12";
+    } else {
+      gridClasses += " md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 2xl:grid-cols-16";
+    }
+    
+    return gridClasses;
+  };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="customer-box-grid">
+    <div className={getGridClasses()} data-testid="customer-box-grid">
       {boxData.map((box) => {
         const completionPercentage = box.totalQty > 0 ? Math.round((box.scannedQty / box.totalQty) * 100) : 0;
         
@@ -90,9 +117,9 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
             id={box.isActive ? "scan-flash-target" : undefined}
             data-testid={`box-${box.boxNumber}`}
           >
-            {/* Box Number Badge */}
-            <div className="absolute top-2 right-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+            {/* Box Number Badge - Center Right, 2x Size */}
+            <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white ${
                 box.isComplete 
                   ? "bg-success-500" 
                   : box.isActive 
@@ -117,7 +144,7 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
               </div>
             )}
 
-            <div className="mb-3">
+            <div className="mb-3 pr-16">
               <h3 className="font-medium text-gray-900 text-sm truncate" data-testid={`customer-name-${box.boxNumber}`}>
                 {box.customerName === "Unassigned" ? "Unassigned" : `Customer: ${box.customerName}`}
               </h3>
@@ -126,7 +153,7 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 pr-16">
               <div className={`text-lg font-bold ${
                 box.isComplete 
                   ? "text-success-600" 
