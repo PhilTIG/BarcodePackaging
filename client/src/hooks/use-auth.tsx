@@ -29,8 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     enabled: !!localStorage.getItem("token") && !isInitialized,
     retry: false,
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/auth/me");
-      return response.json();
+      return await apiRequest("/api/auth/me", { method: "GET" });
     },
   });
 

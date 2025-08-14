@@ -11,7 +11,7 @@ export async function apiRequest(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<any> {
-  const token = localStorage.getItem("auth-token");
+  const token = localStorage.getItem("token");
 
   // Ensure we have the correct base URL
   const baseUrl = window.location.origin;
@@ -29,7 +29,7 @@ export async function apiRequest(
   const response = await fetch(url, config);
 
   await throwIfResNotOk(response);
-  return response;
+  return response.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

@@ -28,10 +28,14 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: Login) => {
+      console.log("Attempting login with:", data);
+      
       const result = await apiRequest("/api/auth/login", {
         method: "POST",
         body: JSON.stringify(data),
       });
+
+      console.log("Login response:", result);
 
       if (!result.success) {
         throw new Error(result.message || "Login failed");
