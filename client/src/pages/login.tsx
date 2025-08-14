@@ -1,19 +1,17 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { Package } from "lucide-react";
 import { loginSchema, type Login } from "@shared/schema";
-import { Settings, Package } from "lucide-react";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -147,7 +145,7 @@ export default function Login() {
               onClick={() => setLocation("/settings")}
               data-testid="button-settings"
             >
-              <Settings className="mr-2 h-4 w-4" />
+              <SettingsIcon className="mr-2 h-4 w-4" />
               Settings
             </Button>
           </div>
