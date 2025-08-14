@@ -16,6 +16,12 @@ export default function SupervisorView() {
   const [, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
 
+  // Fetch all jobs for supervisor (job selection)
+  const { data: allJobsData } = useQuery({
+    queryKey: ["/api/jobs"],
+    enabled: !!user && !jobId,
+  });
+
   // Fetch job details
   const { data: jobData } = useQuery({
     queryKey: ["/api/jobs", jobId],
@@ -57,22 +63,163 @@ export default function SupervisorView() {
   // This check is now redundant due to the useEffect hook above, but kept for clarity.
   // The useEffect ensures we navigate away before this point if not authenticated.
   if (!user || (user.role !== "supervisor" && user.role !== "manager")) {
-     // The useEffect hook handles the navigation, so this block should ideally not be reached
-     // if the user is not a supervisor or manager after auth is loaded.
-     // However, as a safeguard or for cases where the useEffect might not run as expected,
-     // we can keep a minimal return or a navigation call here.
-     // For this specific context, the useEffect is the primary handler.
      return null;
+  }
+
+  // Show job selection interface when no jobId
+  if (!jobId) {
+    if (isLoading || !allJobsData) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading jobs...</p>
+          </div>
+        </div>
+      );
+    }
+
+    const jobs = allJobsData.jobs || [];
+    const activeJobs = jobs.filter(job => job.status === 'active');
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary-100 w-10 h-10 rounded-lg flex items-center justify-center">
+                  <Settings className="text-primary-600" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Supervisor Dashboard</h1>
+                  <p className="text-sm text-gray-600">Select a job to monitor</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation("/settings")}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation("/login")}
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="p-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Active Jobs</h2>
+              <p className="text-sm text-gray-600">
+                Monitor progress, assign workers, and track performance
+              </p>
+            </div>
+
+            {activeJobs.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <div className="bg-gray-100 w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <Package className="text-gray-400 w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Jobs</h3>
+                  <p className="text-gray-600">No jobs are currently active for monitoring.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {activeJobs.map((job) => {
+                  const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
+                  const assignedWorkers = job.assignments || [];
+                  
+                  return (
+                    <Card key={job.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+                      <CardContent className="p-6">
+                        <div 
+                          className="flex items-center justify-between"
+                          onClick={() => setLocation(`/supervisor/${job.id}`)}
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {job.name}
+                              </h3>
+                              <Badge
+                                variant={completionPercentage === 100 ? "success" : "secondary"}
+                                className="ml-2"
+                              >
+                                {completionPercentage}% Complete
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                              <div>
+                                <p className="text-sm text-gray-600">Total Items</p>
+                                <p className="text-lg font-semibold text-gray-900">{job.totalProducts}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Assigned Workers</p>
+                                <div className="flex items-center gap-1 mt-1">
+                                  {assignedWorkers.slice(0, 3).map((assignment, index) => (
+                                    <div
+                                      key={assignment.id}
+                                      className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
+                                      style={{ backgroundColor: assignment.assignedColor }}
+                                      title={assignment.assignee?.name}
+                                    />
+                                  ))}
+                                  {assignedWorkers.length > 3 && (
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      +{assignedWorkers.length - 3} more
+                                    </span>
+                                  )}
+                                  {assignedWorkers.length === 0 && (
+                                    <span className="text-sm text-gray-500">None assigned</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Progress</p>
+                                <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                  <div
+                                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                                    style={{ width: `${completionPercentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <Button size="sm" className="ml-4">
+                            Monitor
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!jobData?.job) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Job not found</p>
-          <Button onClick={() => setLocation("/manager")} className="mt-4">
-            Back to Dashboard
-          </Button>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading job details...</p>
         </div>
       </div>
     );
@@ -91,10 +238,10 @@ export default function SupervisorView() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setLocation("/manager")}
+                onClick={() => setLocation("/supervisor")}
                 data-testid="button-back"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Job Monitor</h1>

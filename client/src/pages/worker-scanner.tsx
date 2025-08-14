@@ -33,6 +33,13 @@ export default function WorkerScanner() {
     accuracy: 100,
     score: 0,
   });
+  const [showJobSelector, setShowJobSelector] = useState(false);
+
+  // Fetch worker's job assignments
+  const { data: assignmentsData } = useQuery({
+    queryKey: ["/api/users/me/assignments"],
+    enabled: !!user && user.role === "worker",
+  });
 
   // Fetch job details
   const { data: jobData } = useQuery({
@@ -66,6 +73,24 @@ export default function WorkerScanner() {
       setLocation("/login");
     }
   }, [user, isLoading, setLocation]);
+
+  // Handle job selection logic for workers
+  useEffect(() => {
+    if (!user || user.role !== "worker" || !assignmentsData || jobId) return;
+
+    const assignments = assignmentsData.assignments || [];
+    
+    if (assignments.length === 0) {
+      // No assignments - stay on scanner page and show no assignments message
+      return;
+    } else if (assignments.length === 1) {
+      // Only one assignment - auto-redirect to that job
+      setLocation(`/scanner/${assignments[0].jobId}`);
+    } else {
+      // Multiple assignments - show job selector
+      setShowJobSelector(true);
+    }
+  }, [user, assignmentsData, jobId, setLocation]);
 
   // Create scan session mutation
   const createSessionMutation = useMutation({
@@ -247,14 +272,125 @@ export default function WorkerScanner() {
     return null;
   }
 
+  // Show job selection interface when no jobId and multiple assignments
+  if (!jobId) {
+    const assignments = assignmentsData?.assignments || [];
+    
+    if (isLoading || !assignmentsData) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading assignments...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (assignments.length === 0) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="bg-primary-100 w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Package className="text-primary-600 w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">No Jobs Assigned</h2>
+            <p className="text-gray-600 mb-4">You don't have any active job assignments yet.</p>
+            <p className="text-sm text-gray-500 mb-6">Please contact your supervisor to be assigned to a job.</p>
+            <Button onClick={() => setLocation("/login")} variant="outline">
+              Back to Login
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (assignments.length > 1 || showJobSelector) {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <header className="bg-white shadow-sm border-b border-gray-200">
+            <div className="px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-primary-100 w-10 h-10 rounded-lg flex items-center justify-center">
+                    <Package className="text-primary-600" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-gray-900">Select Job</h1>
+                    <p className="text-sm text-gray-600">Choose a job to work on</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation("/login")}
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </header>
+
+          <div className="p-4">
+            <div className="max-w-2xl mx-auto">
+              <div className="grid gap-4">
+                {assignments.map((assignment) => {
+                  const job = assignment.job;
+                  const completionPercentage = job ? Math.round((job.completedItems / job.totalProducts) * 100) : 0;
+                  
+                  return (
+                    <Card key={assignment.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+                      <CardContent className="p-6">
+                        <div 
+                          className="flex items-center justify-between"
+                          onClick={() => setLocation(`/scanner/${assignment.jobId}`)}
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div 
+                                className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                                style={{ backgroundColor: assignment.assignedColor }}
+                              />
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {job?.name || 'Loading...'}
+                              </h3>
+                            </div>
+                            {job && (
+                              <>
+                                <p className="text-sm text-gray-600 mb-2">
+                                  {job.totalProducts} total items • {completionPercentage}% complete
+                                </p>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                                    style={{ width: `${completionPercentage}%` }}
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <Button size="sm">
+                            Start Working
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
   if (!jobData?.job) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">No job assigned</p>
-          <Button onClick={() => setLocation("/login")} className="mt-4">
-            Back to Login
-          </Button>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading job details...</p>
         </div>
       </div>
     );
@@ -279,6 +415,17 @@ export default function WorkerScanner() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {/* Show job switching button if worker has multiple assignments */}
+              {assignmentsData?.assignments && assignmentsData.assignments.length > 1 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowJobSelector(true)}
+                  data-testid="button-switch-job"
+                >
+                  Switch Job
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

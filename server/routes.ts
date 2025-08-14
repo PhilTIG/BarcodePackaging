@@ -342,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Worker assignment to job
-  app.post('/api/jobs/:jobId/assign', requireAuth, requireRole(['manager']), async (req, res) => {
+  app.post('/api/jobs/:jobId/assign', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
     try {
       const { jobId } = req.params;
       const { userId, assignedColor } = req.body;
@@ -494,7 +494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unassign worker from job
-  app.delete('/api/jobs/:jobId/assign/:userId', requireAuth, requireRole(['manager']), async (req, res) => {
+  app.delete('/api/jobs/:jobId/assign/:userId', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
     try {
       const { jobId, userId } = req.params;
 
@@ -526,6 +526,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ 
         message: error.message || 'Failed to unassign worker from job'
       });
+    }
+  });
+
+  // Get current user's assignments with job details
+  app.get('/api/users/me/assignments', requireAuth, async (req, res) => {
+    try {
+      const assignments = await storage.getJobAssignmentsByUser(req.user!.id);
+      const assignmentsWithJobs = await Promise.all(
+        assignments.map(async (assignment) => {
+          const job = await storage.getJob(assignment.jobId);
+          return {
+            ...assignment,
+            job
+          };
+        })
+      );
+      res.json({ assignments: assignmentsWithJobs });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch user assignments' });
     }
   });
 

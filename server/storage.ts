@@ -157,14 +157,13 @@ export class DatabaseStorage implements IStorage {
     const scannedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
 
     // Get worker performance data for all assigned workers
-    console.log('Assignments found:', assignments.length);
     const workersData = await Promise.all(
       assignments.map(async (assignment) => {
         const session = sessions.find(s => s.userId === assignment.userId);
         const events = session ? await this.getScanEventsBySessionId(session.id) : [];
         const performance = session ? await this.getSessionPerformance(session.id) : null;
 
-        const workerData = {
+        return {
           id: assignment.userId,
           name: assignment.assignee.name,
           isActive: session?.status === 'active' || false,
@@ -176,11 +175,8 @@ export class DatabaseStorage implements IStorage {
           lastScan: events.length > 0 ? events[events.length - 1].scanTime : null,
           assignedColor: assignment.assignedColor,
         };
-        console.log('Worker data for', assignment.assignee.name, ':', workerData);
-        return workerData;
       })
     );
-    console.log('Total workers data:', workersData.length);
 
     return {
       progress: {
