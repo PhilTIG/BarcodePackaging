@@ -251,7 +251,7 @@ export class DatabaseStorage implements IStorage {
 
   private async updateJobCompletedItems(jobId: string): Promise<void> {
     const jobProducts = await this.getProductsByJobId(jobId);
-    const completedItems = jobProducts.reduce((sum, p) => sum + p.scannedQty, 0);
+    const completedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
     
     await db
       .update(jobs)
@@ -330,7 +330,7 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     let timeSincePrevious = null;
-    if (previousEvents.length > 0) {
+    if (previousEvents.length > 0 && previousEvents[0].scanTime) {
       timeSincePrevious = Date.now() - new Date(previousEvents[0].scanTime).getTime();
     }
 
@@ -407,11 +407,11 @@ export class DatabaseStorage implements IStorage {
           .where(eq(products.barCode, event.barCode));
 
         for (const product of jobProducts) {
-          if (product.scannedQty > 0) {
+          if ((product.scannedQty || 0) > 0) {
             await db
               .update(products)
               .set({ 
-                scannedQty: product.scannedQty - 1,
+                scannedQty: (product.scannedQty || 0) - 1,
                 isComplete: false
               })
               .where(eq(products.id, product.id));
@@ -433,8 +433,8 @@ export class DatabaseStorage implements IStorage {
     const undoEvents = events.filter(e => e.eventType === 'undo');
 
     const sessionDuration = session.endTime 
-      ? new Date(session.endTime).getTime() - new Date(session.startTime).getTime()
-      : Date.now() - new Date(session.startTime).getTime();
+      ? new Date(session.endTime).getTime() - new Date(session.startTime!).getTime()
+      : Date.now() - new Date(session.startTime!).getTime();
 
     const sessionHours = sessionDuration / (1000 * 60 * 60);
     const scansPerHour = sessionHours > 0 ? Math.round(scanEvents.length / sessionHours) : 0;

@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/auth/me', requireAuth, async (req, res) => {
+  app.get('/api/auth/me', requireAuth, async (req: AuthenticatedRequest, res) => {
     res.json({
       user: {
         id: req.user!.id,
@@ -228,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Job management routes
-  app.post('/api/jobs', requireAuth, requireRole(['manager']), upload.single('csv'), async (req, res) => {
+  app.post('/api/jobs', requireAuth, requireRole(['manager']), upload.single('csv'), async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'CSV file is required' });
@@ -342,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Worker assignment to job
-  app.post('/api/jobs/:jobId/assign', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+  app.post('/api/jobs/:jobId/assign', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId } = req.params;
       const { userId, assignedColor } = req.body;
@@ -390,7 +390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/auth/me', requireAuth, async (req, res) => {
+  app.get('/api/auth/me', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       res.json({ 
         user: {
@@ -464,7 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Job assignments
-  app.post('/api/jobs/:id/assignments', requireAuth, requireRole(['manager']), async (req, res) => {
+  app.post('/api/jobs/:id/assignments', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
     try {
       const { userIds } = req.body;
       const assignments = [];
@@ -530,12 +530,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get current user's assignments with job details
-  app.get('/api/users/me/assignments', requireAuth, async (req, res) => {
+  app.get('/api/users/me/assignments', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const assignments = await storage.getJobAssignmentsByUser(req.user!.id);
       const assignmentsWithJobs = await Promise.all(
         assignments.map(async (assignment) => {
-          const job = await storage.getJob(assignment.jobId);
+          const job = await storage.getJobById(assignment.jobId);
           return {
             ...assignment,
             job
@@ -549,7 +549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Scanning routes
-  app.post('/api/scan-sessions', requireAuth, requireRole(['worker']), async (req, res) => {
+  app.post('/api/scan-sessions', requireAuth, requireRole(['worker']), async (req: AuthenticatedRequest, res) => {
     try {
       const sessionData = {
         jobId: req.body.jobId,
@@ -564,7 +564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/scan-sessions/my-active', requireAuth, requireRole(['worker']), async (req, res) => {
+  app.get('/api/scan-sessions/my-active', requireAuth, requireRole(['worker']), async (req: AuthenticatedRequest, res) => {
     try {
       const session = await storage.getActiveScanSession(req.user!.id);
       res.json({ session });
@@ -573,7 +573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/scan-events', requireAuth, requireRole(['worker']), async (req, res) => {
+  app.post('/api/scan-events', requireAuth, requireRole(['worker']), async (req: AuthenticatedRequest, res) => {
     try {
       const eventData = req.body;
       const scanEvent = await storage.createScanEvent(eventData);
@@ -597,7 +597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/scan-events/undo', requireAuth, requireRole(['worker']), async (req, res) => {
+  app.post('/api/scan-events/undo', requireAuth, requireRole(['worker']), async (req: AuthenticatedRequest, res) => {
     try {
       const { sessionId, count = 1 } = req.body;
       
@@ -686,7 +686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/users', requireAuth, requireRole(['manager']), async (req, res) => {
+  app.post('/api/users', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
     try {
       const { staffId, name, role, pin } = req.body;
       
@@ -728,7 +728,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/users/:id', requireAuth, requireRole(['manager']), async (req, res) => {
+  app.put('/api/users/:id', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
     try {
       const { staffId, name, role, pin } = req.body;
       const userId = req.params.id;
@@ -778,7 +778,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/users/:id', requireAuth, requireRole(['manager']), async (req, res) => {
+  app.delete('/api/users/:id', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.params.id;
 
