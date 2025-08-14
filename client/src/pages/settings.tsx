@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useErrorContext } from "@/lib/error-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, Trash2, Plus, Edit3, Users, Settings as SettingsIcon, Palette } from "lucide-react";
 import { z } from "zod";
@@ -42,6 +43,7 @@ export default function Settings() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, isLoading } = useAuth();
+  const { detailedErrorMessages, setDetailedErrorMessages } = useErrorContext();
   const [activeTab, setActiveTab] = useState<"general" | "users">("general");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -54,7 +56,6 @@ export default function Settings() {
     targetScansPerHour: 71,
     autoSaveSessions: true,
     showRealtimeStats: true,
-    detailedErrorMessages: false,
   });
 
   // Redirect if not authenticated or not a manager
@@ -158,10 +159,14 @@ export default function Settings() {
   };
 
   const handleSettingChange = (key: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: value,
-    }));
+    if (key === "detailedErrorMessages") {
+      setDetailedErrorMessages(value);
+    } else {
+      setSettings(prev => ({
+        ...prev,
+        [key]: value,
+      }));
+    }
   };
 
   const handleClearData = () => {
@@ -429,7 +434,7 @@ export default function Settings() {
                 <p className="text-sm text-gray-600">Show detailed CSV validation errors instead of summary</p>
               </div>
               <Switch
-                checked={settings.detailedErrorMessages}
+                checked={detailedErrorMessages}
                 onCheckedChange={(checked) => handleSettingChange("detailedErrorMessages", checked)}
                 data-testid="switch-detailed-errors"
               />

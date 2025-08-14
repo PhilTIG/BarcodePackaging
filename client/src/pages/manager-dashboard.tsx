@@ -12,6 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useErrorContext } from "@/lib/error-context";
+import { ErrorDialog } from "@/components/ui/error-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus } from "lucide-react";
 import { z } from "zod";
@@ -28,12 +30,15 @@ export default function ManagerDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, logout, isLoading } = useAuth();
+  const { formatError, getErrorDetails } = useErrorContext();
   const [uploadSuccess, setUploadSuccess] = useState<{
     productsCount: number;
     customersCount: number;
     job: any;
   } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [currentError, setCurrentError] = useState<any>(null);
 
   // Redirect if not authenticated or not a manager
   useEffect(() => {
@@ -102,16 +107,35 @@ export default function ManagerDashboard() {
     },
     onError: (error: any) => {
       console.error('Upload error:', error);
+      setCurrentError(error);
       
-      // Show detailed error for header issues
-      const isHeaderError = error.message?.includes('header error');
-      const showDetailed = isHeaderError || error.message?.includes('CustomerName');
+      const errorDetails = getErrorDetails(error);
+      const formattedMessage = formatError(error, "Please check your CSV format and try again");
       
-      toast({
-        title: "CSV Upload Failed",
-        description: showDetailed ? error.message : "Please check your CSV format and try again",
-        variant: "destructive",
-      });
+      // If there are more than 3 errors and detailed mode is enabled, show "More..." option
+      if (errorDetails.length > 3) {
+        toast({
+          title: "CSV Upload Failed",
+          description: formattedMessage,
+          variant: "destructive",
+          action: (
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setErrorDialogOpen(true)}
+              data-testid="button-more-errors"
+            >
+              More...
+            </Button>
+          ),
+        });
+      } else {
+        toast({
+          title: "CSV Upload Failed",
+          description: formattedMessage,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -470,6 +494,14 @@ export default function ManagerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Error Details Dialog */}
+      <ErrorDialog
+        isOpen={errorDialogOpen}
+        onClose={() => setErrorDialogOpen(false)}
+        title="CSV Upload Errors"
+        errors={currentError ? getErrorDetails(currentError) : []}
+      />
     </div>
   );
 }
