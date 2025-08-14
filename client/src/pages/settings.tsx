@@ -480,7 +480,7 @@ export default function Settings() {
                       Add User
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className="sm:max-w-md bg-white text-black border border-gray-200">
                     <DialogHeader>
                       <DialogTitle>
                         {editingUser ? "Edit User" : "Add New User"}
