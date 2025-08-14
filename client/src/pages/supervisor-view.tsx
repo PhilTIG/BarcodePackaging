@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { ArrowLeft, Package } from "lucide-react";
+import { Settings, LogOut, Users, Package, ChevronLeft } from "lucide-react";
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { PerformanceDashboard } from "@/components/performance-dashboard";
 import { useEffect } from "react";
@@ -79,8 +79,8 @@ export default function SupervisorView() {
       );
     }
 
-    const jobs = allJobsData.jobs || [];
-    const activeJobs = jobs.filter(job => job.status === 'active');
+    const jobs = allJobsData?.jobs || [];
+    const activeJobs = jobs.filter((job: any) => job.status === 'active');
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -137,7 +137,7 @@ export default function SupervisorView() {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {activeJobs.map((job) => {
+                {activeJobs.map((job: any) => {
                   const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
                   const assignedWorkers = job.assignments || [];
                   
@@ -154,7 +154,7 @@ export default function SupervisorView() {
                                 {job.name}
                               </h3>
                               <Badge
-                                variant={completionPercentage === 100 ? "success" : "secondary"}
+                                variant={completionPercentage === 100 ? "default" : "secondary"}
                                 className="ml-2"
                               >
                                 {completionPercentage}% Complete
@@ -169,7 +169,7 @@ export default function SupervisorView() {
                               <div>
                                 <p className="text-sm text-gray-600">Assigned Workers</p>
                                 <div className="flex items-center gap-1 mt-1">
-                                  {assignedWorkers.slice(0, 3).map((assignment, index) => (
+                                  {assignedWorkers.slice(0, 3).map((assignment: any, index: number) => (
                                     <div
                                       key={assignment.id}
                                       className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
@@ -226,6 +226,7 @@ export default function SupervisorView() {
   }
 
   const { job, products } = jobData;
+  const progress = progressData?.progress;
   const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
 
   return (
@@ -243,6 +244,9 @@ export default function SupervisorView() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
+              <div className="bg-primary-100 w-10 h-10 rounded-lg flex items-center justify-center">
+                <Users className="text-primary-600" />
+              </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Job Monitor</h1>
                 <p className="text-sm text-gray-600">{job.name}</p>
@@ -254,8 +258,8 @@ export default function SupervisorView() {
                 {job.completedItems} of {job.totalProducts} items
               </p>
               <div className="flex items-center mt-1">
-                <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-success-500' : 'bg-gray-400'}`}></div>
-                <span className={`text-xs ${isConnected ? 'text-success-600' : 'text-gray-600'}`}>
+                <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                <span className={`text-xs ${isConnected ? 'text-green-600' : 'text-gray-600'}`}>
                   {isConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
@@ -272,12 +276,12 @@ export default function SupervisorView() {
               <CardTitle>Overall Progress</CardTitle>
               <div className="flex items-center space-x-4 text-sm">
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-success-500 rounded-full mr-2"></div>
-                  <span className="text-gray-600">Active ({progressData?.progress?.activeSessions || 0})</span>
+                  <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                  <span className="text-gray-600">Active ({progress?.activeSessions || 0})</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
-                  <span className="text-gray-600">Waiting ({progressData?.progress?.waitingSessions || 0})</span>
+                  <span className="text-gray-600">Waiting ({progress?.waitingSessions || 0})</span>
                 </div>
               </div>
             </div>
