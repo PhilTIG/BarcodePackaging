@@ -80,7 +80,8 @@ export default function SupervisorView() {
     }
 
     const jobs = allJobsData?.jobs || [];
-    const activeJobs = jobs.filter((job: any) => job.status === 'active');
+    // Supervisors can see all jobs regardless of status
+    const visibleJobs = jobs;
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -119,25 +120,25 @@ export default function SupervisorView() {
         <div className="p-4">
           <div className="max-w-4xl mx-auto">
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Active Jobs</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Available Jobs</h2>
               <p className="text-sm text-gray-600">
                 Monitor progress, assign workers, and track performance
               </p>
             </div>
 
-            {activeJobs.length === 0 ? (
+            {visibleJobs.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <div className="bg-gray-100 w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4">
                     <Package className="text-gray-400 w-8 h-8" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Jobs</h3>
-                  <p className="text-gray-600">No jobs are currently active for monitoring.</p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Jobs Available</h3>
+                  <p className="text-gray-600">No jobs are currently available for monitoring.</p>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid gap-4">
-                {activeJobs.map((job: any) => {
+                {visibleJobs.map((job: any) => {
                   const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
                   const assignedWorkers = job.assignments || [];
                   
@@ -150,9 +151,17 @@ export default function SupervisorView() {
                         >
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-3">
-                              <h3 className="text-lg font-semibold text-gray-900">
-                                {job.name}
-                              </h3>
+                              <div className="flex items-center gap-3">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                  {job.name}
+                                </h3>
+                                <Badge
+                                  variant={job.status === 'active' ? "default" : job.status === 'pending' ? "secondary" : "outline"}
+                                  className="text-xs"
+                                >
+                                  {job.status}
+                                </Badge>
+                              </div>
                               <Badge
                                 variant={completionPercentage === 100 ? "default" : "secondary"}
                                 className="ml-2"
