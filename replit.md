@@ -4,6 +4,16 @@
 
 This is a comprehensive warehouse sorting application designed to streamline the sorting process of purchased goods with different customer destinations. The app provides role-based interfaces for managers, supervisors, and warehouse workers to upload CSV data, track job progress, and perform barcode scanning operations. The system emphasizes real-time collaboration, performance tracking, and efficient sorting workflows with visual feedback and progress monitoring.
 
+## Recent Changes (January 2025)
+
+**Enhanced Active Jobs UI (January 14, 2025):**
+- **Box Counting**: Changed "customers" to "boxes" terminology throughout the interface, reflecting that each customer destination represents one box
+- **Progress Visualization**: Enhanced progress bars with clear percentage display and improved visual hierarchy
+- **Boxes Complete Counter**: Added bottom-right positioned counter showing "X/Y boxes complete" in a dedicated widget
+- **Worker Name Display**: Cleaned up worker assignment display by removing staff IDs from the Active Jobs section
+- **Completion Highlighting**: Implemented light green background for 100% completed jobs
+- **Layout Improvements**: Added proper spacing to prevent overlap with the new boxes counter widget
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

@@ -485,98 +485,121 @@ export default function ManagerDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {(jobsData as any)?.jobs?.map((job: any) => (
-                  <div key={job.id} className="border border-gray-200 rounded-lg p-4" data-testid={`job-card-${job.id}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="font-medium text-gray-900">{job.name}</h3>
-                        <p className="text-sm text-gray-600">
-                          {job.totalProducts} products, {job.totalCustomers} customers
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge
-                          variant={
-                            job.status === "completed"
-                              ? "default"
-                              : job.status === "active"
-                              ? "secondary"
-                              : "outline"
-                          }
-                        >
-                          {job.status === "completed" ? "Completed" : job.status === "active" ? "In Progress" : "Pending"}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
-                      <span>Progress: {Math.round((job.completedItems / job.totalProducts) * 100)}% complete</span>
-                      <span>Created: {new Date(job.createdAt).toLocaleDateString()}</span>
-                    </div>
-
-                    <Progress value={(job.completedItems / job.totalProducts) * 100} className="mb-4" />
-
-                    {/* Assigned Workers Display */}
-                    {job.assignments && job.assignments.length > 0 && (
-                      <div className="mb-4">
-                        <p className="text-sm text-gray-600 mb-2">Assigned Workers:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {job.assignments.map((assignment: any) => (
-                            <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1 group">
-                              <div 
-                                className="w-3 h-3 rounded-full border border-gray-300"
-                                style={{ backgroundColor: assignment.assignedColor || '#3B82F6' }}
-                                data-testid={`worker-color-${assignment.assignee.id}`}
-                              ></div>
-                              <span className="text-sm text-gray-700 font-medium">
-                                {assignment.assignee.name}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                ({assignment.assignee.staffId})
-                              </span>
-                              <button
-                                onClick={() => handleUnassignWorker(job.id, assignment.assignee.id)}
-                                className="ml-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                data-testid={`unassign-${assignment.assignee.id}`}
-                                title="Unassign worker"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
+                {(jobsData as any)?.jobs?.map((job: any) => {
+                  const progressPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
+                  const isCompleted = progressPercentage === 100;
+                  const completedBoxes = Math.round((job.completedItems / job.totalProducts) * job.totalCustomers);
+                  
+                  return (
+                    <div 
+                      key={job.id} 
+                      className={`border border-gray-200 rounded-lg p-4 relative ${isCompleted ? 'bg-green-50 border-green-200' : ''}`} 
+                      data-testid={`job-card-${job.id}`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{job.name}</h3>
+                          <p className="text-sm text-gray-600">
+                            {job.totalProducts} products, {job.totalCustomers} boxes
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge
+                            variant={
+                              job.status === "completed"
+                                ? "default"
+                                : job.status === "active"
+                                ? "secondary"
+                                : "outline"
+                            }
+                          >
+                            {job.status === "completed" ? "Completed" : job.status === "active" ? "In Progress" : "Pending"}
+                          </Badge>
                         </div>
                       </div>
-                    )}
 
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setLocation(`/supervisor/${job.id}`)}
-                        data-testid={`button-monitor-${job.id}`}
-                      >
-                        <Eye className="mr-1 h-4 w-4" />
-                        Monitor
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
-                          setSelectedJobId(job.id);
-                          setAssignDialogOpen(true);
-                        }}
-                        data-testid={`button-assign-${job.id}`}
-                      >
-                        <Users className="mr-1 h-4 w-4" />
-                        Assign Workers
-                      </Button>
-                      <Button variant="outline" size="sm" data-testid={`button-export-${job.id}`}>
-                        <Download className="mr-1 h-4 w-4" />
-                        Export
-                      </Button>
+                      <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
+                        <span>Created: {new Date(job.createdAt).toLocaleDateString()}</span>
+                      </div>
+
+                      {/* Progress Bar with Percentage */}
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                          <span>Progress</span>
+                          <span>{progressPercentage}% complete</span>
+                        </div>
+                        <Progress value={progressPercentage} className="mb-2" />
+                      </div>
+
+                      {/* Boxes Complete Counter - Bottom Right */}
+                      <div className="absolute bottom-4 right-4">
+                        <div className="bg-white border border-gray-300 rounded-md px-2 py-1 shadow-sm">
+                          <div className="text-xs text-gray-500 font-medium">Boxes Complete</div>
+                          <div className="text-sm font-bold text-gray-900" data-testid={`boxes-complete-${job.id}`}>
+                            {completedBoxes}/{job.totalCustomers}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Assigned Workers Display */}
+                      {job.assignments && job.assignments.length > 0 && (
+                        <div className="mb-4 mr-24">
+                          <p className="text-sm text-gray-600 mb-2">Assigned Workers:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {job.assignments.map((assignment: any) => (
+                              <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1 group">
+                                <div 
+                                  className="w-3 h-3 rounded-full border border-gray-300"
+                                  style={{ backgroundColor: assignment.assignedColor || '#3B82F6' }}
+                                  data-testid={`worker-color-${assignment.assignee.id}`}
+                                ></div>
+                                <span className="text-sm text-gray-700 font-medium">
+                                  {assignment.assignee.name}
+                                </span>
+                                <button
+                                  onClick={() => handleUnassignWorker(job.id, assignment.assignee.id)}
+                                  className="ml-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  data-testid={`unassign-${assignment.assignee.id}`}
+                                  title="Unassign worker"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2 mr-24">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setLocation(`/supervisor/${job.id}`)}
+                          data-testid={`button-monitor-${job.id}`}
+                        >
+                          <Eye className="mr-1 h-4 w-4" />
+                          Monitor
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            setSelectedJobId(job.id);
+                            setAssignDialogOpen(true);
+                          }}
+                          data-testid={`button-assign-${job.id}`}
+                        >
+                          <Users className="mr-1 h-4 w-4" />
+                          Assign Workers
+                        </Button>
+                        <Button variant="outline" size="sm" data-testid={`button-export-${job.id}`}>
+                          <Download className="mr-1 h-4 w-4" />
+                          Export
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {!(jobsData as any)?.jobs?.length && (
                   <div className="text-center py-8 text-gray-500">
