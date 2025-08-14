@@ -41,11 +41,11 @@ type UserFormData = z.infer<typeof userFormSchema>;
 export default function Settings() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<"general" | "users">("general");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
-  
+
   const [settings, setSettings] = useState({
     autoClearInput: true,
     soundFeedback: true,
@@ -56,14 +56,14 @@ export default function Settings() {
     showRealtimeStats: true,
   });
 
-  // Redirect if not manager (only managers can access settings)
+  // Redirect if not authenticated or not a manager
   useEffect(() => {
-    if (!user) {
+    if (!isLoading && !user) {
       setLocation("/login");
-    } else if (user.role !== "manager") {
+    } else if (user && user.role !== "manager") {
       setLocation("/login");
     }
-  }, [user, setLocation]);
+  }, [user, isLoading, setLocation]);
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
@@ -204,6 +204,10 @@ export default function Settings() {
     setEditingUser(null);
     setIsCreateDialogOpen(false);
   };
+
+  if (isLoading) {
+    return null; // Or a loading spinner
+  }
 
   if (!user || user.role !== "manager") {
     return null;

@@ -27,17 +27,19 @@ type UploadForm = z.infer<typeof uploadFormSchema>;
 export default function ManagerDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const [uploadSuccess, setUploadSuccess] = useState<any>(null);
 
-  // Redirect if not authenticated or wrong role
+  // Redirect if not authenticated or not a manager
   useEffect(() => {
-    if (!user) {
+    if (!isLoading && !user) {
       setLocation("/login");
-    } else if (user.role !== "manager") {
+      return;
+    }
+    if (user && user.role !== "manager") {
       setLocation("/login");
     }
-  }, [user, setLocation]);
+  }, [user, isLoading, setLocation]);
 
   if (!user || user.role !== "manager") {
     return null;
@@ -119,7 +121,7 @@ export default function ManagerDashboard() {
   const onSubmit = (data: UploadForm) => {
     const fileInput = document.getElementById("csv-upload") as HTMLInputElement;
     const file = fileInput?.files?.[0];
-    
+
     if (!file) {
       toast({
         title: "No file selected",
@@ -264,7 +266,7 @@ export default function ManagerDashboard() {
                       Select File
                     </Button>
                   </div>
-                  
+
                   {/* CSV Format Guide */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <h4 className="font-medium text-blue-900 mb-2">CSV Format Requirements</h4>

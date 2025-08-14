@@ -17,7 +17,7 @@ import { BarcodeScanner } from "@/components/barcode-scanner";
 export default function WorkerScanner() {
   const { jobId } = useParams();
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [activeSession, setActiveSession] = useState<{ id: string; startTime: string } | null>(null);
@@ -56,6 +56,17 @@ export default function WorkerScanner() {
     }
   }, []);
 
+  // Redirect if not authenticated or not a worker
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation("/login");
+      return;
+    }
+    if (user && user.role !== "worker") {
+      setLocation("/login");
+    }
+  }, [user, isLoading, setLocation]);
+
   // Create scan session mutation
   const createSessionMutation = useMutation({
     mutationFn: async () => {
@@ -78,7 +89,7 @@ export default function WorkerScanner() {
   const scanMutation = useMutation({
     mutationFn: async (barcode: string) => {
       if (!activeSession) throw new Error("No active session");
-      
+
       const response = await apiRequest("POST", "/api/scan-events", {
         sessionId: activeSession.id,
         barCode: barcode,
@@ -89,7 +100,7 @@ export default function WorkerScanner() {
     },
     onSuccess: (data) => {
       setLastScanEvent(data.scanEvent);
-      
+
       // Send WebSocket update
       sendMessage({
         type: "scan_event",
@@ -108,7 +119,7 @@ export default function WorkerScanner() {
 
       // Flash success feedback
       showScanFeedback(true);
-      
+
       // Clear input
       if (barcodeInputRef.current) {
         barcodeInputRef.current.value = "";
@@ -134,7 +145,7 @@ export default function WorkerScanner() {
   const undoMutation = useMutation({
     mutationFn: async (count = 1) => {
       if (!activeSession) throw new Error("No active session");
-      
+
       const response = await apiRequest("POST", "/api/scan-events/undo", {
         sessionId: activeSession.id,
         count,
@@ -146,13 +157,13 @@ export default function WorkerScanner() {
         title: `Undid ${data.undoneEvents.length} scan(s)`,
         description: "Scan history updated",
       });
-      
+
       // Update stats
       setScanStats(prev => ({
         ...prev,
         totalScans: Math.max(0, prev.totalScans - data.undoneEvents.length),
       }));
-      
+
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
     },
   });
@@ -161,7 +172,7 @@ export default function WorkerScanner() {
   const saveSessionMutation = useMutation({
     mutationFn: async () => {
       if (!activeSession) throw new Error("No active session");
-      
+
       const response = await apiRequest("PATCH", `/api/scan-sessions/${activeSession.id}/status`, {
         status: "paused",
       });
@@ -179,7 +190,7 @@ export default function WorkerScanner() {
   const finishSessionMutation = useMutation({
     mutationFn: async () => {
       if (!activeSession) throw new Error("No active session");
-      
+
       const response = await apiRequest("PATCH", `/api/scan-sessions/${activeSession.id}/status`, {
         status: "completed",
       });

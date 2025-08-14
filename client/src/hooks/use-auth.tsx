@@ -21,6 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Check for existing session on app load
   const { data: userData, isLoading } = useQuery({
@@ -43,8 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [userData, isLoading]);
 
   const login = (token: string, user: User) => {
+    setIsLoggingIn(true);
     localStorage.setItem("token", token);
     setUser(user);
+    setIsLoggingIn(false);
   };
 
   const logout = () => {
@@ -56,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     login,
     logout,
-    isLoading: isLoading && !isInitialized,
+    isLoading: (isLoading && !isInitialized) || isLoggingIn,
   };
 
   return (

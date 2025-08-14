@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +18,26 @@ import { Settings, Package } from "lucide-react";
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { login } = useAuth();
+  const { login, user, isLoading } = useAuth();
+
+  // Redirect authenticated users
+  useEffect(() => {
+    if (user && !isLoading) {
+      switch (user.role) {
+        case "manager":
+          setLocation("/manager");
+          break;
+        case "supervisor":
+          setLocation("/supervisor");
+          break;
+        case "worker":
+          setLocation("/scanner");
+          break;
+        default:
+          setLocation("/");
+      }
+    }
+  }, [user, isLoading, setLocation]);
 
   const form = useForm<Login>({
     resolver: zodResolver(loginSchema),
@@ -39,21 +58,6 @@ export default function Login() {
         title: "Login successful",
         description: `Welcome back, ${data.user.name}!`,
       });
-
-      // Redirect based on role
-      switch (data.user.role) {
-        case "manager":
-          setLocation("/manager");
-          break;
-        case "supervisor":
-          setLocation("/supervisor");
-          break;
-        case "worker":
-          setLocation("/scanner");
-          break;
-        default:
-          setLocation("/");
-      }
     },
     onError: (error: any) => {
       toast({

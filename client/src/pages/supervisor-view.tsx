@@ -9,14 +9,15 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { ArrowLeft, Package } from "lucide-react";
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { PerformanceDashboard } from "@/components/performance-dashboard";
+import { useEffect } from "react";
 
 export default function SupervisorView() {
   const { jobId } = useParams();
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
 
   // Fetch job details
-  const { data: jobData, isLoading } = useQuery({
+  const { data: jobData } = useQuery({
     queryKey: ["/api/jobs", jobId],
     enabled: !!jobId && !!user,
   });
@@ -31,10 +32,16 @@ export default function SupervisorView() {
   // Connect to WebSocket for real-time updates
   const { isConnected } = useWebSocket(jobId);
 
-  if (!user || (user.role !== "supervisor" && user.role !== "manager")) {
-    setLocation("/login");
-    return null;
-  }
+  // Redirect if not authenticated or not a supervisor/manager
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation("/login");
+      return;
+    }
+    if (user && !["supervisor", "manager"].includes(user.role)) {
+      setLocation("/login");
+    }
+  }, [user, isLoading, setLocation]);
 
   if (isLoading) {
     return (
@@ -45,6 +52,17 @@ export default function SupervisorView() {
         </div>
       </div>
     );
+  }
+
+  // This check is now redundant due to the useEffect hook above, but kept for clarity.
+  // The useEffect ensures we navigate away before this point if not authenticated.
+  if (!user || (user.role !== "supervisor" && user.role !== "manager")) {
+     // The useEffect hook handles the navigation, so this block should ideally not be reached
+     // if the user is not a supervisor or manager after auth is loaded.
+     // However, as a safeguard or for cases where the useEffect might not run as expected,
+     // we can keep a minimal return or a navigation call here.
+     // For this specific context, the useEffect is the primary handler.
+     return null;
   }
 
   if (!jobData?.job) {
