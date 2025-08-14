@@ -173,6 +173,33 @@ export default function ManagerDashboard() {
     },
   });
 
+  // Worker unassignment mutation
+  const unassignWorkerMutation = useMutation({
+    mutationFn: async (data: { jobId: string; userId: string }) => {
+      const response = await apiRequest("DELETE", `/api/jobs/${data.jobId}/assign/${data.userId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Worker unassigned successfully",
+        description: "The worker has been removed from the job",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Unassignment failed",
+        description: error.message || "Failed to unassign worker from job",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle unassign worker action
+  const handleUnassignWorker = (jobId: string, userId: string) => {
+    unassignWorkerMutation.mutate({ jobId, userId });
+  };
+
   // Handle assignment form submission
   const handleAssignWorker = () => {
     if (!selectedJobId || !assignForm.userId) {
@@ -484,7 +511,7 @@ export default function ManagerDashboard() {
                         <p className="text-sm text-gray-600 mb-2">Assigned Workers:</p>
                         <div className="flex flex-wrap gap-2">
                           {job.assignments.map((assignment: any) => (
-                            <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1">
+                            <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1 group">
                               <div 
                                 className="w-3 h-3 rounded-full border border-gray-300"
                                 style={{ backgroundColor: assignment.assignedColor || '#3B82F6' }}
@@ -496,6 +523,14 @@ export default function ManagerDashboard() {
                               <span className="text-xs text-gray-500">
                                 ({assignment.assignee.staffId})
                               </span>
+                              <button
+                                onClick={() => handleUnassignWorker(job.id, assignment.assignee.id)}
+                                className="ml-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                data-testid={`unassign-${assignment.assignee.id}`}
+                                title="Unassign worker"
+                              >
+                                ×
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -608,7 +643,12 @@ export default function ManagerDashboard() {
                   <SelectValue placeholder="Choose a worker..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {(workersData as any)?.workers?.map((worker: any) => (
+                  {(workersData as any)?.workers?.filter((worker: any) => {
+                    // Filter out workers already assigned to this job
+                    const currentJob = (jobsData as any)?.jobs?.find((job: any) => job.id === selectedJobId);
+                    const assignedWorkerIds = currentJob?.assignments?.map((assignment: any) => assignment.assignee.id) || [];
+                    return !assignedWorkerIds.includes(worker.id);
+                  }).map((worker: any) => (
                     <SelectItem key={worker.id} value={worker.id}>
                       {worker.name} ({worker.staffId})
                     </SelectItem>

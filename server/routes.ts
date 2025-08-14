@@ -324,6 +324,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
+      // Check for existing assignment to prevent duplicates
+      const existingAssignment = await storage.checkExistingAssignment(jobId, userId);
+      if (existingAssignment) {
+        return res.status(400).json({ message: 'Worker is already assigned to this job' });
+      }
+
       // Create assignment
       const assignment = await storage.createJobAssignment({
         jobId,
@@ -445,6 +451,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ assignments });
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch job assignments' });
+    }
+  });
+
+  // Unassign worker from job
+  app.delete('/api/jobs/:jobId/assign/:userId', requireAuth, requireRole(['manager']), async (req, res) => {
+    try {
+      const { jobId, userId } = req.params;
+
+      // Check if job exists
+      const job = await storage.getJobById(jobId);
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Check if user exists
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Unassign worker
+      const success = await storage.unassignWorkerFromJob(jobId, userId);
+      if (!success) {
+        return res.status(404).json({ message: 'Assignment not found or already inactive' });
+      }
+
+      res.json({ 
+        message: 'Worker unassigned from job successfully',
+        jobId,
+        userId 
+      });
+    } catch (error: any) {
+      console.error('Job unassignment error:', error);
+      res.status(400).json({ 
+        message: error.message || 'Failed to unassign worker from job'
+      });
     }
   });
 

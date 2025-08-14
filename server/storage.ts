@@ -62,6 +62,8 @@ export interface IStorage {
   getJobAssignments(jobId: string): Promise<JobAssignment[]>;
   getJobAssignmentsWithUsers(jobId: string): Promise<(JobAssignment & { assignee: User })[]>;
   getJobAssignmentsByUser(userId: string): Promise<JobAssignment[]>;
+  unassignWorkerFromJob(jobId: string, userId: string): Promise<boolean>;
+  checkExistingAssignment(jobId: string, userId: string): Promise<JobAssignment | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -513,6 +515,33 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(jobAssignments)
       .where(and(eq(jobAssignments.userId, userId), eq(jobAssignments.isActive, true)));
+  }
+
+  async unassignWorkerFromJob(jobId: string, userId: string): Promise<boolean> {
+    const result = await db
+      .update(jobAssignments)
+      .set({ isActive: false })
+      .where(and(
+        eq(jobAssignments.jobId, jobId), 
+        eq(jobAssignments.userId, userId),
+        eq(jobAssignments.isActive, true)
+      ))
+      .returning();
+    
+    return result.length > 0;
+  }
+
+  async checkExistingAssignment(jobId: string, userId: string): Promise<JobAssignment | undefined> {
+    const [assignment] = await db
+      .select()
+      .from(jobAssignments)
+      .where(and(
+        eq(jobAssignments.jobId, jobId), 
+        eq(jobAssignments.userId, userId),
+        eq(jobAssignments.isActive, true)
+      ));
+    
+    return assignment || undefined;
   }
 }
 
