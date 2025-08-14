@@ -310,13 +310,7 @@
   z-index: 110 !important;
 }
 
-.dark .dialog-content {
-  background: #1f2937 !important;
-  color: white !important;
-  border: 1px solid #374151 !important;
-}
-
-/* Ensure all popup forms have solid backgrounds */
+/* Ensure all popup forms have solid white backgrounds */
 [data-radix-dialog-content] {
   background: white !important;
   color: black !important;
@@ -345,31 +339,6 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* Dark mode variants for all popup forms */
-.dark [data-radix-dialog-content] {
-  background: #1f2937 !important;
-  color: white !important;
-  border: 1px solid #374151 !important;
-}
-
-.dark [data-radix-alert-dialog-content] {
-  background: #1f2937 !important;
-  color: white !important;
-  border: 1px solid #374151 !important;
-}
-
-.dark [data-radix-popover-content] {
-  background: #1f2937 !important;
-  color: white !important;
-  border: 1px solid #374151 !important;
-}
-
-.dark [data-vaul-drawer] {
-  background: #1f2937 !important;
-  color: white !important;
-  border: 1px solid #374151 !important;
-}
-
 /* Sheet/sidebar popup forms */
 [data-radix-dialog-content][data-side] {
   background: white !important;
@@ -378,8 +347,50 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
 }
 
-.dark [data-radix-dialog-content][data-side] {
-  background: #1f2937 !important;
-  color: white !important;
-  border: 1px solid #374151 !important;
+/* Toast notifications - ensure solid white background */
+[data-radix-toast-root] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Command palette */
+[cmdk-root] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Dropdown menus */
+[data-radix-dropdown-menu-content] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Context menus */
+[data-radix-context-menu-content] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Hover cards */
+[data-radix-hover-card-content] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Tooltip content */
+[data-radix-tooltip-content] {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
 }
