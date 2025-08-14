@@ -191,7 +191,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Job management routes
   app.post('/api/jobs', requireAuth, requireRole(['manager']), upload.single('csv'), async (req, res) => {
     try {
+      console.log('=== CSV Upload Debug ===');
+      console.log('req.file:', req.file);
+      console.log('req.body:', req.body);
+      console.log('req.headers:', req.headers);
+      console.log('========================');
+      
       if (!req.file) {
+        console.log('ERROR: No file received');
         return res.status(400).json({ message: 'CSV file is required' });
       }
 
