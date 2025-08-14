@@ -60,6 +60,7 @@ export interface IStorage {
   // Job assignment methods
   createJobAssignment(assignment: InsertJobAssignment): Promise<JobAssignment>;
   getJobAssignments(jobId: string): Promise<JobAssignment[]>;
+  getJobAssignmentsWithUsers(jobId: string): Promise<(JobAssignment & { assignee: User })[]>;
   getJobAssignmentsByUser(userId: string): Promise<JobAssignment[]>;
 }
 
@@ -479,6 +480,31 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(jobAssignments)
+      .where(and(eq(jobAssignments.jobId, jobId), eq(jobAssignments.isActive, true)));
+  }
+
+  async getJobAssignmentsWithUsers(jobId: string): Promise<(JobAssignment & { assignee: User })[]> {
+    return await db
+      .select({
+        id: jobAssignments.id,
+        jobId: jobAssignments.jobId,
+        userId: jobAssignments.userId,
+        assignedBy: jobAssignments.assignedBy,
+        assignedAt: jobAssignments.assignedAt,
+        isActive: jobAssignments.isActive,
+        assignedColor: jobAssignments.assignedColor,
+        assignee: {
+          id: users.id,
+          staffId: users.staffId,
+          pin: users.pin,
+          role: users.role,
+          name: users.name,
+          isActive: users.isActive,
+          createdAt: users.createdAt,
+        }
+      })
+      .from(jobAssignments)
+      .innerJoin(users, eq(jobAssignments.userId, users.id))
       .where(and(eq(jobAssignments.jobId, jobId), eq(jobAssignments.isActive, true)));
   }
 

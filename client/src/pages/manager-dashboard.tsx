@@ -478,6 +478,30 @@ export default function ManagerDashboard() {
 
                     <Progress value={(job.completedItems / job.totalProducts) * 100} className="mb-4" />
 
+                    {/* Assigned Workers Display */}
+                    {job.assignments && job.assignments.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-2">Assigned Workers:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {job.assignments.map((assignment: any) => (
+                            <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1">
+                              <div 
+                                className="w-3 h-3 rounded-full border border-gray-300"
+                                style={{ backgroundColor: assignment.assignedColor || '#3B82F6' }}
+                                data-testid={`worker-color-${assignment.assignee.id}`}
+                              ></div>
+                              <span className="text-sm text-gray-700 font-medium">
+                                {assignment.assignee.name}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                ({assignment.assignee.staffId})
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap gap-2">
                       <Button
                         variant="outline"

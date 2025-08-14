@@ -363,7 +363,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/jobs', requireAuth, async (req, res) => {
     try {
       const jobs = await storage.getAllJobs();
-      res.json({ jobs });
+      
+      // Fetch assignments for each job
+      const jobsWithAssignments = await Promise.all(
+        jobs.map(async (job) => {
+          const assignments = await storage.getJobAssignmentsWithUsers(job.id);
+          return {
+            ...job,
+            assignments: assignments
+          };
+        })
+      );
+      
+      res.json({ jobs: jobsWithAssignments });
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch jobs' });
     }
