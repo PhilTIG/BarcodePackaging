@@ -31,13 +31,26 @@ export function useWebSocket(jobId?: string) {
         
         // Validate host exists and is not empty
         if (!host || host.trim() === '' || host.includes('undefined')) {
-          console.error('Invalid host detected:', host);
+          console.error('[WebSocket] Invalid host detected:', host);
           throw new Error(`Invalid host for WebSocket connection: ${host}`);
         }
 
-        // Construct and validate URL
-        const wsUrl = `${protocol}//${host}/ws`;
+        // Special handling for Replit production URLs
+        let wsUrl: string;
+        if (host.includes('.replit.dev') || host.includes('worf.replit.dev')) {
+          // Production Replit environment - use the full host
+          wsUrl = `${protocol}//${host}/ws`;
+        } else if (host === 'localhost:5173' || host === 'localhost:3000') {
+          // Local development - connect to backend server
+          wsUrl = `ws://localhost:5000/ws`;
+        } else {
+          // Default case - use current host
+          wsUrl = `${protocol}//${host}/ws`;
+        }
+        
         console.log(`[WebSocket] Attempting connection to: ${wsUrl}`);
+        console.log(`[WebSocket] Current location: ${window.location.href}`);
+        console.log(`[WebSocket] Detected environment: ${host.includes('.replit.dev') ? 'Replit Production' : 'Other'}`);
         
         // Basic URL validation
         try {
