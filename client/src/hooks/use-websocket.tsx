@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "./use-auth";
 import { queryClient } from "@/lib/queryClient";
 
@@ -15,52 +15,64 @@ export function useWebSocket(jobId?: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const connect = () => {
+  const connect = useCallback(() => {
     if (!user || wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    wsRef.current = new WebSocket(wsUrl);
-
-    wsRef.current.onopen = () => {
-      setIsConnected(true);
+    try {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
       
-      // Authenticate with the WebSocket server
-      if (wsRef.current) {
-        wsRef.current.send(JSON.stringify({
-          type: "authenticate",
-          data: {
-            userId: user.id,
-            jobId,
-          },
-        }));
-      }
-    };
+      wsRef.current = new WebSocket(wsUrl);
 
-    wsRef.current.onmessage = (event) => {
-      try {
-        const message: WSMessage = JSON.parse(event.data);
-        handleMessage(message);
-      } catch (error) {
-        console.error("Failed to parse WebSocket message:", error);
-      }
-    };
+      wsRef.current.onopen = () => {
+        setIsConnected(true);
+        
+        // Authenticate with the WebSocket server
+        if (wsRef.current) {
+          wsRef.current.send(JSON.stringify({
+            type: "authenticate",
+            data: {
+              userId: user.id,
+              jobId,
+            },
+          }));
+        }
+      };
 
-    wsRef.current.onclose = () => {
+      wsRef.current.onmessage = (event) => {
+        try {
+          const message: WSMessage = JSON.parse(event.data);
+          handleMessage(message);
+        } catch (error) {
+          console.error("Failed to parse WebSocket message:", error);
+        }
+      };
+
+      wsRef.current.onclose = (event) => {
+        setIsConnected(false);
+        
+        // Only attempt to reconnect if it wasn't a manual close
+        if (event.code !== 1000) {
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connect();
+          }, 3000);
+        }
+      };
+
+      wsRef.current.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setIsConnected(false);
+      };
+    } catch (error) {
+      console.error("Failed to create WebSocket connection:", error);
       setIsConnected(false);
       
-      // Attempt to reconnect after 3 seconds
+      // Retry connection after delay
       reconnectTimeoutRef.current = setTimeout(() => {
         connect();
-      }, 3000);
-    };
-
-    wsRef.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      setIsConnected(false);
-    };
-  };
+      }, 5000);
+    }
+  }, [user?.id, jobId]);
 
   const handleMessage = (message: WSMessage) => {
     switch (message.type) {
@@ -120,7 +132,7 @@ export function useWebSocket(jobId?: string) {
     return () => {
       disconnect();
     };
-  }, [user, jobId]);
+  }, [user?.id, jobId]);
 
   return {
     isConnected,

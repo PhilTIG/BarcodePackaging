@@ -42,7 +42,7 @@ export default function WorkerScanner() {
   });
 
   // Connect to WebSocket
-  const { sendMessage } = useWebSocket(jobId);
+  const { sendMessage, isConnected } = useWebSocket(jobId);
 
   // Auto-focus barcode input
   useEffect(() => {
@@ -285,6 +285,18 @@ export default function WorkerScanner() {
       </header>
 
       <div className="p-4 space-y-6">
+        {/* Connection Status */}
+        {!isConnected && (
+          <Card className="border-orange-200 bg-orange-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-orange-600">
+                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                <span className="text-sm">Connecting to real-time updates...</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Performance Dashboard */}
         <Card data-testid="performance-dashboard">
           <CardHeader>
