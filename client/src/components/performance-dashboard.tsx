@@ -15,10 +15,10 @@ export function PerformanceDashboard({ jobId, supervisorView = false }: Performa
     refetchInterval: 5000,
   });
 
-  if (!progressData?.progress?.workers) {
+  if (!progressData?.progress?.workers || progressData.progress.workers.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        No active workers found
+        No assigned workers found
       </div>
     );
   }

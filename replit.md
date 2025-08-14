@@ -6,6 +6,12 @@ This is a comprehensive warehouse sorting application designed to streamline the
 
 ## Recent Changes (January 2025)
 
+**Enhanced Worker Performance Display (January 14, 2025):**
+- **Worker Color Icons**: Added assigned worker color icons to the Worker Performance section in Supervisor View
+- **Comprehensive Worker Display**: Updated backend to show all assigned workers regardless of scanning activity status
+- **Visual Improvements**: Color icons positioned next to worker avatars with white border and shadow for visibility
+- **Data Integration**: Backend now includes assignedColor field in job progress API for consistent color display
+
 **Enhanced Active Jobs UI (January 14, 2025):**
 - **Box Counting**: Changed "customers" to "boxes" terminology throughout the interface, reflecting that each customer destination represents one box
 - **Progress Visualization**: Enhanced progress bars with clear percentage display and improved visual hierarchy
@@ -13,6 +19,12 @@ This is a comprehensive warehouse sorting application designed to streamline the
 - **Worker Name Display**: Cleaned up worker assignment display by removing staff IDs from the Active Jobs section
 - **Completion Highlighting**: Implemented light green background for 100% completed jobs
 - **Layout Improvements**: Added proper spacing to prevent overlap with the new boxes counter widget
+
+**Responsive Box Grid System (January 14, 2025):**
+- **User Preferences**: Added "Maximum Boxes Per Row" setting in main Settings page (range 4-16)
+- **Responsive Layout**: Mobile shows 2 columns, scales up based on screen size and user preference
+- **Badge Enhancement**: Doubled badge size (12x12) and repositioned to center-right of each box
+- **Automatic Reflow**: Flexbox implementation automatically adjusts columns based on screen size and setting
 
 ## User Preferences
 

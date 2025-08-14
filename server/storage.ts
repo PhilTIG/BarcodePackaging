@@ -148,6 +148,7 @@ export class DatabaseStorage implements IStorage {
     const job = await this.getJobById(id);
     const jobProducts = await this.getProductsByJobId(id);
     const sessions = await this.getScanSessionsByJobId(id);
+    const assignments = await this.getJobAssignmentsWithUsers(id);
 
     if (!job) return null;
 
@@ -155,27 +156,24 @@ export class DatabaseStorage implements IStorage {
     const totalItems = jobProducts.reduce((sum, p) => sum + p.qty, 0);
     const scannedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
 
-    // Get worker performance data with assignment colors
+    // Get worker performance data for all assigned workers
     const workersData = await Promise.all(
-      sessions.map(async (session) => {
-        const user = await this.getUserById(session.userId);
-        const events = await this.getScanEventsBySessionId(session.id);
-        const performance = await this.getSessionPerformance(session.id);
-        
-        // Get the assignment to fetch the assigned color
-        const assignment = await this.checkExistingAssignment(id, session.userId);
+      assignments.map(async (assignment) => {
+        const session = sessions.find(s => s.userId === assignment.userId);
+        const events = session ? await this.getScanEventsBySessionId(session.id) : [];
+        const performance = session ? await this.getSessionPerformance(session.id) : null;
 
         return {
-          id: session.userId,
-          name: user?.name || 'Unknown',
-          isActive: session.status === 'active',
+          id: assignment.userId,
+          name: assignment.assignee.name,
+          isActive: session?.status === 'active' || false,
           scansPerHour: performance?.scansPerHour || 0,
           score: performance?.score || 0,
-          totalScans: session.totalScans,
-          currentBox: this.getCurrentBox(jobProducts, session.userId),
-          currentCustomer: this.getCurrentCustomer(jobProducts, session.userId),
+          totalScans: session?.totalScans || 0,
+          currentBox: this.getCurrentBox(jobProducts, assignment.userId),
+          currentCustomer: this.getCurrentCustomer(jobProducts, assignment.userId),
           lastScan: events.length > 0 ? events[events.length - 1].scanTime : null,
-          assignedColor: assignment?.assignedColor || '#3B82F6',
+          assignedColor: assignment.assignedColor,
         };
       })
     );
@@ -187,6 +185,7 @@ export class DatabaseStorage implements IStorage {
         completionPercentage: totalItems > 0 ? Math.round((scannedItems / totalItems) * 100) : 0,
         activeSessions: sessions.filter(s => s.status === 'active').length,
         waitingSessions: sessions.filter(s => s.status === 'paused').length,
+        totalAssignedWorkers: assignments.length,
         workers: workersData,
       },
     };
