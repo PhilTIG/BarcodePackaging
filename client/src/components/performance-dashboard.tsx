@@ -44,17 +44,26 @@ export function PerformanceDashboard({ jobId, supervisorView = false }: Performa
             data-testid={`worker-performance-${worker.id}`}
           >
             <div className="flex items-center space-x-3">
-              <Avatar className={`w-10 h-10 ${
-                performanceLevel === "high" 
-                  ? "bg-success-500" 
-                  : performanceLevel === "medium"
-                    ? "bg-warning-500"
-                    : "bg-gray-500"
-              }`}>
-                <AvatarFallback className="text-white font-bold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              {/* Worker Color Icon */}
+              <div className="flex items-center space-x-2">
+                <div 
+                  className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                  style={{ backgroundColor: worker.assignedColor || '#3B82F6' }}
+                  title={`Worker color: ${worker.assignedColor || '#3B82F6'}`}
+                  data-testid={`worker-color-icon-${worker.id}`}
+                />
+                <Avatar className={`w-10 h-10 ${
+                  performanceLevel === "high" 
+                    ? "bg-success-500" 
+                    : performanceLevel === "medium"
+                      ? "bg-warning-500"
+                      : "bg-gray-500"
+                }`}>
+                  <AvatarFallback className="text-white font-bold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
               <div>
                 <h3 className="font-medium text-gray-900">{worker.name}</h3>
                 <p className="text-sm text-gray-600">

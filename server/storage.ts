@@ -155,12 +155,15 @@ export class DatabaseStorage implements IStorage {
     const totalItems = jobProducts.reduce((sum, p) => sum + p.qty, 0);
     const scannedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
 
-    // Get worker performance data
+    // Get worker performance data with assignment colors
     const workersData = await Promise.all(
       sessions.map(async (session) => {
         const user = await this.getUserById(session.userId);
         const events = await this.getScanEventsBySessionId(session.id);
         const performance = await this.getSessionPerformance(session.id);
+        
+        // Get the assignment to fetch the assigned color
+        const assignment = await this.checkExistingAssignment(id, session.userId);
 
         return {
           id: session.userId,
@@ -172,6 +175,7 @@ export class DatabaseStorage implements IStorage {
           currentBox: this.getCurrentBox(jobProducts, session.userId),
           currentCustomer: this.getCurrentCustomer(jobProducts, session.userId),
           lastScan: events.length > 0 ? events[events.length - 1].scanTime : null,
+          assignedColor: assignment?.assignedColor || '#3B82F6',
         };
       })
     );
