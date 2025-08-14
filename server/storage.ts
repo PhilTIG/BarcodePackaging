@@ -197,12 +197,12 @@ export class DatabaseStorage implements IStorage {
     return activeProducts.length > 0 ? activeProducts[0].customerName : null;
   }
 
-  async createProducts(products: InsertProduct[]): Promise<Product[]> {
-    if (products.length === 0) return [];
+  async createProducts(productList: InsertProduct[]): Promise<Product[]> {
+    if (productList.length === 0) return [];
     
     return await db
       .insert(products)
-      .values(products)
+      .values(productList)
       .returning();
   }
 

@@ -1,0 +1,66 @@
+client:536 WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/?token=Te4QWsOLXN9n' failed: 
+setupWebSocket @ client:536
+(anonymous) @ client:531
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=Te4QWsOLXN9n' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555
+queryClient.ts:30  POST https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/api/jobs 400 (Bad Request)
+apiRequest @ queryClient.ts:30
+mutationFn @ manager-dashboard.tsx:71
+fn @ @tanstack_react-query.js?v=25b10906:1189
+run @ @tanstack_react-query.js?v=25b10906:494
+start @ @tanstack_react-query.js?v=25b10906:536
+execute @ @tanstack_react-query.js?v=25b10906:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=25b10906:2630
+(anonymous) @ @tanstack_react-query.js?v=25b10906:3295
+onSubmit @ manager-dashboard.tsx:173
+(anonymous) @ chunk-4BFJKWC4.js?v=25b10906:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=25b10906:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=25b10906:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=25b10906:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=25b10906:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=25b10906:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=25b10906:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=25b10906:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=25b10906:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=25b10906:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=25b10906:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=25b10906:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=25b10906:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=25b10906:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=25b10906:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=25b10906:5449
+manager-dashboard.tsx:95 Upload error: Error: 400: {"message":"Cannot read properties of undefined (reading 'jobId')"}
+    at throwIfResNotOk (queryClient.ts:6:11)
+    at async apiRequest (queryClient.ts:37:3)
+    at async Object.mutationFn (manager-dashboard.tsx:71:24)
+overrideMethod @ hook.js:608
+onError @ manager-dashboard.tsx:95
+execute @ @tanstack_react-query.js?v=25b10906:1254
+await in execute
+mutate @ @tanstack_react-query.js?v=25b10906:2630
+(anonymous) @ @tanstack_react-query.js?v=25b10906:3295
+onSubmit @ manager-dashboard.tsx:173
+(anonymous) @ chunk-4BFJKWC4.js?v=25b10906:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=25b10906:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=25b10906:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=25b10906:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=25b10906:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=25b10906:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=25b10906:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=25b10906:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=25b10906:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=25b10906:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=25b10906:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=25b10906:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=25b10906:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=25b10906:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=25b10906:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=25b10906:5449
