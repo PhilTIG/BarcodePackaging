@@ -20,8 +20,13 @@ export default function WorkerScanner() {
   const { user } = useAuth();
   const { toast } = useToast();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
-  const [activeSession, setActiveSession] = useState<any>(null);
-  const [lastScanEvent, setLastScanEvent] = useState<any>(null);
+  const [activeSession, setActiveSession] = useState<{ id: string; startTime: string } | null>(null);
+  const [lastScanEvent, setLastScanEvent] = useState<{
+    productName: string;
+    barCode: string;
+    customerName: string;
+    boxNumber: number;
+  } | null>(null);
   const [scanStats, setScanStats] = useState({
     totalScans: 0,
     scansPerHour: 0,

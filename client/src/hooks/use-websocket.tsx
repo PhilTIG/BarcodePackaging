@@ -4,7 +4,7 @@ import { queryClient } from "@/lib/queryClient";
 
 interface WSMessage {
   type: string;
-  data: any;
+  data: Record<string, unknown>;
   jobId?: string;
   sessionId?: string;
 }
@@ -54,7 +54,7 @@ export function useWebSocket(jobId?: string) {
         // Only attempt to reconnect if it wasn't a manual close
         if (event.code !== 1000) {
           reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
+            void connect();
           }, 3000);
         }
       };
@@ -69,7 +69,7 @@ export function useWebSocket(jobId?: string) {
       
       // Retry connection after delay
       reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
+        void connect();
       }, 5000);
     }
   }, [user?.id, jobId]);
@@ -132,7 +132,7 @@ export function useWebSocket(jobId?: string) {
     return () => {
       disconnect();
     };
-  }, [user?.id, jobId]);
+  }, [connect, user]);
 
   return {
     isConnected,
