@@ -292,3 +292,23 @@
     text-wrap: balance;
   }
 }
+
+/* Dialog overrides to ensure proper visibility */
+[data-radix-popper-content-wrapper] {
+  z-index: 110 !important;
+}
+
+.dialog-content {
+  background: white !important;
+  color: black !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  position: relative !important;
+  z-index: 110 !important;
+}
+
+.dark .dialog-content {
+  background: #1f2937 !important;
+  color: white !important;
+  border: 1px solid #374151 !important;
+}
