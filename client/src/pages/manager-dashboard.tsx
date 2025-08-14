@@ -33,6 +33,7 @@ export default function ManagerDashboard() {
     customersCount: number;
     job: any;
   } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Redirect if not authenticated or not a manager
   useEffect(() => {
@@ -79,10 +80,8 @@ export default function ManagerDashboard() {
 
       const response = await fetch("/api/jobs", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
         body: formData,
+        credentials: 'include', // Use session-based auth instead of Bearer token
       });
 
       if (!response.ok) {
@@ -127,10 +126,7 @@ export default function ManagerDashboard() {
   });
 
   const onSubmit = (data: UploadForm) => {
-    const fileInput = document.getElementById("csv-upload") as HTMLInputElement;
-    const file = fileInput?.files?.[0];
-
-    if (!file) {
+    if (!selectedFile) {
       toast({
         title: "No file selected",
         description: "Please select a CSV file to upload",
@@ -140,7 +136,7 @@ export default function ManagerDashboard() {
     }
 
     // Basic file validation
-    if (!file.name.toLowerCase().endsWith('.csv')) {
+    if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
       toast({
         title: "Invalid file format",
         description: "Please select a .csv file",
@@ -149,7 +145,7 @@ export default function ManagerDashboard() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
       toast({
         title: "File too large",
         description: "CSV file must be smaller than 10MB",
@@ -165,7 +161,7 @@ export default function ManagerDashboard() {
 
     uploadMutation.mutate({
       ...data,
-      file,
+      file: selectedFile,
     });
   };
 
@@ -299,14 +295,23 @@ export default function ManagerDashboard() {
                       className="hidden"
                       id="csv-upload"
                       data-testid="input-csv-file"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        setSelectedFile(file || null);
+                      }}
                     />
                     <Button
                       type="button"
                       onClick={() => document.getElementById("csv-upload")?.click()}
                       data-testid="button-select-file"
                     >
-                      Select File
+                      {selectedFile ? selectedFile.name : "Select File"}
                     </Button>
+                    {selectedFile && (
+                      <p className="text-sm text-green-600 mt-2">
+                        ✓ {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                      </p>
+                    )}
                   </div>
 
                   {/* CSV Format Guide */}
@@ -366,7 +371,7 @@ export default function ManagerDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {jobsData?.jobs?.map((job: any) => (
+                {(jobsData as any)?.jobs?.map((job: any) => (
                   <div key={job.id} className="border border-gray-200 rounded-lg p-4" data-testid={`job-card-${job.id}`}>
                     <div className="flex items-center justify-between mb-3">
                       <div>
@@ -419,7 +424,7 @@ export default function ManagerDashboard() {
                   </div>
                 ))}
 
-                {!jobsData?.jobs?.length && (
+                {!(jobsData as any)?.jobs?.length && (
                   <div className="text-center py-8 text-gray-500">
                     No jobs found. Upload a CSV file to create your first job.
                   </div>
@@ -436,7 +441,7 @@ export default function ManagerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {workersData?.workers?.map((worker: any) => (
+              {(workersData as any)?.workers?.map((worker: any) => (
                 <div key={worker.id} className="border border-gray-200 rounded-lg p-4" data-testid={`worker-card-${worker.id}`}>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-medium text-gray-900">{worker.name}</h3>
@@ -455,7 +460,7 @@ export default function ManagerDashboard() {
                 </div>
               ))}
 
-              {!workersData?.workers?.length && (
+              {!(workersData as any)?.workers?.length && (
                 <div className="col-span-full text-center py-8 text-gray-500">
                   No workers found.
                 </div>
