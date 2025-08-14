@@ -40,21 +40,6 @@ export default function ManagerDashboard() {
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [currentError, setCurrentError] = useState<any>(null);
 
-  // Redirect if not authenticated or not a manager
-  useEffect(() => {
-    if (!isLoading && !user) {
-      setLocation("/login");
-      return;
-    }
-    if (user && user.role !== "manager") {
-      setLocation("/login");
-    }
-  }, [user, isLoading, setLocation]);
-
-  if (!user || user.role !== "manager") {
-    return null;
-  }
-
   const form = useForm<UploadForm>({
     resolver: zodResolver(uploadFormSchema),
     defaultValues: {
@@ -99,6 +84,7 @@ export default function ManagerDashboard() {
         job: data.job
       });
       form.reset();
+      setSelectedFile(null); // Clear selected file on success
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       toast({
         title: "CSV uploaded successfully",
@@ -195,8 +181,18 @@ export default function ManagerDashboard() {
     setLocation("/login");
   };
 
+  // Redirect if not authenticated or not a manager
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation("/login");
+      return;
+    }
+    if (user && user.role !== "manager") {
+      setLocation("/login");
+    }
+  }, [user, isLoading, setLocation]);
+
   if (!user || user.role !== "manager") {
-    setLocation("/login");
     return null;
   }
 
