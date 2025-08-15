@@ -265,32 +265,44 @@ export class DatabaseStorage implements IStorage {
     try {
       const allJobs = await this.getAllJobs();
 
-      const jobsWithStats = await Promise.all(allJobs.map(async (job) => {
-        const products = await this.getProductsByJobId(job.id);
-        const assignments = await this.getJobAssignmentsWithUsers(job.id);
+      const jobsWithStats = await Promise.all(allJobs.map(async (job: any) => {
+        try {
+          const products = await this.getProductsByJobId(job.id);
+          const assignments = await this.getJobAssignmentsWithUsers(job.id);
 
-        const totalProducts = products.length;
-        const completedItems = products.filter((p: any) => (p.scannedQty || 0) >= p.qty).length;
+          const totalProducts = products.length;
+          const completedItems = products.filter((p: any) => (p.scannedQty || 0) >= p.qty).length;
 
-        // Calculate box completion using the same logic as getJobProgress
-        const boxCompletion = this.calculateBoxCompletion(products);
+          // Calculate box completion using the same logic as getJobProgress
+          const boxCompletion = this.calculateBoxCompletion(products);
 
-        return {
-          ...job,
-          totalProducts,
-          completedItems,
-          totalCustomers: new Set(products.map((p: any) => p.customerName)).size,
-          completedBoxes: boxCompletion.completedBoxes,
-          assignments: assignments.map((a: any) => ({
-            id: a.id,
-            assignedColor: a.assignedColor,
-            assignee: {
-              id: a.assignee.id,
-              name: a.assignee.name,
-              staffId: a.assignee.staffId,
-            }
-          }))
-        };
+          return {
+            ...job,
+            totalProducts,
+            completedItems,
+            totalCustomers: new Set(products.map((p: any) => p.customerName)).size,
+            completedBoxes: boxCompletion.completedBoxes,
+            assignments: assignments.map((a: any) => ({
+              id: a.id,
+              assignedColor: a.assignedColor,
+              assignee: {
+                id: a.assignee.id,
+                name: a.assignee.name,
+                staffId: a.assignee.staffId,
+              }
+            }))
+          };
+        } catch (error) {
+          console.error(`Error processing job ${job.id}:`, error);
+          return {
+            ...job,
+            totalProducts: 0,
+            completedItems: 0,
+            totalCustomers: 0,
+            completedBoxes: 0,
+            assignments: []
+          };
+        }
       }));
 
       return { jobs: jobsWithStats };
