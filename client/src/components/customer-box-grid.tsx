@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Lock } from "lucide-react";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { useBoxHighlighting } from "@/hooks/use-box-highlighting";
 
 interface Product {
   id: string;
@@ -11,6 +12,8 @@ interface Product {
   scannedQty: number;
   boxNumber: number;
   isComplete: boolean;
+  lastWorkerUserId?: string;
+  lastWorkerColor?: string;
 }
 
 interface CustomerBoxGridProps {
@@ -18,11 +21,17 @@ interface CustomerBoxGridProps {
   jobId: string;
   supervisorView?: boolean;
   lastScannedBoxNumber?: number | null; // For POC-style single box highlighting
+  onBoxScanUpdate?: (boxNumber: number, workerId?: string, workerColor?: string) => void;
 }
 
-export function CustomerBoxGrid({ products, supervisorView = false, lastScannedBoxNumber = null }: CustomerBoxGridProps) {
+export function CustomerBoxGrid({ products, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate }: CustomerBoxGridProps) {
   // Use actual user preferences for box layout
   const { preferences } = useUserPreferences();
+  
+  // POC-style box highlighting system
+  const { updateBoxHighlighting, clearHighlighting, getBoxHighlight } = useBoxHighlighting({
+    autoResetDelay: 2000 // Clear green highlights after 2 seconds
+  });
   
   const boxData = useMemo(() => {
     const boxes: { [key: number]: {
@@ -32,7 +41,7 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
       scannedQty: number;
       isComplete: boolean;
       assignedWorker?: string;
-      isActive: boolean;
+      lastWorkerColor?: string;
     }} = {};
 
     products.forEach(product => {
@@ -43,7 +52,7 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
           totalQty: 0,
           scannedQty: 0,
           isComplete: false,
-          isActive: false,
+          lastWorkerColor: product.lastWorkerColor,
         };
       }
 
@@ -54,9 +63,9 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
       boxes[product.boxNumber].isComplete = boxes[product.boxNumber].totalQty > 0 && 
                                            boxes[product.boxNumber].scannedQty === boxes[product.boxNumber].totalQty;
       
-      // Mark as active if any items have been scanned but not complete
-      if (boxes[product.boxNumber].scannedQty > 0 && !boxes[product.boxNumber].isComplete) {
-        boxes[product.boxNumber].isActive = true;
+      // Update worker color tracking
+      if (product.lastWorkerColor) {
+        boxes[product.boxNumber].lastWorkerColor = product.lastWorkerColor;
       }
     });
 
@@ -70,7 +79,6 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
           totalQty: 0,
           scannedQty: 0,
           isComplete: false,
-          isActive: false,
         };
       }
     }
@@ -101,39 +109,44 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
     return gridClasses;
   };
 
+  // Update highlighting when lastScannedBoxNumber changes
+  useEffect(() => {
+    if (lastScannedBoxNumber !== null) {
+      // Find the box that was scanned to get worker color info
+      const scannedBox = boxData.find(box => box.boxNumber === lastScannedBoxNumber);
+      updateBoxHighlighting(
+        lastScannedBoxNumber,
+        scannedBox?.assignedWorker,
+        scannedBox?.lastWorkerColor
+      );
+    }
+  }, [lastScannedBoxNumber, boxData, updateBoxHighlighting]);
+
   return (
     <div className={getGridClasses()} data-testid="customer-box-grid">
       {boxData.map((box) => {
         const completionPercentage = box.totalQty > 0 ? Math.round((box.scannedQty / box.totalQty) * 100) : 0;
         
-        // POC-style highlighting logic
+        // POC-style highlighting with worker color support
         const isLastScanned = lastScannedBoxNumber === box.boxNumber;
+        const highlighting = getBoxHighlight(box.boxNumber, box.isComplete);
         
         const boxClasses = [
           "border rounded-lg p-3 relative transition-all duration-200",
-          box.isComplete 
-            ? "border-red-300 bg-red-100" // Grey-red for completed boxes
-            : isLastScanned 
-              ? "border-green-300 bg-green-100" // Green for just-scanned box
-              : "border-gray-200 bg-white" // Default for all other boxes
+          highlighting.backgroundColor,
+          highlighting.borderColor
         ].join(" ");
 
         return (
           <div
             key={box.boxNumber}
             className={boxClasses}
-            id={box.isActive ? "scan-flash-target" : undefined}
+
             data-testid={`box-${box.boxNumber}`}
           >
             {/* Box Number Badge - Center Right, 2x Size */}
             <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white ${
-                box.isComplete 
-                  ? "bg-red-400" // Grey-red badge for completed boxes
-                  : isLastScanned 
-                    ? "bg-green-500" // Green badge for just-scanned box
-                    : "bg-gray-400" // Default grey badge
-              }`}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: highlighting.badgeColor }}>
                 {box.boxNumber}
               </div>
             </div>
@@ -141,7 +154,7 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
             {/* Lock icon for 100% completed boxes */}
             {box.isComplete && (
               <div className="absolute top-1 left-1">
-                <Lock className="w-4 h-4 text-red-600" />
+                <Lock className="w-4 h-4 text-white" />
               </div>
             )}
 
@@ -162,25 +175,13 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
             </div>
 
             <div className="space-y-2 pr-16">
-              <div className={`text-lg font-bold ${
-                box.isComplete 
-                  ? "text-red-700" // Dark red text for completed boxes
-                  : isLastScanned 
-                    ? "text-green-700" // Dark green text for just-scanned box
-                    : "text-gray-500" // Default grey text
-              }`} data-testid={`quantity-${box.boxNumber}`}>
+              <div className={`text-lg font-bold ${highlighting.textColor}`} data-testid={`quantity-${box.boxNumber}`}>
                 {box.scannedQty}/{box.totalQty}
               </div>
               
               <Progress 
                 value={completionPercentage} 
-                className={`h-2 ${
-                  box.isComplete 
-                    ? "text-red-600" // Red progress for completed boxes
-                    : isLastScanned 
-                      ? "text-green-600" // Green progress for just-scanned box
-                      : "text-gray-400" // Default grey progress
-                }`} 
+                className="h-2" 
                 data-testid={`progress-${box.boxNumber}`}
               />
               

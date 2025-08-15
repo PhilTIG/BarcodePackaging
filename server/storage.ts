@@ -635,7 +635,7 @@ export class DatabaseStorage implements IStorage {
         productInfo.jobId, 
         1,
         insertEvent.workerAssignmentType ? await this.getWorkerIdFromSession(insertEvent.sessionId) : undefined,
-        insertEvent.workerColor
+        insertEvent.workerColor || undefined
       );
     }
 

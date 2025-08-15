@@ -819,6 +819,10 @@ export default function WorkerScanner() {
               jobId={job.id}
               supervisorView={false}
               lastScannedBoxNumber={lastScannedBoxNumber}
+              onBoxScanUpdate={(boxNumber, workerId, workerColor) => {
+                // POC-style single box highlighting - only one box highlighted at a time
+                setLastScannedBoxNumber(boxNumber);
+              }}
             />
           </CardContent>
         </Card>
