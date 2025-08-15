@@ -140,17 +140,7 @@ export default function Login() {
             </form>
           </Form>
 
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => setLocation("/settings")}
-              data-testid="button-settings"
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Button>
-          </div>
+          
         </CardContent>
       </Card>
     </div>
