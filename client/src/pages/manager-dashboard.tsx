@@ -580,24 +580,25 @@ export default function ManagerDashboard() {
                           >
                             {job.status === "completed" ? "Completed" : job.status === "active" ? "In Progress" : "Pending"}
                           </Badge>
-                          <Badge
+                          <Button
                             variant={job.isActive ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleJobActiveToggle(job.id, !job.isActive)}
+                            disabled={job.status === "completed"}
+                            className="h-6 px-2 text-xs font-medium"
+                            data-testid={`button-toggle-scanning-${job.id}`}
                           >
                             {job.isActive ? "Scanning Active" : "Scanning Paused"}
-                          </Badge>
+                          </Button>
+                          <span className="text-sm text-gray-600">Created: {new Date(job.createdAt).toLocaleDateString()}</span>
                         </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
-                        <span>Created: {new Date(job.createdAt).toLocaleDateString()}</span>
                       </div>
 
                       {/* Progress Bar with Percentage */}
                       <div className="mb-4">
                         <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                          <span>Progress</span>
+                          <span>Progress - {progressPercentage}% complete</span>
                           <div className="flex flex-col items-end">
-                            <span>{progressPercentage}% complete</span>
                             {progressPercentage === 0 && (
                               <Button
                                 variant="destructive"
@@ -614,7 +615,9 @@ export default function ManagerDashboard() {
                             )}
                           </div>
                         </div>
-                        <Progress value={progressPercentage} className="mb-2" />
+                        <div className="border border-gray-300 rounded-md p-1 bg-gray-50">
+                          <Progress value={progressPercentage} className="mb-2" />
+                        </div>
                       </div>
 
                       {/* Boxes Complete Counter - Bottom Right */}
@@ -699,15 +702,6 @@ export default function ManagerDashboard() {
                         <Button variant="outline" size="sm" data-testid={`button-export-${job.id}`}>
                           <Download className="mr-1 h-4 w-4" />
                           Export
-                        </Button>
-                        <Button 
-                          variant={job.isActive ? "destructive" : "default"}
-                          size="sm" 
-                          onClick={() => handleJobActiveToggle(job.id, !job.isActive)}
-                          disabled={job.status === "completed"}
-                          data-testid={`button-toggle-scanning-${job.id}`}
-                        >
-                          {job.isActive ? "Pause Scanning" : "Start Scanning"}
                         </Button>
                       </div>
                     </div>
