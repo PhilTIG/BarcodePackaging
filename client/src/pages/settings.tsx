@@ -45,23 +45,8 @@ export default function Settings() {
   const { toast } = useToast();
   const { user, isLoading } = useAuth();
   const { detailedErrorMessages, setDetailedErrorMessages } = useErrorContext();
-  // Temporarily disabled user preferences provider
-  // const { preferences, updatePreference, isLoading: preferencesLoading } = useUserPreferences();
-  const preferences = {
-    maxBoxesPerRow: 12,
-    autoClearInput: true,
-    soundFeedback: true,
-    vibrationFeedback: false,
-    scannerType: "camera",
-    targetScansPerHour: 71,
-    autoSaveSessions: true,
-    showRealtimeStats: true,
-    mobileModePreference: false,
-    singleBoxMode: false,
-  };
-  const updatePreference = (key: string, value: any) => {
-    console.log('Preference update disabled:', key, value);
-  };
+  // Re-enabled user preferences provider
+  const { preferences, updatePreference, isLoading: preferencesLoading } = useUserPreferences();
   const [activeTab, setActiveTab] = useState<"general" | "users">("general");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);

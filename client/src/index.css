@@ -275,6 +275,42 @@
     }
   }
 
+/* Enhanced Switch colors for theme visibility */
+.theme-blue [data-state="checked"] {
+  background-color: hsl(214, 100%, 59%) !important;
+}
+
+.theme-green [data-state="checked"] {
+  background-color: hsl(160, 84%, 39%) !important;
+}
+
+.theme-orange [data-state="checked"] {
+  background-color: hsl(38, 92%, 50%) !important;
+}
+
+.theme-teal [data-state="checked"] {
+  background-color: hsl(174, 62%, 47%) !important;
+}
+
+.theme-red [data-state="checked"] {
+  background-color: hsl(0, 84%, 60%) !important;
+}
+
+.theme-dark [data-state="checked"] {
+  background-color: hsl(215, 16%, 47%) !important;
+}
+
+/* Switch component enhanced visibility */
+[data-state="checked"] {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+[data-state="unchecked"] {
+  background-color: hsl(220, 13%, 91%) !important;
+  border: 2px solid hsl(220, 13%, 91%) !important;
+}
+
   /* Print styles */
   @media print {
     body {

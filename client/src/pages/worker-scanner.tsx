@@ -278,7 +278,8 @@ export default function WorkerScanner() {
   // Mobile mode helper functions
   const getUniqueCustomers = () => {
     const products = (jobData as any)?.products || [];
-    const customers = [...new Set(products.map((p: any) => p.customerName))];
+    const customerSet = new Set(products.map((p: any) => p.customerName));
+    const customers = Array.from(customerSet);
     return customers.sort();
   };
 
@@ -459,7 +460,7 @@ export default function WorkerScanner() {
   if (isMobileMode && preferences.singleBoxMode) {
     return (
       <MobileScannerInterface
-        currentCustomer={getCurrentCustomer()}
+        currentCustomer={getCurrentCustomer() || "No Customer Selected"}
         currentBoxNumber={currentBoxIndex + 1}
         assignedColor={workerAssignment?.assignedColor || "#3B82F6"}
         totalBoxes={getTotalBoxes()}
@@ -497,17 +498,17 @@ export default function WorkerScanner() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    // Toggle mobile mode preference
-                    // This would be handled by the settings page normally
+                    // Direct mobile mode toggle
+                    preferences.mobileModePreference = true;
                     toast({
                       title: "Mobile Mode",
-                      description: "Enable mobile mode in Settings to access mobile interface",
+                      description: "Go to Settings to enable mobile mode permanently",
                     });
                     setLocation("/settings");
                   }}
                   data-testid="button-mobile-mode"
                 >
-                  📱 Mobile Mode
+                  📱 Enable Mobile
                 </Button>
               )}
               
