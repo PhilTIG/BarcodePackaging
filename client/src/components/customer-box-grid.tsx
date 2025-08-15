@@ -160,8 +160,8 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
 
             {/* Lock icon for 100% completed boxes */}
             {box.isComplete && (
-              <div className="absolute top-1 left-1">
-                <Lock className="w-4 h-4 text-white" />
+              <div className="absolute top-1 right-1">
+                <Lock className={`w-5 h-5 ${highlighting.textColor}`} />
               </div>
             )}
 
