@@ -312,15 +312,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const job = await storage.createJob(jobData);
 
-      // Create products from CSV data
-      const products = csvData.map((row, index) => ({
+      // POC-Compliant Box Assignment: Customers assigned to boxes 1-100 by first appearance order
+      const customerToBoxMap = new Map<string, number>();
+      let nextBoxNumber = 1;
+      
+      // Build customer-to-box mapping based on first appearance in CSV
+      csvData.forEach(row => {
+        if (!customerToBoxMap.has(row.CustomName)) {
+          customerToBoxMap.set(row.CustomName, nextBoxNumber);
+          nextBoxNumber++;
+        }
+      });
+
+      // Create products with POC-compliant box assignments
+      const products = csvData.map((row) => ({
         jobId: job.id,
         barCode: row.BarCode,
         productName: row['Product Name'],
         qty: row.Qty,
         customerName: row.CustomName,
         groupName: row.Group || null,
-        boxNumber: Math.floor(index / 8) + 1 // Auto-assign to boxes (8 boxes max)
+        boxNumber: customerToBoxMap.get(row.CustomName)! // Assign based on customer first appearance
       }));
 
       await storage.createProducts(products);

@@ -40,6 +40,10 @@ export const products = pgTable("products", {
   scannedQty: integer("scanned_qty").default(0),
   boxNumber: integer("box_number"),
   isComplete: boolean("is_complete").default(false),
+  
+  // NEW: Worker tracking fields for color highlighting
+  lastWorkerUserId: varchar("last_worker_user_id").references(() => users.id),
+  lastWorkerColor: text("last_worker_color"),
 });
 
 export const scanSessions = pgTable("scan_sessions", {
@@ -68,9 +72,10 @@ export const scanEvents = pgTable("scan_events", {
   scanTime: timestamp("scan_time").default(sql`now()`),
   timeSincePrevious: integer("time_since_previous"), // milliseconds
   
-  // Worker assignment tracking (NEW)
-  workerAssignmentType: text("worker_assignment_type"),
+  // Worker assignment tracking (UPDATED)
+  workerAssignmentType: text("worker_assignment_type"), // 'ascending', 'descending', 'middle_up', 'middle_down'
   targetBoxNumber: integer("target_box_number"),
+  workerColor: text("worker_color"), // NEW: Track worker color for this scan
 });
 
 export const jobTypes = pgTable("job_types", {

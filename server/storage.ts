@@ -63,7 +63,7 @@ export interface IStorage {
   // Product methods
   createProducts(products: InsertProduct[]): Promise<Product[]>;
   getProductsByJobId(jobId: string): Promise<Product[]>;
-  updateProductScannedQty(barCode: string, jobId: string, increment: number): Promise<Product | undefined>;
+  updateProductScannedQty(barCode: string, jobId: string, increment: number, workerId?: string, workerColor?: string): Promise<Product | undefined>;
 
   // Scan session methods
   createScanSession(session: InsertScanSession): Promise<ScanSession>;
@@ -198,7 +198,7 @@ export class DatabaseStorage implements IStorage {
     return job || undefined;
   }
 
-  async updateJobActiveStatus(jobId: string, isActive: boolean): Promise<Job | null> {
+  async updateJobActiveStatus(jobId: string, isActive: boolean): Promise<Job | undefined> {
     try {
       const [job] = await this.db
         .update(jobs)
@@ -209,7 +209,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(jobs.id, jobId))
         .returning();
 
-      return job || null;
+      return job || undefined;
     } catch (error) {
       console.error('Error updating job active status:', error);
       throw error;
@@ -233,7 +233,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteJob(jobId: string): Promise<boolean> {
     try {
-      await this.db.transaction(async (tx) => {
+      await this.db.transaction(async (tx: any) => {
         // Delete scan events first (via scan sessions)
         const jobScanSessions = await tx
           .select({ id: scanSessions.id })
@@ -447,7 +447,7 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(products).where(eq(products.jobId, jobId));
   }
 
-  async updateProductScannedQty(barCode: string, jobId: string, increment: number): Promise<Product | undefined> {
+  async updateProductScannedQty(barCode: string, jobId: string, increment: number, workerId?: string, workerColor?: string): Promise<Product | undefined> {
     // Find products with this barcode in the job, ordered by customer priority
     const jobProducts = await this.db
       .select()
@@ -460,12 +460,21 @@ export class DatabaseStorage implements IStorage {
     for (const product of jobProducts) {
       if ((product.scannedQty || 0) < product.qty) {
         const newScannedQty = Math.min((product.scannedQty || 0) + increment, product.qty);
+        // Update product with worker tracking
+        const updateData: any = {
+          scannedQty: newScannedQty,
+          isComplete: newScannedQty >= product.qty
+        };
+
+        // Track last worker to scan into this box (for color highlighting)
+        if (workerId && workerColor) {
+          updateData.lastWorkerUserId = workerId;
+          updateData.lastWorkerColor = workerColor;
+        }
+
         const [updatedProduct] = await this.db
           .update(products)
-          .set({ 
-            scannedQty: newScannedQty,
-            isComplete: newScannedQty >= product.qty
-          })
+          .set(updateData)
           .where(eq(products.id, product.id))
           .returning();
 
@@ -619,12 +628,23 @@ export class DatabaseStorage implements IStorage {
       .values(eventData)
       .returning();
 
-    // Update product scanned quantity
+    // Update product scanned quantity with worker tracking
     if (insertEvent.eventType === 'scan' && productInfo) {
-      await this.updateProductScannedQty(insertEvent.barCode, productInfo.jobId, 1);
+      await this.updateProductScannedQty(
+        insertEvent.barCode, 
+        productInfo.jobId, 
+        1,
+        insertEvent.workerAssignmentType ? await this.getWorkerIdFromSession(insertEvent.sessionId) : undefined,
+        insertEvent.workerColor
+      );
     }
 
     return event;
+  }
+
+  private async getWorkerIdFromSession(sessionId: string): Promise<string | undefined> {
+    const session = await this.getScanSessionById(sessionId);
+    return session?.userId;
   }
 
   async getScanEventsBySessionId(sessionId: string): Promise<ScanEvent[]> {
@@ -647,7 +667,7 @@ export class DatabaseStorage implements IStorage {
     if (eventsToUndo.length === 0) return [];
 
     // Mark these events as undone and create undo events
-    const undoEvents: InsertScanEvent[] = eventsToUndo.map(event => ({
+    const undoEvents: InsertScanEvent[] = eventsToUndo.map((event: any) => ({
       sessionId,
       barCode: event.barCode,
       productName: event.productName,
