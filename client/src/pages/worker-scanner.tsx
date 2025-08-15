@@ -77,9 +77,6 @@ export default function WorkerScanner() {
       setLocation("/login");
       return;
     }
-    if (user && user.role !== "worker") {
-      setLocation("/login");
-    }
   }, [user, isLoading, setLocation]);
 
   // Handle job selection logic for workers
@@ -90,6 +87,7 @@ export default function WorkerScanner() {
     
     if (assignments.length === 0) {
       // No assignments - stay on scanner page and show no assignments message
+      setShowJobSelector(false);
       return;
     } else if (assignments.length === 1) {
       // Only one assignment - auto-redirect to that job
@@ -335,9 +333,34 @@ export default function WorkerScanner() {
     return assignments.find((a: any) => a.jobId === jobId);
   };
 
-  if (!user || user.role !== "worker") {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
     setLocation("/login");
     return null;
+  }
+
+  if (user.role !== "worker") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">Worker access required</p>
+          <Button onClick={() => setLocation("/login")} variant="outline">
+            Back to Login
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   // Show job selection interface when no jobId and multiple assignments
