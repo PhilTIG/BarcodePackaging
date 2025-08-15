@@ -161,6 +161,16 @@ export default function WorkerScanner() {
         score: calculateScore(prev.totalScans + 1, Date.now() - new Date(activeSession?.startTime || "").getTime()),
       }));
 
+      // Update currentBoxIndex to stay on scanned item's customer box (for single box mode)
+      if (preferences.singleBoxMode && data.scanEvent?.customerName) {
+        const products = (jobData as any)?.products || [];
+        const customers = Array.from(new Set(products.map((p: any) => p.customerName))).sort();
+        const newBoxIndex = customers.indexOf(data.scanEvent.customerName);
+        if (newBoxIndex !== -1) {
+          setCurrentBoxIndex(newBoxIndex);
+        }
+      }
+
       // Flash success feedback
       showScanFeedback(true);
 
@@ -313,6 +323,13 @@ export default function WorkerScanner() {
       progress: `${scannedItems + 1}/${totalItems} items`
     });
 
+    // Update currentBoxIndex to stay on the scanned item's customer box
+    const customerList = getUniqueCustomers();
+    const newBoxIndex = customerList.indexOf(targetItem.customerName);
+    if (newBoxIndex !== -1) {
+      setCurrentBoxIndex(newBoxIndex);
+    }
+
     // Clear scan result after 2 seconds to return to normal view
     setTimeout(() => setScanResult(null), 2000);
 
@@ -355,6 +372,14 @@ export default function WorkerScanner() {
       autoCreateSessionMutation.mutate();
     }
   }, [jobId, user, activeSession, sessionData]);
+
+  // Invalidate job data when switching jobs to ensure fresh product data
+  useEffect(() => {
+    if (jobId) {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/scan-sessions/my-active"] });
+    }
+  }, [jobId]);
 
   // Mobile mode helper functions
   const getUniqueCustomers = () => {
