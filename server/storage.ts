@@ -57,6 +57,8 @@ export interface IStorage {
   updateJobActiveStatus(id: string, isActive: boolean): Promise<Job | undefined>;
   getJobProgress(id: string): Promise<any>;
   getJobs(): Promise<{ jobs: any[] }>;
+  jobHasScanEvents(jobId: string): Promise<boolean>;
+  deleteJob(jobId: string): Promise<boolean>;
 
   // Product methods
   createProducts(products: InsertProduct[]): Promise<Product[]>;
@@ -89,26 +91,27 @@ export interface IStorage {
   // User preferences methods
   getUserPreferences(userId: string): Promise<UserPreferences | undefined>;
   updateUserPreferences(userId: string, preferences: Partial<UserPreferences>): Promise<UserPreferences | undefined>;
-  
+  createUserPreferences(insertPrefs: InsertUserPreferences): Promise<UserPreferences>;
+
   // Job types methods
   createJobType(jobType: InsertJobType): Promise<JobType>;
   getJobTypes(): Promise<JobType[]>;
   getJobTypeById(id: string): Promise<JobType | undefined>;
   updateJobType(id: string, updates: Partial<InsertJobType>): Promise<JobType | undefined>;
   deleteJobType(id: string): Promise<boolean>;
-  
+
   // Worker box assignment methods
   createWorkerBoxAssignment(assignment: InsertWorkerBoxAssignment): Promise<WorkerBoxAssignment>;
   getWorkerBoxAssignments(jobId: string): Promise<WorkerBoxAssignment[]>;
   getWorkerBoxAssignmentsByWorker(workerId: string, jobId: string): Promise<WorkerBoxAssignment[]>;
   deleteWorkerBoxAssignments(jobId: string, workerId: string): Promise<boolean>;
-  
+
   // Session snapshot methods
   createSessionSnapshot(snapshot: InsertSessionSnapshot): Promise<SessionSnapshot>;
   getSessionSnapshots(sessionId: string): Promise<SessionSnapshot[]>;
   getLatestSessionSnapshot(sessionId: string): Promise<SessionSnapshot | undefined>;
   deleteSessionSnapshot(id: string): Promise<boolean>;
-  
+
   // Job archive methods
   createJobArchive(archive: InsertJobArchive): Promise<JobArchive>;
   getJobArchives(): Promise<JobArchive[]>;
@@ -117,18 +120,20 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  constructor(private db: any) {} // Inject db instance
+
   async getUserById(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
   async getUserByStaffId(staffId: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.staffId, staffId));
+    const [user] = await this.db.select().from(users).where(eq(users.staffId, staffId));
     return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
+    const [user] = await this.db
       .insert(users)
       .values(insertUser)
       .returning();
@@ -136,7 +141,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined> {
-    const [user] = await db
+    const [user] = await this.db
       .update(users)
       .set(updates)
       .where(eq(users.id, id))
@@ -146,7 +151,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: string): Promise<boolean> {
     // Soft delete by setting isActive to false
-    const [user] = await db
+    const [user] = await this.db
       .update(users)
       .set({ isActive: false })
       .where(eq(users.id, id))
@@ -155,15 +160,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users).where(eq(users.isActive, true));
+    return await this.db.select().from(users).where(eq(users.isActive, true));
   }
 
   async getUsersByRole(role: string): Promise<User[]> {
-    return await db.select().from(users).where(and(eq(users.role, role), eq(users.isActive, true)));
+    return await this.db.select().from(users).where(and(eq(users.role, role), eq(users.isActive, true)));
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    const [job] = await db
+    const [job] = await this.db
       .insert(jobs)
       .values(insertJob)
       .returning();
@@ -171,12 +176,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobById(id: string): Promise<Job | undefined> {
-    const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
+    const [job] = await this.db.select().from(jobs).where(eq(jobs.id, id));
     return job || undefined;
   }
 
   async getAllJobs(): Promise<Job[]> {
-    return await db.select().from(jobs).orderBy(desc(jobs.createdAt));
+    return await this.db.select().from(jobs).orderBy(desc(jobs.createdAt));
   }
 
   async updateJobStatus(id: string, status: string): Promise<Job | undefined> {
@@ -185,7 +190,7 @@ export class DatabaseStorage implements IStorage {
       updateData.completedAt = new Date();
     }
 
-    const [job] = await db
+    const [job] = await this.db
       .update(jobs)
       .set(updateData)
       .where(eq(jobs.id, id))
@@ -193,13 +198,80 @@ export class DatabaseStorage implements IStorage {
     return job || undefined;
   }
 
-  async updateJobActiveStatus(id: string, isActive: boolean): Promise<Job | undefined> {
-    const [job] = await db
-      .update(jobs)
-      .set({ isActive })
-      .where(eq(jobs.id, id))
-      .returning();
-    return job || undefined;
+  async updateJobActiveStatus(jobId: string, isActive: boolean): Promise<Job | null> {
+    try {
+      const [job] = await this.db
+        .update(jobs)
+        .set({ 
+          isActive,
+          updatedAt: new Date()
+        })
+        .where(eq(jobs.id, jobId))
+        .returning();
+
+      return job || null;
+    } catch (error) {
+      console.error('Error updating job active status:', error);
+      throw error;
+    }
+  }
+
+  async jobHasScanEvents(jobId: string): Promise<boolean> {
+    try {
+      const scanEventsCount = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(scanEvents)
+        .innerJoin(scanSessions, eq(scanEvents.sessionId, scanSessions.id))
+        .where(eq(scanSessions.jobId, jobId));
+
+      return scanEventsCount[0]?.count > 0;
+    } catch (error) {
+      console.error('Error checking job scan events:', error);
+      throw error;
+    }
+  }
+
+  async deleteJob(jobId: string): Promise<boolean> {
+    try {
+      await this.db.transaction(async (tx) => {
+        // Delete scan events first (via scan sessions)
+        const jobScanSessions = await tx
+          .select({ id: scanSessions.id })
+          .from(scanSessions)
+          .where(eq(scanSessions.jobId, jobId));
+
+        for (const session of jobScanSessions) {
+          await tx
+            .delete(scanEvents)
+            .where(eq(scanEvents.sessionId, session.id));
+        }
+
+        // Delete scan sessions
+        await tx
+          .delete(scanSessions)
+          .where(eq(scanSessions.jobId, jobId));
+
+        // Delete job assignments
+        await tx
+          .delete(jobAssignments)
+          .where(eq(jobAssignments.jobId, jobId));
+
+        // Delete products
+        await tx
+          .delete(products)
+          .where(eq(products.jobId, jobId));
+
+        // Finally delete the job
+        await tx
+          .delete(jobs)
+          .where(eq(jobs.id, jobId));
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      throw error;
+    }
   }
 
   async getJobProgress(id: string): Promise<any> {
@@ -365,19 +437,19 @@ export class DatabaseStorage implements IStorage {
   async createProducts(productList: InsertProduct[]): Promise<Product[]> {
     if (productList.length === 0) return [];
 
-    return await db
+    return await this.db
       .insert(products)
       .values(productList)
       .returning();
   }
 
   async getProductsByJobId(jobId: string): Promise<Product[]> {
-    return await db.select().from(products).where(eq(products.jobId, jobId));
+    return await this.db.select().from(products).where(eq(products.jobId, jobId));
   }
 
   async updateProductScannedQty(barCode: string, jobId: string, increment: number): Promise<Product | undefined> {
     // Find products with this barcode in the job, ordered by customer priority
-    const jobProducts = await db
+    const jobProducts = await this.db
       .select()
       .from(products)
       .where(and(eq(products.barCode, barCode), eq(products.jobId, jobId)));
@@ -388,7 +460,7 @@ export class DatabaseStorage implements IStorage {
     for (const product of jobProducts) {
       if ((product.scannedQty || 0) < product.qty) {
         const newScannedQty = Math.min((product.scannedQty || 0) + increment, product.qty);
-        const [updatedProduct] = await db
+        const [updatedProduct] = await this.db
           .update(products)
           .set({ 
             scannedQty: newScannedQty,
@@ -411,14 +483,14 @@ export class DatabaseStorage implements IStorage {
     const jobProducts = await this.getProductsByJobId(jobId);
     const completedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
 
-    await db
+    await this.db
       .update(jobs)
       .set({ completedItems })
       .where(eq(jobs.id, jobId));
   }
 
   async createScanSession(insertSession: InsertScanSession): Promise<ScanSession> {
-    const [session] = await db
+    const [session] = await this.db
       .insert(scanSessions)
       .values(insertSession)
       .returning();
@@ -426,12 +498,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getScanSessionById(id: string): Promise<ScanSession | undefined> {
-    const [session] = await db.select().from(scanSessions).where(eq(scanSessions.id, id));
+    const [session] = await this.db.select().from(scanSessions).where(eq(scanSessions.id, id));
     return session || undefined;
   }
 
   async getActiveScanSession(userId: string): Promise<ScanSession | undefined> {
-    const [session] = await db
+    const [session] = await this.db
       .select()
       .from(scanSessions)
       .where(and(eq(scanSessions.userId, userId), eq(scanSessions.status, 'active')))
@@ -442,26 +514,26 @@ export class DatabaseStorage implements IStorage {
   async createOrGetActiveScanSession(userId: string, jobId: string): Promise<ScanSession> {
     // First check if there's already an active session for this user and job
     const existingSession = await this.getActiveScanSession(userId);
-    
+
     if (existingSession && existingSession.jobId === jobId) {
       return existingSession;
     }
-    
+
     // Check if the job is active for scanning
     const job = await this.getJobById(jobId);
     if (!job) {
       throw new Error('Job not found');
     }
-    
+
     if (!job.isActive) {
       throw new Error('Scanning is currently paused for this job. Please contact your manager.');
     }
-    
+
     // Close any existing active sessions for this user
     if (existingSession) {
       await this.updateScanSessionStatus(existingSession.id, 'completed');
     }
-    
+
     // Create new session
     return await this.createScanSession({
       userId,
@@ -471,7 +543,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getScanSessionsByJobId(jobId: string): Promise<ScanSession[]> {
-    return await db.select().from(scanSessions).where(eq(scanSessions.jobId, jobId));
+    return await this.db.select().from(scanSessions).where(eq(scanSessions.jobId, jobId));
   }
 
   async updateScanSessionStatus(id: string, status: string): Promise<ScanSession | undefined> {
@@ -481,7 +553,7 @@ export class DatabaseStorage implements IStorage {
     }
     updateData.lastActivityTime = new Date();
 
-    const [session] = await db
+    const [session] = await this.db
       .update(scanSessions)
       .set(updateData)
       .where(eq(scanSessions.id, id))
@@ -499,7 +571,7 @@ export class DatabaseStorage implements IStorage {
     const errorScans = events.filter(e => e.eventType === 'error').length;
     const undoOperations = events.filter(e => e.eventType === 'undo').length;
 
-    await db
+    await this.db
       .update(scanSessions)
       .set({
         totalScans,
@@ -513,7 +585,7 @@ export class DatabaseStorage implements IStorage {
 
   async createScanEvent(insertEvent: InsertScanEvent): Promise<ScanEvent> {
     // Calculate time since previous scan
-    const previousEvents = await db
+    const previousEvents = await this.db
       .select()
       .from(scanEvents)
       .where(eq(scanEvents.sessionId, insertEvent.sessionId))
@@ -526,7 +598,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Get product information for the scanned barcode
-    const jobProducts = await db
+    const jobProducts = await this.db
       .select()
       .from(products)
       .where(eq(products.barCode, insertEvent.barCode))
@@ -542,7 +614,7 @@ export class DatabaseStorage implements IStorage {
       timeSincePrevious,
     };
 
-    const [event] = await db
+    const [event] = await this.db
       .insert(scanEvents)
       .values(eventData)
       .returning();
@@ -556,7 +628,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getScanEventsBySessionId(sessionId: string): Promise<ScanEvent[]> {
-    return await db
+    return await this.db
       .select()
       .from(scanEvents)
       .where(eq(scanEvents.sessionId, sessionId))
@@ -565,7 +637,7 @@ export class DatabaseStorage implements IStorage {
 
   async undoScanEvents(sessionId: string, count: number): Promise<ScanEvent[]> {
     // Get the most recent scan events to undo
-    const eventsToUndo = await db
+    const eventsToUndo = await this.db
       .select()
       .from(scanEvents)
       .where(and(eq(scanEvents.sessionId, sessionId), eq(scanEvents.eventType, 'scan')))
@@ -584,7 +656,7 @@ export class DatabaseStorage implements IStorage {
       eventType: 'undo',
     }));
 
-    const createdUndoEvents = await db
+    const createdUndoEvents = await this.db
       .insert(scanEvents)
       .values(undoEvents)
       .returning();
@@ -592,14 +664,14 @@ export class DatabaseStorage implements IStorage {
     // Decrease product scanned quantities
     for (const event of eventsToUndo) {
       if (event.barCode) {
-        const jobProducts = await db
+        const jobProducts = await this.db
           .select()
           .from(products)
           .where(eq(products.barCode, event.barCode));
 
         for (const product of jobProducts) {
           if ((product.scannedQty || 0) > 0) {
-            await db
+            await this.db
               .update(products)
               .set({ 
                 scannedQty: (product.scannedQty || 0) - 1,
@@ -665,7 +737,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createJobAssignment(insertAssignment: InsertJobAssignment): Promise<JobAssignment> {
-    const [assignment] = await db
+    const [assignment] = await this.db
       .insert(jobAssignments)
       .values(insertAssignment)
       .returning();
@@ -673,14 +745,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobAssignments(jobId: string): Promise<JobAssignment[]> {
-    return await db
+    return await this.db
       .select()
       .from(jobAssignments)
       .where(and(eq(jobAssignments.jobId, jobId), eq(jobAssignments.isActive, true)));
   }
 
   async getJobAssignmentsWithUsers(jobId: string): Promise<(JobAssignment & { assignee: User })[]> {
-    return await db
+    return await this.db
       .select({
         id: jobAssignments.id,
         jobId: jobAssignments.jobId,
@@ -705,14 +777,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobAssignmentsByUser(userId: string): Promise<JobAssignment[]> {
-    return await db
+    return await this.db
       .select()
       .from(jobAssignments)
       .where(and(eq(jobAssignments.userId, userId), eq(jobAssignments.isActive, true)));
   }
 
   async unassignWorkerFromJob(jobId: string, userId: string): Promise<boolean> {
-    const result = await db
+    const result = await this.db
       .update(jobAssignments)
       .set({ isActive: false })
       .where(and(
@@ -726,7 +798,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkExistingAssignment(jobId: string, userId: string): Promise<JobAssignment | undefined> {
-    const [assignment] = await db
+    const [assignment] = await this.db
       .select()
       .from(jobAssignments)
       .where(and(
@@ -740,7 +812,7 @@ export class DatabaseStorage implements IStorage {
 
   // User preferences methods
   async getUserPreferences(userId: string): Promise<UserPreferences | undefined> {
-    const [result] = await db
+    const [result] = await this.db
       .select()
       .from(userPreferences)
       .where(eq(userPreferences.userId, userId));
@@ -771,7 +843,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUserPreferences(insertPrefs: InsertUserPreferences): Promise<UserPreferences> {
-    const [result] = await db
+    const [result] = await this.db
       .insert(userPreferences)
       .values(insertPrefs)
       .returning();
@@ -798,7 +870,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserPreferences(userId: string, updates: Partial<UserPreferences>): Promise<UserPreferences | undefined> {
-    const [result] = await db
+    const [result] = await this.db
       .update(userPreferences)
       .set({ 
         ...updates,
@@ -833,7 +905,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRoleDefaults(role: string): Promise<any | undefined> {
-    const [defaults] = await db
+    const [defaults] = await this.db
       .select()
       .from(roleDefaults)
       .where(eq(roleDefaults.role, role));
@@ -843,7 +915,7 @@ export class DatabaseStorage implements IStorage {
 
   async createOrUpdateRoleDefaults(role: string, preferences: any, createdBy: string): Promise<RoleDefaults> {
     // Try to update existing first
-    const [updated] = await db
+    const [updated] = await this.db
       .update(roleDefaults)
       .set({ 
         defaultPreferences: preferences,
@@ -855,7 +927,7 @@ export class DatabaseStorage implements IStorage {
     if (updated) return updated;
 
     // Create new if doesn't exist
-    const [created] = await db
+    const [created] = await this.db
       .insert(roleDefaults)
       .values({ role, defaultPreferences: preferences, createdBy })
       .returning();
@@ -864,14 +936,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllRoleDefaults(): Promise<RoleDefaults[]> {
-    return await db
+    return await this.db
       .select()
       .from(roleDefaults);
   }
 
   // Job types methods
   async createJobType(jobType: InsertJobType): Promise<JobType> {
-    const [result] = await db
+    const [result] = await this.db
       .insert(jobTypes)
       .values(jobType)
       .returning();
@@ -879,11 +951,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobTypes(): Promise<JobType[]> {
-    return await db.select().from(jobTypes).orderBy(jobTypes.name);
+    return await this.db.select().from(jobTypes).orderBy(jobTypes.name);
   }
 
   async getJobTypeById(id: string): Promise<JobType | undefined> {
-    const [result] = await db
+    const [result] = await this.db
       .select()
       .from(jobTypes)
       .where(eq(jobTypes.id, id));
@@ -891,7 +963,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateJobType(id: string, updates: Partial<InsertJobType>): Promise<JobType | undefined> {
-    const [result] = await db
+    const [result] = await this.db
       .update(jobTypes)
       .set(updates)
       .where(eq(jobTypes.id, id))
@@ -900,7 +972,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteJobType(id: string): Promise<boolean> {
-    const result = await db
+    const result = await this.db
       .delete(jobTypes)
       .where(eq(jobTypes.id, id))
       .returning();
@@ -909,7 +981,7 @@ export class DatabaseStorage implements IStorage {
 
   // Worker box assignment methods
   async createWorkerBoxAssignment(assignment: InsertWorkerBoxAssignment): Promise<WorkerBoxAssignment> {
-    const [result] = await db
+    const [result] = await this.db
       .insert(workerBoxAssignments)
       .values(assignment)
       .returning();
@@ -917,7 +989,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkerBoxAssignments(jobId: string): Promise<WorkerBoxAssignment[]> {
-    return await db
+    return await this.db
       .select()
       .from(workerBoxAssignments)
       .where(eq(workerBoxAssignments.jobId, jobId))
@@ -925,7 +997,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkerBoxAssignmentsByWorker(workerId: string, jobId: string): Promise<WorkerBoxAssignment[]> {
-    return await db
+    return await this.db
       .select()
       .from(workerBoxAssignments)
       .where(and(
@@ -936,7 +1008,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteWorkerBoxAssignments(jobId: string, workerId: string): Promise<boolean> {
-    const result = await db
+    const result = await this.db
       .delete(workerBoxAssignments)
       .where(and(
         eq(workerBoxAssignments.jobId, jobId),
@@ -948,7 +1020,7 @@ export class DatabaseStorage implements IStorage {
 
   // Session snapshot methods
   async createSessionSnapshot(snapshot: InsertSessionSnapshot): Promise<SessionSnapshot> {
-    const [result] = await db
+    const [result] = await this.db
       .insert(sessionSnapshots)
       .values(snapshot)
       .returning();
@@ -956,7 +1028,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSessionSnapshots(sessionId: string): Promise<SessionSnapshot[]> {
-    return await db
+    return await this.db
       .select()
       .from(sessionSnapshots)
       .where(eq(sessionSnapshots.sessionId, sessionId))
@@ -964,7 +1036,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestSessionSnapshot(sessionId: string): Promise<SessionSnapshot | undefined> {
-    const [result] = await db
+    const [result] = await this.db
       .select()
       .from(sessionSnapshots)
       .where(eq(sessionSnapshots.sessionId, sessionId))
@@ -974,7 +1046,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSessionSnapshot(id: string): Promise<boolean> {
-    const result = await db
+    const result = await this.db
       .delete(sessionSnapshots)
       .where(eq(sessionSnapshots.id, id))
       .returning();
@@ -983,7 +1055,7 @@ export class DatabaseStorage implements IStorage {
 
   // Job archive methods
   async createJobArchive(archive: InsertJobArchive): Promise<JobArchive> {
-    const [result] = await db
+    const [result] = await this.db
       .insert(jobArchives)
       .values(archive)
       .returning();
@@ -991,14 +1063,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobArchives(): Promise<JobArchive[]> {
-    return await db
+    return await this.db
       .select()
       .from(jobArchives)
       .orderBy(sql`archived_at DESC`);
   }
 
   async searchJobArchives(query: string): Promise<JobArchive[]> {
-    return await db
+    return await this.db
       .select()
       .from(jobArchives)
       .where(sql`job_data::text ILIKE ${`%${query}%`}`)
@@ -1006,7 +1078,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteJobArchive(id: string): Promise<boolean> {
-    const result = await db
+    const result = await this.db
       .delete(jobArchives)
       .where(eq(jobArchives.id, id))
       .returning();
@@ -1014,4 +1086,4 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new DatabaseStorage(db);

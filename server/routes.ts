@@ -506,6 +506,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Remove job (only if 0% complete)
+  app.delete('/api/jobs/:id', requireAuth, requireRole(['manager']), async (req, res) => {
+    try {
+      const jobId = req.params.id;
+      
+      // Check if job exists and get its progress
+      const job = await storage.getJobById(jobId);
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Check if job has any scan events (0% complete check)
+      const hasScanEvents = await storage.jobHasScanEvents(jobId);
+      if (hasScanEvents) {
+        return res.status(400).json({ 
+          message: 'Cannot remove job with scan progress. Only jobs with 0% completion can be removed.' 
+        });
+      }
+
+      // Remove all job data
+      const success = await storage.deleteJob(jobId);
+      if (!success) {
+        return res.status(500).json({ message: 'Failed to remove job' });
+      }
+
+      // Broadcast job removal to all connected clients
+      broadcastToJob(jobId, {
+        type: 'job_removed',
+        data: { jobId }
+      });
+
+      res.json({ message: 'Job removed successfully', jobId });
+    } catch (error: any) {
+      console.error('Job removal error:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to remove job'
+      });
+    }
+  });
+
   // Job assignments
   app.post('/api/jobs/:id/assignments', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
     try {

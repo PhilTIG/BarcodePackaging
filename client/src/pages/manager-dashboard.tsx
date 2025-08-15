@@ -230,6 +230,35 @@ export default function ManagerDashboard() {
     toggleJobActiveMutation.mutate({ jobId, isActive });
   };
 
+  // Remove job mutation
+  const removeJobMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const response = await apiRequest("DELETE", `/api/jobs/${jobId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Job removed successfully",
+        description: "The job and all its data have been deleted.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to remove job",
+        description: error.message || "Unable to remove the job",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle job removal
+  const handleRemoveJob = (jobId: string) => {
+    if (confirm("Are you sure you want to remove this job? This action cannot be undone.")) {
+      removeJobMutation.mutate(jobId);
+    }
+  };
+
   // Handle assignment form submission
   const handleAssignWorker = () => {
     if (!selectedJobId || !assignForm.userId) {
@@ -559,7 +588,23 @@ export default function ManagerDashboard() {
                       <div className="mb-4">
                         <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                           <span>Progress</span>
-                          <span>{progressPercentage}% complete</span>
+                          <div className="flex flex-col items-end">
+                            <span>{progressPercentage}% complete</span>
+                            {progressPercentage === 0 && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="mt-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveJob(job.id);
+                                }}
+                                data-testid={`button-remove-${job.id}`}
+                              >
+                                Remove Job
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         <Progress value={progressPercentage} className="mb-2" />
                       </div>
