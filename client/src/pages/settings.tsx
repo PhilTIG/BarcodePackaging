@@ -665,7 +665,7 @@ export default function Settings() {
           </Card>
         )}
         </>
-      ) : user.role === "manager" ? (
+      ) : activeTab === "users" && user.role === "manager" ? (
         <>
           {/* User Management Section */}
           <Card data-testid="user-management">
@@ -866,7 +866,7 @@ export default function Settings() {
             </CardContent>
           </Card>
         </>
-      ) : (
+      ) : activeTab === "users" && user.role !== "manager" ? (
         <>
           {/* Fallback for non-managers who somehow get to users tab */}
           <Card>
@@ -876,7 +876,7 @@ export default function Settings() {
             </CardContent>
           </Card>
         </>
-      )}
+      ) : null}
       {activeTab === "job-types" && (
         <>
           {/* Job Types Management */}
