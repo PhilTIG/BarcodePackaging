@@ -323,6 +323,7 @@ export default function SupervisorView() {
               products={products}
               jobId={job.id}
               supervisorView={true}
+              lastScannedBoxNumber={null}
             />
           </CardContent>
         </Card>

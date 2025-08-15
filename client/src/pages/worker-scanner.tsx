@@ -38,6 +38,7 @@ export default function WorkerScanner() {
   });
   const [showJobSelector, setShowJobSelector] = useState(false);
   const [currentBoxIndex, setCurrentBoxIndex] = useState(0);
+  const [lastScannedBoxNumber, setLastScannedBoxNumber] = useState<number | null>(null); // Track last scanned box for POC-style highlighting
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<{
     boxNumber: number;
@@ -309,6 +310,9 @@ export default function WorkerScanner() {
     // Calculate box number and progress
     const customers = getUniqueCustomers();
     const boxNumber = customers.indexOf(targetItem.customerName) + 1;
+    
+    // Update last scanned box for POC-style highlighting
+    setLastScannedBoxNumber(boxNumber);
     
     // Calculate progress for this customer's box
     const customerProducts = products.filter(p => p.customerName === targetItem.customerName);
@@ -814,6 +818,7 @@ export default function WorkerScanner() {
               products={products}
               jobId={job.id}
               supervisorView={false}
+              lastScannedBoxNumber={lastScannedBoxNumber}
             />
           </CardContent>
         </Card>

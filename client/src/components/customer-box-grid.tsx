@@ -17,9 +17,10 @@ interface CustomerBoxGridProps {
   products: Product[];
   jobId: string;
   supervisorView?: boolean;
+  lastScannedBoxNumber?: number | null; // For POC-style single box highlighting
 }
 
-export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBoxGridProps) {
+export function CustomerBoxGrid({ products, supervisorView = false, lastScannedBoxNumber = null }: CustomerBoxGridProps) {
   // Use actual user preferences for box layout
   const { preferences } = useUserPreferences();
   
@@ -105,13 +106,16 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
       {boxData.map((box) => {
         const completionPercentage = box.totalQty > 0 ? Math.round((box.scannedQty / box.totalQty) * 100) : 0;
         
+        // POC-style highlighting logic
+        const isLastScanned = lastScannedBoxNumber === box.boxNumber;
+        
         const boxClasses = [
           "border rounded-lg p-3 relative transition-all duration-200",
           box.isComplete 
-            ? "border-green-200 bg-green-50" 
-            : box.isActive 
-              ? "border-blue-200 bg-blue-50" 
-              : "border-gray-200 bg-white"
+            ? "border-red-300 bg-red-100" // Grey-red for completed boxes
+            : isLastScanned 
+              ? "border-green-300 bg-green-100" // Green for just-scanned box
+              : "border-gray-200 bg-white" // Default for all other boxes
         ].join(" ");
 
         return (
@@ -125,10 +129,10 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
             <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white ${
                 box.isComplete 
-                  ? "bg-green-500" 
-                  : box.isActive 
-                    ? "bg-blue-500" 
-                    : "bg-gray-400"
+                  ? "bg-red-400" // Grey-red badge for completed boxes
+                  : isLastScanned 
+                    ? "bg-green-500" // Green badge for just-scanned box
+                    : "bg-gray-400" // Default grey badge
               }`}>
                 {box.boxNumber}
               </div>
@@ -137,14 +141,14 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
             {/* Lock icon for 100% completed boxes */}
             {box.isComplete && (
               <div className="absolute top-1 left-1">
-                <Lock className="w-3 h-3 text-green-600" />
+                <Lock className="w-4 h-4 text-red-600" />
               </div>
             )}
 
-            {/* Activity indicator for active boxes (scanning in progress) */}
-            {box.isActive && !box.isComplete && (
+            {/* Green indicator for just-scanned box */}
+            {isLastScanned && !box.isComplete && (
               <div className="absolute top-1 left-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
             )}
 
@@ -160,10 +164,10 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
             <div className="space-y-2 pr-16">
               <div className={`text-lg font-bold ${
                 box.isComplete 
-                  ? "text-green-600" 
-                  : box.isActive 
-                    ? "text-blue-600" 
-                    : "text-gray-500"
+                  ? "text-red-700" // Dark red text for completed boxes
+                  : isLastScanned 
+                    ? "text-green-700" // Dark green text for just-scanned box
+                    : "text-gray-500" // Default grey text
               }`} data-testid={`quantity-${box.boxNumber}`}>
                 {box.scannedQty}/{box.totalQty}
               </div>
@@ -172,10 +176,10 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
                 value={completionPercentage} 
                 className={`h-2 ${
                   box.isComplete 
-                    ? "text-green-600" 
-                    : box.isActive 
-                      ? "text-blue-600" 
-                      : "text-gray-400"
+                    ? "text-red-600" // Red progress for completed boxes
+                    : isLastScanned 
+                      ? "text-green-600" // Green progress for just-scanned box
+                      : "text-gray-400" // Default grey progress
                 }`} 
                 data-testid={`progress-${box.boxNumber}`}
               />
@@ -185,26 +189,16 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
               </p>
             </div>
 
-            {/* Status badges */}
+            {/* Status badges - Removed "Scanning" and "Pending" badges per requirements */}
             <div className="mt-2">
               {box.isComplete && (
-                <Badge variant="default" className="text-xs bg-green-500 text-white">
+                <Badge variant="default" className="text-xs bg-red-500 text-white">
                   100% Complete
                 </Badge>
               )}
-              {box.isActive && !box.isComplete && (
-                <Badge variant="secondary" className="text-xs bg-blue-500 text-white">
-                  Scanning
-                </Badge>
-              )}
-              {!box.isActive && !box.isComplete && box.totalQty === 0 && (
+              {!box.isComplete && box.totalQty === 0 && (
                 <Badge variant="outline" className="text-xs">
                   Empty
-                </Badge>
-              )}
-              {!box.isActive && !box.isComplete && box.totalQty > 0 && (
-                <Badge variant="outline" className="text-xs">
-                  Pending
                 </Badge>
               )}
             </div>
