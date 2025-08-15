@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Lock } from "lucide-react";
-import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 interface Product {
   id: string;
@@ -20,7 +19,7 @@ interface CustomerBoxGridProps {
 }
 
 export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBoxGridProps) {
-  // Temporarily use default preferences while system is being rebuilt
+  // Use default preferences for now - will be enhanced with mobile interface
   const preferences = { maxBoxesPerRow: 12 };
   
   const boxData = useMemo(() => {
