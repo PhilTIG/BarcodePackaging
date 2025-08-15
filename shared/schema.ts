@@ -93,7 +93,6 @@ export const scanEvents = pgTable("scan_events", {
   
   // Worker assignment tracking (UPDATED)
   workerAssignmentType: text("worker_assignment_type"), // 'ascending', 'descending', 'middle_up', 'middle_down'
-  targetBoxNumber: integer("target_box_number"),
   workerColor: text("worker_color"), // NEW: Track worker color for this scan
 });
 

@@ -603,80 +603,131 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createScanEvent(insertEvent: InsertScanEvent): Promise<ScanEvent> {
-    // Calculate time since previous scan
-    const previousEvents = await this.db
-      .select()
-      .from(scanEvents)
-      .where(eq(scanEvents.sessionId, insertEvent.sessionId))
-      .orderBy(desc(scanEvents.scanTime))
-      .limit(1);
+    try {
+      // Calculate time since previous scan
+      const previousEvents = await this.db
+        .select()
+        .from(scanEvents)
+        .where(eq(scanEvents.sessionId, insertEvent.sessionId))
+        .orderBy(desc(scanEvents.scanTime))
+        .limit(1);
 
-    let timeSincePrevious = null;
-    if (previousEvents.length > 0 && previousEvents[0].scanTime) {
-      timeSincePrevious = Date.now() - new Date(previousEvents[0].scanTime).getTime();
-    }
+      let timeSincePrevious = null;
+      if (previousEvents.length > 0 && previousEvents[0].scanTime) {
+        timeSincePrevious = Date.now() - new Date(previousEvents[0].scanTime).getTime();
+      }
 
-    // Get session to determine worker and job
-    const session = await this.getScanSessionById(insertEvent.sessionId);
-    if (!session) {
-      throw new Error('Session not found');
-    }
+      // Get session to determine worker and job
+      const session = await this.getScanSessionById(insertEvent.sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
 
-    // NEW SCANNING LOGIC: Use box requirements instead of products
-    const workerId = session.userId;
-    const targetBox = await this.findNextTargetBox(insertEvent.barCode, session.jobId, workerId);
-    
-    if (!targetBox && insertEvent.eventType === 'scan') {
-      console.log(`No available target box found for barcode ${insertEvent.barCode}`);
-      // Could be an error event - item not expected or already fully allocated
-    }
-
-    // Get box requirement info for the target box
-    let productName = null;
-    let customerName = null;
-    if (targetBox) {
-      const boxReq = await this.db
+      // Check if job has box requirements (new system) or fall back to products (old system)
+      const hasBoxRequirements = await this.db
         .select()
         .from(boxRequirements)
-        .where(and(
-          eq(boxRequirements.jobId, session.jobId),
-          eq(boxRequirements.barCode, insertEvent.barCode),
-          eq(boxRequirements.boxNumber, targetBox)
-        ))
+        .where(eq(boxRequirements.jobId, session.jobId))
         .limit(1);
-      
-      if (boxReq.length > 0) {
-        productName = boxReq[0].productName;
-        customerName = boxReq[0].customerName;
+
+      let productName = null;
+      let customerName = null;
+      let targetBox = null;
+      let workerColor = insertEvent.workerColor || 'blue'; // Default color
+
+      if (hasBoxRequirements.length > 0) {
+        // NEW SYSTEM: Use box requirements logic
+        console.log('Using new box requirements system for scanning');
+        const workerId = session.userId;
+        targetBox = await this.findNextTargetBox(insertEvent.barCode, session.jobId, workerId);
+        
+        if (targetBox) {
+          // Get box requirement info for the target box
+          const boxReq = await this.db
+            .select()
+            .from(boxRequirements)
+            .where(and(
+              eq(boxRequirements.jobId, session.jobId),
+              eq(boxRequirements.barCode, insertEvent.barCode),
+              eq(boxRequirements.boxNumber, targetBox)
+            ))
+            .limit(1);
+          
+          if (boxReq.length > 0) {
+            productName = boxReq[0].productName;
+            customerName = boxReq[0].customerName;
+          }
+        } else if (insertEvent.eventType === 'scan') {
+          console.log(`No available target box found for barcode ${insertEvent.barCode} - marking as error`);
+          // Convert to error event if no target box found
+          insertEvent.eventType = 'error';
+        }
+      } else {
+        // FALLBACK: Use old products system for backward compatibility
+        console.log('Using legacy products system for scanning');
+        const jobProducts = await this.db
+          .select()
+          .from(products)
+          .where(and(
+            eq(products.jobId, session.jobId),
+            eq(products.barCode, insertEvent.barCode)
+          ))
+          .limit(1);
+
+        if (jobProducts.length > 0) {
+          const productInfo = jobProducts[0];
+          productName = productInfo.productName;
+          customerName = productInfo.customerName;
+          targetBox = productInfo.boxNumber;
+        } else if (insertEvent.eventType === 'scan') {
+          console.log(`Product not found for barcode ${insertEvent.barCode} - marking as error`);
+          insertEvent.eventType = 'error';
+        }
       }
+
+      const eventData = {
+        ...insertEvent,
+        productName,
+        customerName,
+        boxNumber: targetBox,
+        calculatedTargetBox: targetBox,
+        timeSincePrevious,
+        workerColor,
+      };
+
+      const [event] = await this.db
+        .insert(scanEvents)
+        .values(eventData)
+        .returning();
+
+      // Update quantities based on system type
+      if (insertEvent.eventType === 'scan' && targetBox) {
+        if (hasBoxRequirements.length > 0) {
+          // NEW SYSTEM: Update box requirement
+          await this.updateBoxRequirementScannedQty(
+            targetBox,
+            insertEvent.barCode, 
+            session.jobId, 
+            session.userId,
+            workerColor
+          );
+        } else {
+          // FALLBACK: Update product quantity (old system)
+          await this.updateProductScannedQty(
+            insertEvent.barCode, 
+            session.jobId, 
+            1,
+            session.userId,
+            workerColor
+          );
+        }
+      }
+
+      return event;
+    } catch (error) {
+      console.error('Error in createScanEvent:', error);
+      throw error;
     }
-
-    const eventData = {
-      ...insertEvent,
-      productName,
-      customerName,
-      boxNumber: targetBox,
-      calculatedTargetBox: targetBox,
-      timeSincePrevious,
-    };
-
-    const [event] = await this.db
-      .insert(scanEvents)
-      .values(eventData)
-      .returning();
-
-    // NEW: Update box requirement scanned quantity instead of product
-    if (insertEvent.eventType === 'scan' && targetBox && insertEvent.workerColor) {
-      await this.updateBoxRequirementScannedQty(
-        targetBox,
-        insertEvent.barCode, 
-        session.jobId, 
-        workerId,
-        insertEvent.workerColor
-      );
-    }
-
-    return event;
   }
 
   private async getWorkerIdFromSession(sessionId: string): Promise<string | undefined> {
@@ -1130,7 +1181,7 @@ export class DatabaseStorage implements IStorage {
       return null;
     }
 
-    const boxNumbers = availableBoxes.map(box => box.boxNumber);
+    const boxNumbers = availableBoxes.map((box: BoxRequirement) => box.boxNumber);
     
     // Apply worker allocation pattern to find next box
     switch (workerPattern) {
