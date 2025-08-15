@@ -11,6 +11,8 @@ interface UserPreferences {
   targetScansPerHour: number;
   autoSaveSessions: boolean;
   showRealtimeStats: boolean;
+  mobileModePreference: boolean;
+  singleBoxMode: boolean;
 }
 
 interface UserPreferencesContextType {
@@ -30,6 +32,8 @@ const defaultPreferences: UserPreferences = {
   targetScansPerHour: 71,
   autoSaveSessions: true,
   showRealtimeStats: true,
+  mobileModePreference: false,
+  singleBoxMode: false,
 };
 
 export function UserPreferencesProvider({ children }: { children: ReactNode }) {
@@ -47,7 +51,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     mutationFn: async (newPreferences: Partial<UserPreferences>) => {
       return apiRequest('/api/users/me/preferences', 'PUT', newPreferences);
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data?.preferences) {
         setPreferences(data.preferences);
         localStorage.setItem('userPreferences', JSON.stringify(data.preferences));

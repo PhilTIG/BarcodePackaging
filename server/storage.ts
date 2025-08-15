@@ -7,6 +7,10 @@ import {
   jobAssignments,
   userPreferences,
   roleDefaults,
+  jobTypes,
+  workerBoxAssignments,
+  sessionSnapshots,
+  jobArchives,
   type User, 
   type InsertUser,
   type Job,
@@ -22,7 +26,15 @@ import {
   type UserPreferences,
   type InsertUserPreferences,
   type RoleDefaults,
-  type InsertRoleDefaults
+  type InsertRoleDefaults,
+  type JobType,
+  type InsertJobType,
+  type WorkerBoxAssignment,
+  type InsertWorkerBoxAssignment,
+  type SessionSnapshot,
+  type InsertSessionSnapshot,
+  type JobArchive,
+  type InsertJobArchive
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
@@ -74,8 +86,32 @@ export interface IStorage {
 
   // User preferences methods
   getUserPreferences(userId: string): Promise<UserPreferences | undefined>;
-  createUserPreferences(preferences: InsertUserPreferences): Promise<UserPreferences>;
-  updateUserPreferences(userId: string, updates: Partial<UserPreferences>): Promise<UserPreferences | undefined>;
+  updateUserPreferences(userId: string, preferences: Partial<UserPreferences>): Promise<UserPreferences | undefined>;
+  
+  // Job types methods
+  createJobType(jobType: InsertJobType): Promise<JobType>;
+  getJobTypes(): Promise<JobType[]>;
+  getJobTypeById(id: string): Promise<JobType | undefined>;
+  updateJobType(id: string, updates: Partial<InsertJobType>): Promise<JobType | undefined>;
+  deleteJobType(id: string): Promise<boolean>;
+  
+  // Worker box assignment methods
+  createWorkerBoxAssignment(assignment: InsertWorkerBoxAssignment): Promise<WorkerBoxAssignment>;
+  getWorkerBoxAssignments(jobId: string): Promise<WorkerBoxAssignment[]>;
+  getWorkerBoxAssignmentsByWorker(workerId: string, jobId: string): Promise<WorkerBoxAssignment[]>;
+  deleteWorkerBoxAssignments(jobId: string, workerId: string): Promise<boolean>;
+  
+  // Session snapshot methods
+  createSessionSnapshot(snapshot: InsertSessionSnapshot): Promise<SessionSnapshot>;
+  getSessionSnapshots(sessionId: string): Promise<SessionSnapshot[]>;
+  getLatestSessionSnapshot(sessionId: string): Promise<SessionSnapshot | undefined>;
+  deleteSessionSnapshot(id: string): Promise<boolean>;
+  
+  // Job archive methods
+  createJobArchive(archive: InsertJobArchive): Promise<JobArchive>;
+  getJobArchives(): Promise<JobArchive[]>;
+  searchJobArchives(query: string): Promise<JobArchive[]>;
+  deleteJobArchive(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -673,6 +709,8 @@ export class DatabaseStorage implements IStorage {
       enableAutoUndo: result.enableAutoUndo || false,
       undoTimeLimit: result.undoTimeLimit || 30,
       batchScanMode: result.batchScanMode || false,
+      mobileModePreference: result.mobileModePreference || false,
+      singleBoxMode: result.singleBoxMode || false,
     };
   }
 
@@ -698,6 +736,8 @@ export class DatabaseStorage implements IStorage {
       enableAutoUndo: result.enableAutoUndo || false,
       undoTimeLimit: result.undoTimeLimit || 30,
       batchScanMode: result.batchScanMode || false,
+      mobileModePreference: result.mobileModePreference || false,
+      singleBoxMode: result.singleBoxMode || false,
     };
   }
 
@@ -731,6 +771,8 @@ export class DatabaseStorage implements IStorage {
       enableAutoUndo: result.enableAutoUndo || false,
       undoTimeLimit: result.undoTimeLimit || 30,
       batchScanMode: result.batchScanMode || false,
+      mobileModePreference: result.mobileModePreference || false,
+      singleBoxMode: result.singleBoxMode || false,
     };
   }
 
@@ -769,6 +811,150 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(roleDefaults);
+  }
+
+  // Job types methods
+  async createJobType(jobType: InsertJobType): Promise<JobType> {
+    const [result] = await db
+      .insert(jobTypes)
+      .values(jobType)
+      .returning();
+    return result;
+  }
+
+  async getJobTypes(): Promise<JobType[]> {
+    return await db.select().from(jobTypes).orderBy(jobTypes.name);
+  }
+
+  async getJobTypeById(id: string): Promise<JobType | undefined> {
+    const [result] = await db
+      .select()
+      .from(jobTypes)
+      .where(eq(jobTypes.id, id));
+    return result || undefined;
+  }
+
+  async updateJobType(id: string, updates: Partial<InsertJobType>): Promise<JobType | undefined> {
+    const [result] = await db
+      .update(jobTypes)
+      .set(updates)
+      .where(eq(jobTypes.id, id))
+      .returning();
+    return result || undefined;
+  }
+
+  async deleteJobType(id: string): Promise<boolean> {
+    const result = await db
+      .delete(jobTypes)
+      .where(eq(jobTypes.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Worker box assignment methods
+  async createWorkerBoxAssignment(assignment: InsertWorkerBoxAssignment): Promise<WorkerBoxAssignment> {
+    const [result] = await db
+      .insert(workerBoxAssignments)
+      .values(assignment)
+      .returning();
+    return result;
+  }
+
+  async getWorkerBoxAssignments(jobId: string): Promise<WorkerBoxAssignment[]> {
+    return await db
+      .select()
+      .from(workerBoxAssignments)
+      .where(eq(workerBoxAssignments.jobId, jobId))
+      .orderBy(workerBoxAssignments.boxNumber);
+  }
+
+  async getWorkerBoxAssignmentsByWorker(workerId: string, jobId: string): Promise<WorkerBoxAssignment[]> {
+    return await db
+      .select()
+      .from(workerBoxAssignments)
+      .where(and(
+        eq(workerBoxAssignments.workerId, workerId),
+        eq(workerBoxAssignments.jobId, jobId)
+      ))
+      .orderBy(workerBoxAssignments.boxNumber);
+  }
+
+  async deleteWorkerBoxAssignments(jobId: string, workerId: string): Promise<boolean> {
+    const result = await db
+      .delete(workerBoxAssignments)
+      .where(and(
+        eq(workerBoxAssignments.jobId, jobId),
+        eq(workerBoxAssignments.workerId, workerId)
+      ))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Session snapshot methods
+  async createSessionSnapshot(snapshot: InsertSessionSnapshot): Promise<SessionSnapshot> {
+    const [result] = await db
+      .insert(sessionSnapshots)
+      .values(snapshot)
+      .returning();
+    return result;
+  }
+
+  async getSessionSnapshots(sessionId: string): Promise<SessionSnapshot[]> {
+    return await db
+      .select()
+      .from(sessionSnapshots)
+      .where(eq(sessionSnapshots.sessionId, sessionId))
+      .orderBy(sessionSnapshots.createdAt);
+  }
+
+  async getLatestSessionSnapshot(sessionId: string): Promise<SessionSnapshot | undefined> {
+    const [result] = await db
+      .select()
+      .from(sessionSnapshots)
+      .where(eq(sessionSnapshots.sessionId, sessionId))
+      .orderBy(sql`created_at DESC`)
+      .limit(1);
+    return result || undefined;
+  }
+
+  async deleteSessionSnapshot(id: string): Promise<boolean> {
+    const result = await db
+      .delete(sessionSnapshots)
+      .where(eq(sessionSnapshots.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Job archive methods
+  async createJobArchive(archive: InsertJobArchive): Promise<JobArchive> {
+    const [result] = await db
+      .insert(jobArchives)
+      .values(archive)
+      .returning();
+    return result;
+  }
+
+  async getJobArchives(): Promise<JobArchive[]> {
+    return await db
+      .select()
+      .from(jobArchives)
+      .orderBy(sql`archived_at DESC`);
+  }
+
+  async searchJobArchives(query: string): Promise<JobArchive[]> {
+    return await db
+      .select()
+      .from(jobArchives)
+      .where(sql`job_data::text ILIKE ${`%${query}%`}`)
+      .orderBy(sql`archived_at DESC`);
+  }
+
+  async deleteJobArchive(id: string): Promise<boolean> {
+    const result = await db
+      .delete(jobArchives)
+      .where(eq(jobArchives.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 

@@ -22,6 +22,7 @@ export const jobs = pgTable("jobs", {
   totalCustomers: integer("total_customers").notNull(),
   completedItems: integer("completed_items").default(0),
   csvData: jsonb("csv_data").notNull(),
+  jobTypeId: varchar("job_type_id").references(() => jobTypes.id), // NEW
   createdBy: varchar("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").default(sql`now()`),
   completedAt: timestamp("completed_at"),
@@ -65,6 +66,44 @@ export const scanEvents = pgTable("scan_events", {
   eventType: text("event_type").notNull(), // 'scan', 'undo', 'error'
   scanTime: timestamp("scan_time").default(sql`now()`),
   timeSincePrevious: integer("time_since_previous"), // milliseconds
+  
+  // Worker assignment tracking (NEW)
+  workerAssignmentType: text("worker_assignment_type"),
+  targetBoxNumber: integer("target_box_number"),
+});
+
+export const jobTypes = pgTable("job_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  benchmarkItemsPerHour: integer("benchmark_items_per_hour").default(71),
+  requireGroupField: boolean("require_group_field").default(false),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const workerBoxAssignments = pgTable("worker_box_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
+  workerId: varchar("worker_id").notNull().references(() => users.id),
+  boxNumber: integer("box_number"),
+  assignmentType: text("assignment_type").notNull(), // 'ascending', 'descending', 'middle_up', 'middle_down'
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const sessionSnapshots = pgTable("session_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => scanSessions.id, { onDelete: 'cascade' }),
+  snapshotData: jsonb("snapshot_data").notNull(),
+  snapshotType: text("snapshot_type").notNull(), // 'auto', 'manual', 'pre_undo'
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const jobArchives = pgTable("job_archives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  originalJobId: varchar("original_job_id").notNull(),
+  jobData: jsonb("job_data").notNull(),
+  archivedBy: varchar("archived_by").notNull().references(() => users.id),
+  archivedAt: timestamp("archived_at").default(sql`now()`),
 });
 
 export const userPreferences = pgTable("user_preferences", {
@@ -90,6 +129,10 @@ export const userPreferences = pgTable("user_preferences", {
   enableAutoUndo: boolean("enable_auto_undo").default(false),
   undoTimeLimit: integer("undo_time_limit").default(30), // seconds
   batchScanMode: boolean("batch_scan_mode").default(false),
+  
+  // Mobile Preferences (NEW)
+  mobileModePreference: boolean("mobile_mode_preference").default(false),
+  singleBoxMode: boolean("single_box_mode").default(false),
   
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
@@ -122,6 +165,42 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   assignmentsGiven: many(jobAssignments, { relationName: "assigner" }),
   preferences: one(userPreferences),
   createdRoleDefaults: many(roleDefaults),
+  createdJobTypes: many(jobTypes),
+  workerBoxAssignments: many(workerBoxAssignments),
+  archivedJobs: many(jobArchives),
+}));
+
+export const jobTypesRelations = relations(jobTypes, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [jobTypes.createdBy],
+    references: [users.id],
+  }),
+  jobs: many(jobs),
+}));
+
+export const workerBoxAssignmentsRelations = relations(workerBoxAssignments, ({ one }) => ({
+  job: one(jobs, {
+    fields: [workerBoxAssignments.jobId],
+    references: [jobs.id],
+  }),
+  worker: one(users, {
+    fields: [workerBoxAssignments.workerId],
+    references: [users.id],
+  }),
+}));
+
+export const sessionSnapshotsRelations = relations(sessionSnapshots, ({ one }) => ({
+  session: one(scanSessions, {
+    fields: [sessionSnapshots.sessionId],
+    references: [scanSessions.id],
+  }),
+}));
+
+export const jobArchivesRelations = relations(jobArchives, ({ one }) => ({
+  archivedBy: one(users, {
+    fields: [jobArchives.archivedBy],
+    references: [users.id],
+  }),
 }));
 
 export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
@@ -144,9 +223,14 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
     references: [users.id],
     relationName: "creator",
   }),
+  jobType: one(jobTypes, {
+    fields: [jobs.jobTypeId],
+    references: [jobTypes.id],
+  }),
   products: many(products),
   scanSessions: many(scanSessions),
   assignments: many(jobAssignments),
+  workerBoxAssignments: many(workerBoxAssignments),
 }));
 
 export const productsRelations = relations(products, ({ one }) => ({
@@ -166,6 +250,7 @@ export const scanSessionsRelations = relations(scanSessions, ({ one, many }) => 
     references: [users.id],
   }),
   scanEvents: many(scanEvents),
+  snapshots: many(sessionSnapshots),
 }));
 
 export const scanEventsRelations = relations(scanEvents, ({ one }) => ({
@@ -225,6 +310,27 @@ export const insertJobAssignmentSchema = createInsertSchema(jobAssignments).omit
   assignedAt: true,
 });
 
+// New table insert schemas
+export const insertJobTypeSchema = createInsertSchema(jobTypes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWorkerBoxAssignmentSchema = createInsertSchema(workerBoxAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSessionSnapshotSchema = createInsertSchema(sessionSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertJobArchiveSchema = createInsertSchema(jobArchives).omit({
+  id: true,
+  archivedAt: true,
+});
+
 // User Preferences Schema
 export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
   id: true,
@@ -255,6 +361,10 @@ export interface UserPreferences {
   enableAutoUndo: boolean;
   undoTimeLimit: number;
   batchScanMode: boolean;
+  
+  // Mobile Preferences (NEW)
+  mobileModePreference: boolean;
+  singleBoxMode: boolean;
 }
 
 // Remove duplicate schemas that were already defined earlier
@@ -317,9 +427,19 @@ export type ScanEvent = typeof scanEvents.$inferSelect;
 export type InsertScanEvent = z.infer<typeof insertScanEventSchema>;
 export type JobAssignment = typeof jobAssignments.$inferSelect;
 export type InsertJobAssignment = z.infer<typeof insertJobAssignmentSchema>;
-// Remove duplicates - use the interface defined above
 export type RoleDefaults = typeof roleDefaults.$inferSelect;
 export type InsertRoleDefaults = z.infer<typeof insertRoleDefaultsSchema>;
+
+// New table types
+export type JobType = typeof jobTypes.$inferSelect;
+export type InsertJobType = z.infer<typeof insertJobTypeSchema>;
+export type WorkerBoxAssignment = typeof workerBoxAssignments.$inferSelect;
+export type InsertWorkerBoxAssignment = z.infer<typeof insertWorkerBoxAssignmentSchema>;
+export type SessionSnapshot = typeof sessionSnapshots.$inferSelect;
+export type InsertSessionSnapshot = z.infer<typeof insertSessionSnapshotSchema>;
+export type JobArchive = typeof jobArchives.$inferSelect;
+export type InsertJobArchive = z.infer<typeof insertJobArchiveSchema>;
+
 export type Login = z.infer<typeof loginSchema>;
 export type CsvRow = z.infer<typeof csvRowSchema>;
 export type Theme = z.infer<typeof themeSchema>;

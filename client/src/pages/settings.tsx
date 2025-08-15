@@ -56,6 +56,8 @@ export default function Settings() {
     targetScansPerHour: 71,
     autoSaveSessions: true,
     showRealtimeStats: true,
+    mobileModePreference: false,
+    singleBoxMode: false,
   };
   const updatePreference = (key: string, value: any) => {
     console.log('Preference update disabled:', key, value);
@@ -391,6 +393,31 @@ export default function Settings() {
                   <SelectItem value="bluetooth">Bluetooth Scanner</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-gray-900">Mobile Mode</h3>
+                <p className="text-sm text-gray-600">Enable mobile-first interface with touch-optimized controls</p>
+              </div>
+              <Switch
+                checked={preferences.mobileModePreference}
+                onCheckedChange={(checked) => handleSettingChange("mobileModePreference", checked)}
+                data-testid="switch-mobile-mode"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-gray-900">Single Box Mode</h3>
+                <p className="text-sm text-gray-600">Focus on one box at a time with full-screen display (mobile only)</p>
+              </div>
+              <Switch
+                checked={preferences.singleBoxMode}
+                onCheckedChange={(checked) => handleSettingChange("singleBoxMode", checked)}
+                disabled={!preferences.mobileModePreference}
+                data-testid="switch-single-box"
+              />
             </div>
 
             <div>

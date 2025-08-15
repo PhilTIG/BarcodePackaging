@@ -13,11 +13,14 @@ import { calculateScore } from "@/lib/scoring";
 import { Settings, LogOut, Package, Undo, RotateCcw, Save, Check } from "lucide-react";
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { BarcodeScanner } from "@/components/barcode-scanner";
+import { MobileScannerInterface } from "@/components/mobile-scanner-interface";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export default function WorkerScanner() {
   const { jobId } = useParams();
   const [, setLocation] = useLocation();
   const { user, logout, isLoading } = useAuth();
+  const { preferences } = useUserPreferences();
   const { toast } = useToast();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [activeSession, setActiveSession] = useState<{ id: string; startTime: string } | null>(null);
@@ -34,6 +37,11 @@ export default function WorkerScanner() {
     score: 0,
   });
   const [showJobSelector, setShowJobSelector] = useState(false);
+  const [currentBoxIndex, setCurrentBoxIndex] = useState(0);
+  
+  // Mobile mode detection
+  const isMobileMode = preferences.mobileModePreference || (window.innerWidth <= 768);
+  const isDesktopAndMobile = preferences.mobileModePreference && window.innerWidth > 768;
 
   // Fetch worker's job assignments
   const { data: assignmentsData } = useQuery({
@@ -267,6 +275,47 @@ export default function WorkerScanner() {
     }
   };
 
+  // Mobile mode helper functions
+  const getUniqueCustomers = () => {
+    const products = (jobData as any)?.products || [];
+    const customers = [...new Set(products.map((p: any) => p.customerName))];
+    return customers.sort();
+  };
+
+  const getCurrentCustomer = () => {
+    if (!preferences.singleBoxMode) return undefined;
+    const customers = getUniqueCustomers();
+    return customers[currentBoxIndex] || customers[0];
+  };
+
+  const getTotalBoxes = () => {
+    return getUniqueCustomers().length;
+  };
+
+  const getCompletedBoxes = () => {
+    const products = (jobData as any)?.products || [];
+    const customers = getUniqueCustomers();
+    
+    return customers.filter(customer => {
+      const customerProducts = products.filter((p: any) => p.customerName === customer);
+      return customerProducts.every((p: any) => p.scannedQty >= p.totalQty);
+    }).length;
+  };
+
+  const handleBoxSwitch = (direction: 'next' | 'prev') => {
+    const totalBoxes = getTotalBoxes();
+    if (direction === 'next' && currentBoxIndex < totalBoxes - 1) {
+      setCurrentBoxIndex(prev => prev + 1);
+    } else if (direction === 'prev' && currentBoxIndex > 0) {
+      setCurrentBoxIndex(prev => prev - 1);
+    }
+  };
+
+  const getWorkerAssignment = () => {
+    const assignments = (assignmentsData as any)?.assignments || [];
+    return assignments.find((a: any) => a.jobId === jobId);
+  };
+
   if (!user || user.role !== "worker") {
     setLocation("/login");
     return null;
@@ -404,6 +453,27 @@ export default function WorkerScanner() {
 
   const { job, products } = jobData as any;
   const session = (sessionData as any)?.session || activeSession;
+  const workerAssignment = getWorkerAssignment();
+
+  // Mobile interface mode
+  if (isMobileMode && preferences.singleBoxMode) {
+    return (
+      <MobileScannerInterface
+        currentCustomer={getCurrentCustomer()}
+        currentBoxNumber={currentBoxIndex + 1}
+        assignedColor={workerAssignment?.assignedColor || "#3B82F6"}
+        totalBoxes={getTotalBoxes()}
+        completedBoxes={getCompletedBoxes()}
+        scanStats={scanStats}
+        lastScanEvent={lastScanEvent}
+        onScan={handleBarcodeSubmit}
+        onUndo={() => undoMutation.mutate(1)}
+        onSwitchBox={handleBoxSwitch}
+        isUndoAvailable={scanStats.totalScans > 0}
+        isConnected={isConnected}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -421,6 +491,26 @@ export default function WorkerScanner() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {/* Mobile Mode Toggle for Desktop */}
+              {!isMobileMode && window.innerWidth > 768 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Toggle mobile mode preference
+                    // This would be handled by the settings page normally
+                    toast({
+                      title: "Mobile Mode",
+                      description: "Enable mobile mode in Settings to access mobile interface",
+                    });
+                    setLocation("/settings");
+                  }}
+                  data-testid="button-mobile-mode"
+                >
+                  📱 Mobile Mode
+                </Button>
+              )}
+              
               {/* Show job switching button if worker has multiple assignments */}
               {(assignmentsData as any)?.assignments && (assignmentsData as any).assignments.length > 1 && (
                 <Button
