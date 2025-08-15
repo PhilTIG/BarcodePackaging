@@ -29,19 +29,37 @@ export const jobs = pgTable("jobs", {
   completedAt: timestamp("completed_at"),
 });
 
+// Box Requirements: Each box contains specific items for specific customers
+export const boxRequirements = pgTable("box_requirements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
+  boxNumber: integer("box_number").notNull(),
+  customerName: text("customer_name").notNull(),
+  barCode: text("bar_code").notNull(),
+  productName: text("product_name").notNull(),
+  requiredQty: integer("required_qty").notNull(),
+  scannedQty: integer("scanned_qty").default(0),
+  isComplete: boolean("is_complete").default(false),
+  
+  // Worker tracking fields for color highlighting
+  lastWorkerUserId: varchar("last_worker_user_id").references(() => users.id),
+  lastWorkerColor: text("last_worker_color"),
+});
+
+// Keep products table simplified - just for barcode to product name mapping
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
   barCode: text("bar_code").notNull(),
   productName: text("product_name").notNull(),
-  qty: integer("qty").notNull(),
   customerName: text("customer_name").notNull(),
   groupName: text("group_name"),
+  qty: integer("qty").notNull(), // Keep for backward compatibility
+  
+  // Deprecated fields - will be moved to boxRequirements
   scannedQty: integer("scanned_qty").default(0),
   boxNumber: integer("box_number"),
   isComplete: boolean("is_complete").default(false),
-  
-  // NEW: Worker tracking fields for color highlighting
   lastWorkerUserId: varchar("last_worker_user_id").references(() => users.id),
   lastWorkerColor: text("last_worker_color"),
 });
@@ -68,6 +86,7 @@ export const scanEvents = pgTable("scan_events", {
   productName: text("product_name"),
   customerName: text("customer_name"),
   boxNumber: integer("box_number"),
+  calculatedTargetBox: integer("calculated_target_box"), // NEW: Calculated target box based on worker allocation
   eventType: text("event_type").notNull(), // 'scan', 'undo', 'error'
   scanTime: timestamp("scan_time").default(sql`now()`),
   timeSincePrevious: integer("time_since_previous"), // milliseconds
@@ -236,9 +255,21 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
     references: [jobTypes.id],
   }),
   products: many(products),
+  boxRequirements: many(boxRequirements),
   scanSessions: many(scanSessions),
   assignments: many(jobAssignments),
   workerBoxAssignments: many(workerBoxAssignments),
+}));
+
+export const boxRequirementsRelations = relations(boxRequirements, ({ one }) => ({
+  job: one(jobs, {
+    fields: [boxRequirements.jobId],
+    references: [jobs.id],
+  }),
+  lastWorker: one(users, {
+    fields: [boxRequirements.lastWorkerUserId],
+    references: [users.id],
+  }),
 }));
 
 export const productsRelations = relations(products, ({ one }) => ({
@@ -298,6 +329,10 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
 });
 
 export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+});
+
+export const insertBoxRequirementSchema = createInsertSchema(boxRequirements).omit({
   id: true,
 });
 
@@ -447,6 +482,8 @@ export type SessionSnapshot = typeof sessionSnapshots.$inferSelect;
 export type InsertSessionSnapshot = z.infer<typeof insertSessionSnapshotSchema>;
 export type JobArchive = typeof jobArchives.$inferSelect;
 export type InsertJobArchive = z.infer<typeof insertJobArchiveSchema>;
+export type BoxRequirement = typeof boxRequirements.$inferSelect;
+export type InsertBoxRequirement = z.infer<typeof insertBoxRequirementSchema>;
 
 export type Login = z.infer<typeof loginSchema>;
 export type CsvRow = z.infer<typeof csvRowSchema>;

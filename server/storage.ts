@@ -2,6 +2,7 @@ import {
   users, 
   jobs, 
   products, 
+  boxRequirements,
   scanSessions, 
   scanEvents, 
   jobAssignments,
@@ -17,6 +18,8 @@ import {
   type InsertJob,
   type Product,
   type InsertProduct,
+  type BoxRequirement,
+  type InsertBoxRequirement,
   type ScanSession,
   type InsertScanSession,
   type ScanEvent,
@@ -64,6 +67,13 @@ export interface IStorage {
   createProducts(products: InsertProduct[]): Promise<Product[]>;
   getProductsByJobId(jobId: string): Promise<Product[]>;
   updateProductScannedQty(barCode: string, jobId: string, increment: number, workerId?: string, workerColor?: string): Promise<Product | undefined>;
+  
+  // Box requirement methods - NEW SCANNING LOGIC
+  createBoxRequirements(requirements: InsertBoxRequirement[]): Promise<BoxRequirement[]>;
+  getBoxRequirementsByJobId(jobId: string): Promise<BoxRequirement[]>;
+  findNextTargetBox(barCode: string, jobId: string, workerId: string): Promise<number | null>;
+  updateBoxRequirementScannedQty(boxNumber: number, barCode: string, jobId: string, workerId: string, workerColor: string): Promise<BoxRequirement | undefined>;
+  migrateProductsToBoxRequirements(jobId: string): Promise<void>;
 
   // Scan session methods
   createScanSession(session: InsertScanSession): Promise<ScanSession>;
@@ -606,20 +616,47 @@ export class DatabaseStorage implements IStorage {
       timeSincePrevious = Date.now() - new Date(previousEvents[0].scanTime).getTime();
     }
 
-    // Get product information for the scanned barcode
-    const jobProducts = await this.db
-      .select()
-      .from(products)
-      .where(eq(products.barCode, insertEvent.barCode))
-      .limit(1);
+    // Get session to determine worker and job
+    const session = await this.getScanSessionById(insertEvent.sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
 
-    const productInfo = jobProducts[0];
+    // NEW SCANNING LOGIC: Use box requirements instead of products
+    const workerId = session.userId;
+    const targetBox = await this.findNextTargetBox(insertEvent.barCode, session.jobId, workerId);
+    
+    if (!targetBox && insertEvent.eventType === 'scan') {
+      console.log(`No available target box found for barcode ${insertEvent.barCode}`);
+      // Could be an error event - item not expected or already fully allocated
+    }
+
+    // Get box requirement info for the target box
+    let productName = null;
+    let customerName = null;
+    if (targetBox) {
+      const boxReq = await this.db
+        .select()
+        .from(boxRequirements)
+        .where(and(
+          eq(boxRequirements.jobId, session.jobId),
+          eq(boxRequirements.barCode, insertEvent.barCode),
+          eq(boxRequirements.boxNumber, targetBox)
+        ))
+        .limit(1);
+      
+      if (boxReq.length > 0) {
+        productName = boxReq[0].productName;
+        customerName = boxReq[0].customerName;
+      }
+    }
 
     const eventData = {
       ...insertEvent,
-      productName: productInfo?.productName,
-      customerName: productInfo?.customerName,
-      boxNumber: productInfo?.boxNumber,
+      productName,
+      customerName,
+      boxNumber: targetBox,
+      calculatedTargetBox: targetBox,
       timeSincePrevious,
     };
 
@@ -628,14 +665,14 @@ export class DatabaseStorage implements IStorage {
       .values(eventData)
       .returning();
 
-    // Update product scanned quantity with worker tracking
-    if (insertEvent.eventType === 'scan' && productInfo) {
-      await this.updateProductScannedQty(
+    // NEW: Update box requirement scanned quantity instead of product
+    if (insertEvent.eventType === 'scan' && targetBox && insertEvent.workerColor) {
+      await this.updateBoxRequirementScannedQty(
+        targetBox,
         insertEvent.barCode, 
-        productInfo.jobId, 
-        1,
-        insertEvent.workerAssignmentType ? await this.getWorkerIdFromSession(insertEvent.sessionId) : undefined,
-        insertEvent.workerColor || undefined
+        session.jobId, 
+        workerId,
+        insertEvent.workerColor
       );
     }
 
@@ -1045,6 +1082,199 @@ export class DatabaseStorage implements IStorage {
       ))
       .returning();
     return result.length > 0;
+  }
+
+  // NEW BOX REQUIREMENT METHODS - CORRECT SCANNING LOGIC
+  async createBoxRequirements(requirements: InsertBoxRequirement[]): Promise<BoxRequirement[]> {
+    return await this.db
+      .insert(boxRequirements)
+      .values(requirements)
+      .returning();
+  }
+
+  async getBoxRequirementsByJobId(jobId: string): Promise<BoxRequirement[]> {
+    return await this.db
+      .select()
+      .from(boxRequirements)
+      .where(eq(boxRequirements.jobId, jobId))
+      .orderBy(boxRequirements.boxNumber, boxRequirements.barCode);
+  }
+
+  /**
+   * Find the next target box for a scanned item based on worker allocation pattern
+   * Logic: Find lowest numbered box that has this item in requirement list AND still needs more of this item
+   */
+  async findNextTargetBox(barCode: string, jobId: string, workerId: string): Promise<number | null> {
+    // Get worker assignment pattern
+    const workerAssignments = await this.getWorkerBoxAssignmentsByWorker(workerId, jobId);
+    if (workerAssignments.length === 0) {
+      console.log(`No worker assignments found for worker ${workerId}`);
+      return null;
+    }
+
+    const workerPattern = workerAssignments[0].assignmentType as 'ascending' | 'descending' | 'middle_up' | 'middle_down';
+    
+    // Get all box requirements for this item that still need more items
+    const availableBoxes = await this.db
+      .select()
+      .from(boxRequirements)
+      .where(and(
+        eq(boxRequirements.jobId, jobId),
+        eq(boxRequirements.barCode, barCode),
+        sql`${boxRequirements.scannedQty} < ${boxRequirements.requiredQty}`
+      ))
+      .orderBy(boxRequirements.boxNumber);
+
+    if (availableBoxes.length === 0) {
+      console.log(`No available boxes found for barcode ${barCode}`);
+      return null;
+    }
+
+    const boxNumbers = availableBoxes.map(box => box.boxNumber);
+    
+    // Apply worker allocation pattern to find next box
+    switch (workerPattern) {
+      case 'ascending':
+        // Worker 1: Find lowest numbered box
+        return Math.min(...boxNumbers);
+        
+      case 'descending':
+        // Worker 2: Find highest numbered box
+        return Math.max(...boxNumbers);
+        
+      case 'middle_up':
+        // Worker 3: Find middle or next higher box
+        const sortedAsc = [...boxNumbers].sort((a, b) => a - b);
+        const middleIndex = Math.floor(sortedAsc.length / 2);
+        return sortedAsc[middleIndex];
+        
+      case 'middle_down':
+        // Worker 4: Find middle or next lower box  
+        const sortedDesc = [...boxNumbers].sort((a, b) => b - a);
+        const middleDownIndex = Math.floor(sortedDesc.length / 2);
+        return sortedDesc[middleDownIndex];
+        
+      default:
+        // Fallback to ascending
+        return Math.min(...boxNumbers);
+    }
+  }
+
+  /**
+   * Update scanned quantity for a specific box requirement
+   */
+  async updateBoxRequirementScannedQty(
+    boxNumber: number, 
+    barCode: string, 
+    jobId: string, 
+    workerId: string, 
+    workerColor: string
+  ): Promise<BoxRequirement | undefined> {
+    // Find the specific box requirement
+    const requirement = await this.db
+      .select()
+      .from(boxRequirements)
+      .where(and(
+        eq(boxRequirements.jobId, jobId),
+        eq(boxRequirements.barCode, barCode),
+        eq(boxRequirements.boxNumber, boxNumber)
+      ))
+      .limit(1);
+
+    if (requirement.length === 0) {
+      console.log(`No box requirement found for box ${boxNumber}, barcode ${barCode}`);
+      return undefined;
+    }
+
+    const currentRequirement = requirement[0];
+    
+    // Check if box can accept more items
+    if ((currentRequirement.scannedQty || 0) >= currentRequirement.requiredQty) {
+      console.log(`Box ${boxNumber} is already full for barcode ${barCode}`);
+      return undefined;
+    }
+
+    // Update scanned quantity
+    const newScannedQty = (currentRequirement.scannedQty || 0) + 1;
+    const isComplete = newScannedQty >= currentRequirement.requiredQty;
+
+    const [updatedRequirement] = await this.db
+      .update(boxRequirements)
+      .set({
+        scannedQty: newScannedQty,
+        isComplete,
+        lastWorkerUserId: workerId,
+        lastWorkerColor: workerColor
+      })
+      .where(eq(boxRequirements.id, currentRequirement.id))
+      .returning();
+
+    console.log(`Updated box ${boxNumber} for barcode ${barCode}: ${newScannedQty}/${currentRequirement.requiredQty}`);
+    return updatedRequirement;
+  }
+
+  /**
+   * Migrate existing CSV product data to the new box requirements structure
+   * This preserves existing data while enabling the new scanning logic
+   */
+  async migrateProductsToBoxRequirements(jobId: string): Promise<void> {
+    console.log(`Starting migration of products to box requirements for job ${jobId}`);
+    
+    // Get existing products for this job
+    const existingProducts = await this.getProductsByJobId(jobId);
+    
+    if (existingProducts.length === 0) {
+      console.log('No products found to migrate');
+      return;
+    }
+
+    // Group products by customer and assign sequential box numbers
+    const customerBoxMap = new Map<string, number>();
+    let nextBoxNumber = 1;
+    
+    // First pass: assign box numbers to customers in order of appearance
+    existingProducts.forEach(product => {
+      if (!customerBoxMap.has(product.customerName)) {
+        customerBoxMap.set(product.customerName, nextBoxNumber++);
+      }
+    });
+
+    // Create box requirements from products
+    const boxRequirements: InsertBoxRequirement[] = existingProducts.map(product => ({
+      jobId: product.jobId,
+      boxNumber: customerBoxMap.get(product.customerName)!,
+      customerName: product.customerName,
+      barCode: product.barCode,
+      productName: product.productName,
+      requiredQty: product.qty,
+      scannedQty: product.scannedQty || 0,
+      isComplete: (product.scannedQty || 0) >= product.qty,
+      lastWorkerUserId: product.lastWorkerUserId,
+      lastWorkerColor: product.lastWorkerColor
+    }));
+
+    // Insert box requirements
+    await this.createBoxRequirements(boxRequirements);
+    
+    // Create worker assignments for the job (up to 4 workers with their patterns)
+    const jobAssignments = await this.getJobAssignmentsWithUsers(jobId);
+    const workers = jobAssignments.slice(0, 4); // Max 4 workers
+    
+    const workerAssignments: InsertWorkerBoxAssignment[] = workers.map((assignment, index) => {
+      const patterns = ['ascending', 'descending', 'middle_up', 'middle_down'];
+      return {
+        jobId,
+        workerId: assignment.userId,
+        assignmentType: patterns[index % 4]
+      };
+    });
+
+    // Insert worker assignments
+    for (const assignment of workerAssignments) {
+      await this.createWorkerBoxAssignment(assignment);
+    }
+
+    console.log(`Migration completed: Created ${boxRequirements.length} box requirements and ${workerAssignments.length} worker assignments`);
   }
 
   // Session snapshot methods

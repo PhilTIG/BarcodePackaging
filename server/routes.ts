@@ -727,7 +727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error in /api/users/me/assignments:', error);
       res.status(500).json({ 
         message: 'Failed to fetch user assignments',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined
       });
     }
   });
@@ -763,7 +763,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const session = await storage.createOrGetActiveScanSession(req.user!.id, jobId);
       res.status(201).json({ session });
     } catch (error) {
-      res.status(400).json({ message: (error as Error).message || 'Failed to create or get active session' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create or get active session';
+      res.status(400).json({ message: errorMessage });
     }
   });
 
@@ -814,6 +815,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ undoneEvents });
     } catch (error) {
       res.status(500).json({ message: 'Failed to undo scan events' });
+    }
+  });
+
+  // NEW BOX REQUIREMENTS API ENDPOINTS
+  app.get('/api/jobs/:id/box-requirements', requireAuth, async (req, res) => {
+    try {
+      const boxRequirements = await storage.getBoxRequirementsByJobId(req.params.id);
+      res.json({ boxRequirements });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch box requirements' });
+    }
+  });
+
+  app.post('/api/jobs/:id/migrate-to-box-requirements', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      await storage.migrateProductsToBoxRequirements(req.params.id);
+      res.json({ message: 'Migration completed successfully' });
+    } catch (error) {
+      console.error('Migration failed:', error);
+      res.status(500).json({ message: 'Failed to migrate to box requirements' });
+    }
+  });
+
+  app.post('/api/jobs/:id/find-target-box', requireAuth, requireRole(['worker']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { barCode } = req.body;
+      const targetBox = await storage.findNextTargetBox(barCode, req.params.id, req.user!.id);
+      
+      if (targetBox === null) {
+        return res.status(404).json({ message: 'No available target box found for this item' });
+      }
+      
+      res.json({ targetBox });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to find target box' });
     }
   });
 

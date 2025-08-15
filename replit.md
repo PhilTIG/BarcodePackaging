@@ -2,97 +2,7 @@
 
 ## Overview
 
-This is a comprehensive warehouse sorting application designed to streamline the sorting process of purchased goods with different customer destinations. The app provides role-based interfaces for managers, supervisors, and warehouse workers to upload CSV data, track job progress, and perform barcode scanning operations. The system emphasizes real-time collaboration, performance tracking, and efficient sorting workflows with visual feedback and progress monitoring.
-
-## Recent Changes (January 2025)
-
-**Phase 2 Box Highlighting System Completed (January 15, 2025):**
-- **POC-Style Single Box Highlighting**: Implemented proper single box highlighting where only ONE box shows green at a time
-- **Worker Color System**: Created infrastructure to track last worker per box and display assigned worker colors
-- **Box Highlighting Priority System**: Implemented correct priority order: GREEN (just-scanned) > Grey-Red (complete) > Worker Color > Grey (empty)
-- **Removed Blue Active Highlighting**: Eliminated old multiple-box blue highlighting system for POC compliance
-- **Dynamic Color Hook**: Created useBoxHighlighting hook with automatic color management and 2-second auto-clear
-- **White Lock Icons**: Updated completed box styling with white lock icons for better contrast on grey-red backgrounds
-
-**Critical Multi-Worker System Requirements Completed (January 15, 2025):**
-- **✓ POC Box Assignment Logic**: Fixed customers assigned to boxes 1-100 based on first appearance in CSV order
-- **✓ Multi-Worker Allocation Algorithm**: Implemented 4-worker patterns (ascending/descending/middle up/middle down)
-- **✓ Worker Color Tracking**: Added database fields and storage methods to track last worker per box
-- **✓ Database Schema Extensions**: Added worker tracking fields to products and scan_events tables
-- **✓ Comprehensive PRD v3.0**: Created detailed requirements document with 12 implementation phases
-
-**POC-Style Single Box Scanner Implementation Completed (January 15, 2025):**
-- **POC-Matching Design**: Completely redesigned mobile scanner interface to match original HTML POC specifications
-- **Single Box Toggle**: Changed "Mobile" to "Single Box" toggle that switches mode without redirecting to settings
-- **POC Barcode Logic**: Implemented exact POC scanning behavior with proper box allocation and error handling
-- **Red Error Screen**: Added full-screen red error overlay for "unexpected stock" and "fully allocated" items
-- **Immediate Scan Feedback**: Shows destination box number, customer name, and product immediately after scan
-- **Real-time Progress**: Displays "X/Y items" progress for current customer box
-- **Auto Box Allocation**: Finds next available customer box based on ascending order for unfulfilled quantities
-- **Error Auto-Clear**: Error screens auto-dismiss after 3 seconds, scan results clear after 2 seconds
-- **User Preference Persistence**: Single box mode setting saved per user and remembered across sessions
-- **Clean Interface**: Removed toast notifications and navigation buttons during scanning for distraction-free experience
-
-**Critical Session Management Fix Completed (January 15, 2025):**
-- **Manager-Controlled Job Activation**: Added Start/Pause Scanning buttons for managers to control when workers can scan
-- **Database Schema Update**: Added `isActive` boolean field to jobs table with proper defaults
-- **Automatic Session Creation**: Workers now automatically get sessions when entering active jobs, eliminating "No active session" errors
-- **API Routes**: Created `/api/jobs/:id/active` endpoint for manager scanning control
-- **Worker Interface**: Updated worker scanner to handle manager-controlled sessions with proper status messages
-
-**Phase 1 Database Schema Enhancement Completed (January 15, 2025):**
-- **Database Schema Extension**: Successfully added 4 new tables to support advanced features
-  - `job_types`: Custom job types with benchmark configurations and field requirements
-  - `worker_box_assignments`: Box allocation algorithms for multi-worker coordination
-  - `session_snapshots`: Enhanced undo system with JSON export/import capabilities
-  - `job_archives`: Historical job data preservation and search functionality
-- **Mobile User Preferences**: Extended user preferences table with mobile-specific fields
-  - `mobileModePreference`: Toggle for mobile-first interface activation
-  - `singleBoxMode`: Single box focus mode for enhanced mobile scanning experience
-- **Storage Layer Enhancement**: Updated storage interface and implementation with complete CRUD operations for all new tables
-- **Enhanced Scan Events**: Added worker assignment tracking and target box number fields for multi-worker coordination
-- **Database Migration Success**: All schema changes applied successfully to development database without data loss
-
-**POC Analysis & Comprehensive PRD Development (January 15, 2025):**
-- **POC Code Analysis**: Thoroughly analyzed original HTML Proof of Concept against current React implementation
-- **Feature Gap Assessment**: Identified critical missing features including mobile-first interface, smart barcode processing, and advanced session management
-- **Comprehensive PRD v2.0**: Created detailed Product Requirements Document with technical architecture specifications
-- **Implementation Task List**: Developed 16-week phased implementation plan with 200+ specific tasks
-- **Mobile Interface Requirements**: Defined "Single Box" mode with full-screen displays and worker color coordination
-- **Multi-Worker Coordination**: Specified algorithms for 2+ workers with ascending/descending box allocation
-- **Real-time Architecture**: Enhanced WebSocket event types for mobile state sync and worker coordination
-- **Gamification System**: Designed performance levels with emoticons, encouragement, and daily top worker recognition
-- **Job Type Management**: Added job type system with custom benchmarks and field requirements
-- **Session Management**: Enhanced undo system with JSON export/import and worker isolation
-- **Fixed CustomerBoxGrid Error**: Resolved useUserPreferences hook import issue causing console errors
-
-**Comprehensive Box Complete Logic Implementation (January 15, 2025):**
-- **100% Fulfillment Verification**: Implemented strict box completion logic throughout the system where a box is only considered "complete" when scannedQty exactly equals totalQty for all items allocated to that customer destination (CustomName)
-- **Backend Enhancement**: Updated `getJobProgress` API with proper box completion calculation aggregating by customerName rather than boxNumber
-- **Helper Method**: Added `calculateBoxCompletion` utility method in storage for reusable box completion logic
-- **Frontend Updates**: Enhanced CustomerBoxGrid with precise completion status, visual indicators (green for 100% complete, blue for scanning, gray for pending)
-- **Supervisor Dashboard**: Updated progress display to show both item completion and box completion percentages separately
-- **Manager Dashboard**: Added estimation indicators for box completion with proper notation
-
-**Enhanced Worker Performance Display (January 14, 2025):**
-- **Worker Color Icons**: Added assigned worker color icons to the Worker Performance section in Supervisor View
-- **Comprehensive Worker Display**: Updated backend to show all assigned workers regardless of scanning activity status
-- **Visual Improvements**: Color icons positioned next to worker avatars with white border and shadow for visibility
-- **Data Integration**: Backend now includes assignedColor field in job progress API for consistent color display
-
-**Enhanced Active Jobs UI (January 14, 2025):**
-- **Box Counting**: Changed "customers" to "boxes" terminology throughout the interface, reflecting that each customer destination represents one box
-- **Progress Visualization**: Enhanced progress bars with clear percentage display and improved visual hierarchy
-- **Boxes Complete Counter**: Added bottom-right positioned counter showing "X/Y boxes complete" in a dedicated widget
-- **Worker Name Display**: Cleaned up worker assignment display by removing staff IDs from the Active Jobs section
-- **Completion Highlighting**: Implemented light green background for 100% completed jobs
-- **Layout Improvements**: Added proper spacing to prevent overlap with the new boxes counter widget
-
-**Responsive Box Grid System (January 14, 2025):**
-- **User Preferences**: Added "Maximum Boxes Per Row" setting in main Settings page (range 4-16)
-- **Responsive Layout**: Mobile shows 2 columns, scales up based on screen size and user preference
-- **Badge Enhancement**: Doubled badge size (12x12) and repositioned to center-right of each box
-- **Automatic Reflow**: Flexbox implementation automatically adjusts columns based on screen size and setting
+This application streamlines the sorting of purchased goods with various customer destinations within a warehouse environment. It offers role-based interfaces for managers, supervisors, and warehouse workers, facilitating CSV data uploads, job progress tracking, and barcode scanning. The system prioritizes real-time collaboration, performance monitoring, and efficient sorting workflows with visual feedback. The business vision is to enhance warehouse operational efficiency, reduce sorting errors, and provide a clear overview of the sorting process, catering to the growing e-commerce and logistics sectors.
 
 ## User Preferences
 
@@ -102,91 +12,33 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend Architecture
 
-The client is built as a Single Page Application (SPA) using React with TypeScript. The architecture follows a component-based approach with:
-
-- **React Router**: Uses Wouter for lightweight client-side routing with role-based page access
-- **State Management**: React Query (TanStack Query) handles server state, caching, and data synchronization
-- **UI Framework**: Shadcn/ui components built on Radix UI primitives with Tailwind CSS for styling
-- **Form Handling**: React Hook Form with Zod schema validation for type-safe form management
-- **Real-time Updates**: WebSocket integration for live progress tracking and collaborative features
-
-The app supports multiple color themes (blue, green, orange, teal, red, dark) with CSS custom properties for consistent theming across components.
+The client is a React-based Single Page Application (SPA) utilizing TypeScript. It employs a component-based approach with Wouter for routing, React Query for server state management, and Shadcn/ui (built on Radix UI and Tailwind CSS) for UI components. Form handling is managed by React Hook Form with Zod for validation. WebSocket integration provides real-time updates. The application supports multiple color themes via CSS custom properties. Key UI/UX decisions include a responsive design adapting to various screen sizes, a "Single Box" mode for mobile scanning with full-screen displays, and a box grid system that adjusts columns based on user preferences and screen size. Visual feedback includes box highlighting based on scan status, worker colors, and completion.
 
 ### Backend Architecture
 
-The server follows a RESTful API design using Express.js with TypeScript:
-
-- **API Layer**: Express routes handle HTTP requests with middleware for logging, authentication, and error handling
-- **WebSocket Server**: Real-time communication for collaborative features and live updates
-- **File Processing**: Multer for CSV file uploads with streaming CSV parsing
-- **Authentication**: Session-based authentication with bcrypt for password hashing
-- **Database Abstraction**: Custom storage interface provides a clean separation between business logic and data persistence
+The backend is a RESTful API built with Express.js and TypeScript. It includes an API layer for HTTP requests, a WebSocket server for real-time communication, and Multer for CSV file uploads with streaming parsing. Authentication is session-based, using bcrypt for password hashing. A custom storage interface separates business logic from data persistence. Core architectural decisions include a focus on multi-worker allocation algorithms (ascending, descending, middle up/down patterns) and a robust `box_requirements` table for precise customer-to-box allocation, replacing product-based scanning.
 
 ### Data Storage Solutions
 
-The application uses PostgreSQL as the primary database with Drizzle ORM:
-
-- **ORM**: Drizzle provides type-safe database queries and schema management
-- **Database Provider**: Neon serverless PostgreSQL for scalable cloud hosting
-- **Schema Design**: Relational design with tables for users, jobs, products, scan sessions, scan events, and job assignments
-- **Migrations**: Drizzle Kit handles database schema migrations and version control
-
-Key entities include role-based users (manager/supervisor/worker), CSV-based jobs with product inventories, customer box assignments, and detailed scan session tracking for performance analytics.
+PostgreSQL serves as the primary database, managed by Drizzle ORM for type-safe queries and schema management. Neon serverless PostgreSQL provides scalable cloud hosting. The relational schema includes tables for users, jobs, products, scan sessions, scan events, job assignments, job types, worker box assignments, session snapshots, and job archives.
 
 ### Authentication and Authorization
 
-The system implements role-based access control:
-
-- **Authentication**: Staff ID and PIN-based login system suitable for warehouse environments
-- **Session Management**: Server-side session storage with PostgreSQL session store
-- **Role-based Routing**: Client-side route protection based on user roles (manager, supervisor, worker)
-- **API Security**: Middleware validates user sessions and role permissions for protected endpoints
+The system implements role-based access control using a staff ID and PIN-based login system. Server-side session management uses a PostgreSQL session store. Client-side route protection and API security are enforced based on user roles (manager, supervisor, worker). Managers can control job activation (Start/Pause Scanning) which influences worker access.
 
 ### Performance and Real-time Features
 
-The application includes sophisticated performance tracking:
-
-- **Scoring Algorithm**: Industry-standard performance metrics based on scans per hour (71 items/hour target)
-- **Real-time Analytics**: Live performance dashboards with WebSocket updates
-- **Session Management**: Persistent scan sessions with pause/resume functionality
-- **Progress Tracking**: Real-time job completion monitoring with visual progress indicators
+The application incorporates sophisticated performance tracking, including a scoring algorithm based on scans per hour. Real-time analytics dashboards are updated via WebSockets. Scan sessions are persistent with pause/resume functionality. Job completion is monitored with visual indicators, including precise box completion logic requiring 100% fulfillment of all items for a customer destination.
 
 ### Mobile and Hardware Support
 
-Designed for warehouse environments with mobile-first considerations:
-
-- **Responsive Design**: Adaptive layouts that work on tablets and mobile devices
-- **Barcode Scanning**: Dual support for camera-based scanning and hardware HID scanners
-- **Touch-friendly UI**: Large touch targets and mobile-optimized interactions
-- **Offline Considerations**: Client-side caching and error handling for unstable network conditions
+The design is optimized for warehouse environments, featuring responsive layouts for tablets and mobile devices. It supports both camera-based and hardware HID barcode scanners. The UI is touch-friendly with large targets.
 
 ## External Dependencies
 
-### Database Services
-- **Neon PostgreSQL**: Serverless PostgreSQL hosting with connection pooling
-- **Drizzle ORM**: Type-safe database toolkit with schema management
-
-### UI and Styling
-- **Radix UI**: Accessible component primitives for complex UI interactions
-- **Tailwind CSS**: Utility-first CSS framework with custom design system
-- **Shadcn/ui**: Pre-built component library with consistent design patterns
-
-### Development and Build Tools
-- **Vite**: Fast development server and build tool with HMR support
-- **TypeScript**: Type safety across the entire stack
-- **ESBuild**: Fast JavaScript bundling for production builds
-
-### Authentication and Security
-- **bcryptjs**: Password hashing for secure authentication
-- **connect-pg-simple**: PostgreSQL session store for server-side sessions
-
-### File Processing
-- **Multer**: Multipart form data handling for CSV file uploads
-- **csv-parser**: Streaming CSV parsing for large inventory files
-
-### Real-time Communication
-- **WebSocket (ws)**: Real-time bidirectional communication for live updates
-- **React Query**: Optimistic updates and cache invalidation for responsive UI
-
-### Development Environment
-- **Replit Integration**: Development environment integration with runtime error overlays and cartographer mapping
+- **Database Services**: Neon PostgreSQL, Drizzle ORM
+- **UI and Styling**: Radix UI, Tailwind CSS, Shadcn/ui
+- **Development and Build Tools**: Vite, TypeScript, ESBuild
+- **Authentication and Security**: bcryptjs, connect-pg-simple
+- **File Processing**: Multer, csv-parser
+- **Real-time Communication**: WebSocket (ws), React Query
