@@ -785,6 +785,36 @@ export default function ManagerDashboard() {
           </CardContent>
         </Card>
 
+        {/* Danger Zone - Delete All Data */}
+        <Card data-testid="danger-zone" className="border-red-200 bg-red-50">
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              <CardTitle className="text-red-800">Danger Zone</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium text-red-900 mb-2">Delete All Job Data</h3>
+                <p className="text-sm text-red-700 mb-4">
+                  This will permanently delete all jobs, products, scan sessions, and progress data. 
+                  User accounts and settings will be preserved. This action cannot be undone.
+                </p>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAllJobs}
+                  data-testid="button-delete-all-data"
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete All Job Data
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Workers Status */}
         <Card data-testid="workers-status">
           <CardHeader>
