@@ -146,7 +146,13 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
           >
             {/* Box Number Badge - Center Right, 2x Size */}
             <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: highlighting.badgeColor }}>
+              <div 
+                className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg"
+                style={{ 
+                  backgroundColor: box.lastWorkerColor || 'hsl(var(--primary))',
+                  color: box.isComplete ? '#ffffff' : '#ffffff'
+                }}
+              >
                 {box.boxNumber}
               </div>
             </div>
