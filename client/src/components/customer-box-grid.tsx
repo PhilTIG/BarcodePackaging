@@ -190,7 +190,7 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
             </div>
 
             {/* Centered percentage text and progress bar at bottom */}
-            <div className="absolute bottom-2 left-0 right-0 flex flex-col items-center">
+            <div className="absolute bottom-3 left-0 right-0 flex flex-col items-center">
               {box.isComplete ? (
                 <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium mb-1">
                   100%
