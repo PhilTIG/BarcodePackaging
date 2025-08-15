@@ -163,10 +163,7 @@ export default function WorkerScanner() {
         barcodeInputRef.current.focus();
       }
 
-      toast({
-        title: "Item scanned successfully",
-        description: `${data.scanEvent.productName} added to box`,
-      });
+      // No toast notification in mobile mode - visual feedback only
     },
     onError: (error: Error) => {
       toast({
@@ -303,6 +300,17 @@ export default function WorkerScanner() {
     if (!preferences.singleBoxMode) return "No Customer Selected";
     const customers = getUniqueCustomers();
     return customers[currentBoxIndex] || customers[0] || "No Customer Selected";
+  };
+
+  const getCurrentBoxProgress = () => {
+    const currentCustomer = getCurrentCustomer();
+    const products = (jobData as any)?.products || [];
+    const customerProducts = products.filter((p: any) => p.customerName === currentCustomer);
+    
+    const total = customerProducts.reduce((sum: number, p: any) => sum + p.qty, 0);
+    const completed = customerProducts.reduce((sum: number, p: any) => sum + (p.scannedQty || 0), 0);
+    
+    return { completed, total };
   };
 
   const getTotalBoxes = () => {
@@ -501,16 +509,17 @@ export default function WorkerScanner() {
   if (isMobileMode && preferences.singleBoxMode) {
     return (
       <MobileScannerInterface
-        currentCustomer={getCurrentCustomer() || "No Customer Selected"}
+        currentCustomer={getCurrentCustomer()}
         currentBoxNumber={currentBoxIndex + 1}
         assignedColor={workerAssignment?.assignedColor || "#3B82F6"}
         totalBoxes={getTotalBoxes()}
         completedBoxes={getCompletedBoxes()}
+        currentBoxProgress={getCurrentBoxProgress()}
         scanStats={scanStats}
         lastScanEvent={lastScanEvent}
         onScan={handleBarcodeSubmit}
         onUndo={() => undoMutation.mutate(1)}
-        onSwitchBox={handleBoxSwitch}
+        onSwitchSession={() => setLocation('/scanner')}
         isUndoAvailable={scanStats.totalScans > 0}
         isConnected={isConnected}
       />
