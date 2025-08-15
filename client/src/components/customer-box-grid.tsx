@@ -158,8 +158,8 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
               </div>
             )}
 
-            {/* Customer name spanning full width */}
-            <div className="mb-2 pr-2">
+            {/* Customer name spanning full width with proper spacing */}
+            <div className="mb-4 pr-2">
               <h3 className={`font-medium text-sm truncate ${highlighting.textColor}`} data-testid={`customer-name-${box.boxNumber}`}>
                 {box.customerName === "Unassigned" ? "Unassigned" : box.customerName}
               </h3>
@@ -168,8 +168,8 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
               )}
             </div>
 
-            {/* Box Number Badge - Top Right */}
-            <div className="absolute top-6 right-2">
+            {/* Box Number Badge - Top Right with spacing from customer name */}
+            <div className="absolute top-10 right-2">
               <div 
                 className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
                   box.lastWorkerColor ? '' : 'bg-primary'
@@ -183,28 +183,26 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
             </div>
 
             {/* Quantity fraction - Left side at same height as box number */}
-            <div className="absolute top-8 left-2">
+            <div className="absolute top-12 left-2">
               <div className={`text-lg font-bold ${highlighting.textColor}`} data-testid={`quantity-${box.boxNumber}`}>
                 {box.scannedQty}/{box.totalQty}
               </div>
             </div>
 
-            {/* Percentage text below box number */}
-            <div className="absolute top-20 right-2 flex flex-col items-center">
+            {/* Centered percentage text and progress bar */}
+            <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center">
               {box.isComplete ? (
-                <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
+                <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium mb-2">
                   100%
                 </div>
               ) : (
-                <p className={`text-xs text-center ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
+                <p className={`text-xs text-center mb-2 ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
                   {completionPercentage}%
                 </p>
               )}
-            </div>
-
-            {/* Progress bar directly below percentage text */}
-            <div className="absolute top-28 right-2 w-16">
-              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+              
+              {/* Centered progress bar */}
+              <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-green-500 transition-all duration-300"
                   style={{ width: `${completionPercentage}%` }}
