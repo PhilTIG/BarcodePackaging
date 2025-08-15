@@ -189,19 +189,21 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
               </div>
             </div>
 
-            {/* Centered percentage text and progress bar at bottom */}
-            <div className="absolute bottom-2 left-0 right-0 flex flex-col items-center">
+            {/* Percentage text closer to box number */}
+            <div className="absolute top-16 right-2">
               {box.isComplete ? (
-                <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium mb-1">
+                <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
                   100%
                 </div>
               ) : (
-                <p className={`text-xs text-center mb-1 ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
+                <p className={`text-xs text-center ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
                   {completionPercentage}%
                 </p>
               )}
-              
-              {/* Centered progress bar */}
+            </div>
+
+            {/* Progress bar at bottom with more space */}
+            <div className="absolute bottom-2 left-0 right-0 flex justify-center">
               <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-green-500 transition-all duration-300"
