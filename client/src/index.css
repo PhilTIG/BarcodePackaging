@@ -40,6 +40,62 @@
 
 /* Blue Theme (Default) */
 .theme-blue {
+  --primary: hsl(220, 91%, 62%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(220, 91%, 62%);
+}
+
+/* Green Theme */
+.theme-green {
+  --primary: hsl(160, 84%, 39%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(160, 84%, 39%);
+}
+
+/* Orange Theme */
+.theme-orange {
+  --primary: hsl(38, 92%, 50%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(38, 92%, 50%);
+}
+
+/* Teal Theme */
+.theme-teal {
+  --primary: hsl(178, 78%, 57%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(178, 78%, 57%);
+}
+
+/* Red Theme */
+.theme-red {
+  --primary: hsl(0, 84%, 60%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(0, 84%, 60%);
+}
+
+/* Dark Theme */
+.theme-dark {
+  --background: hsl(224, 71%, 4%);
+  --foreground: hsl(0, 0%, 100%);
+  --card: hsl(224, 71%, 4%);
+  --card-foreground: hsl(0, 0%, 100%);
+  --popover: hsl(224, 71%, 4%);
+  --popover-foreground: hsl(0, 0%, 100%);
+  --primary: hsl(220, 9%, 46%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(215, 28%, 17%);
+  --secondary-foreground: hsl(0, 0%, 100%);
+  --muted: hsl(215, 28%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --accent: hsl(215, 28%, 17%);
+  --accent-foreground: hsl(0, 0%, 100%);
+  --border: hsl(215, 28%, 17%);
+  --input: hsl(215, 28%, 17%);
+  --ring: hsl(220, 9%, 46%);
+}
+
+/* Blue Theme (Default) */
+.theme-blue {
   --primary: hsl(214, 100%, 59%);
   --primary-foreground: hsl(0, 0%, 100%);
   --primary-50: hsl(214, 100%, 97%);
