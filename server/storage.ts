@@ -800,10 +800,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobAssignmentsByUser(userId: string): Promise<JobAssignment[]> {
-    return await this.db
-      .select()
-      .from(jobAssignments)
-      .where(and(eq(jobAssignments.userId, userId), eq(jobAssignments.isActive, true)));
+    try {
+      return await this.db
+        .select()
+        .from(jobAssignments)
+        .where(and(eq(jobAssignments.userId, userId), eq(jobAssignments.isActive, true)))
+        .orderBy(desc(jobAssignments.assignedAt));
+    } catch (error) {
+      console.error('Error fetching job assignments by user:', error);
+      throw error;
+    }
   }
 
   async unassignWorkerFromJob(jobId: string, userId: string): Promise<boolean> {

@@ -46,15 +46,17 @@ export default function WorkerScanner() {
     productName: string;
     progress: string;
   } | null>(null);
-  
+
   // Mobile mode detection - now based on single box mode preference
   const isMobileMode = preferences.singleBoxMode || (window.innerWidth <= 768);
   const isDesktopAndMobile = preferences.singleBoxMode && window.innerWidth > 768;
 
   // Fetch worker's job assignments
-  const { data: assignmentsData } = useQuery({
+  const { data: assignmentsData, isLoading: isAssignmentsLoading, error: assignmentsError } = useQuery({
     queryKey: ["/api/users/me/assignments"],
-    enabled: !!user && user.role === "worker",
+    enabled: !!user,
+    retry: 3,
+    retryDelay: 1000,
   });
 
   // Fetch job details
@@ -92,7 +94,7 @@ export default function WorkerScanner() {
     if (!user || user.role !== "worker" || !assignmentsData || jobId) return;
 
     const assignments = (assignmentsData as any)?.assignments || [];
-    
+
     if (assignments.length === 0) {
       // No assignments - stay on scanner page and show no assignments message
       setShowJobSelector(false);
@@ -284,7 +286,7 @@ export default function WorkerScanner() {
 
     // Group products by barcode to match POC logic
     const barcodeItems = products.filter(p => p.barCode === barcode);
-    
+
     if (barcodeItems.length === 0) {
       setScanError('Unexpected stock scanned: unknown stock');
       setTimeout(() => setScanError(null), 3000);
@@ -310,15 +312,15 @@ export default function WorkerScanner() {
     // Calculate box number and progress
     const customers = getUniqueCustomers();
     const boxNumber = customers.indexOf(targetItem.customerName) + 1;
-    
+
     // Update last scanned box for POC-style highlighting
     setLastScannedBoxNumber(boxNumber);
-    
+
     // Calculate progress for this customer's box
     const customerProducts = products.filter(p => p.customerName === targetItem.customerName);
     const totalItems = customerProducts.reduce((sum, p) => sum + p.qty, 0);
     const scannedItems = customerProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
-    
+
     // Set scan result to display immediately
     setScanResult({
       boxNumber,
@@ -342,7 +344,7 @@ export default function WorkerScanner() {
 
   const handleBarcodeSubmit = (barcode: string) => {
     if (!barcode.trim()) return;
-    
+
     // Auto-create session if none exists
     if (!activeSession) {
       autoCreateSessionMutation.mutate();
@@ -354,12 +356,12 @@ export default function WorkerScanner() {
     // Get current products for POC-style processing
     const products = (jobData as any)?.products || [];
     const targetItem = processBarcodeScanning(barcode.trim(), products);
-    
+
     if (!targetItem) {
       // Error already set by processBarcodeScanning
       return;
     }
-    
+
     scanMutation.mutate(barcode.trim());
   };
 
@@ -409,10 +411,10 @@ export default function WorkerScanner() {
     const currentCustomer = getCurrentCustomer();
     const products = (jobData as any)?.products || [];
     const customerProducts = products.filter((p: any) => p.customerName === currentCustomer);
-    
+
     const total = customerProducts.reduce((sum: number, p: any) => sum + p.qty, 0);
     const completed = customerProducts.reduce((sum: number, p: any) => sum + (p.scannedQty || 0), 0);
-    
+
     return { completed, total };
   };
 
@@ -423,7 +425,7 @@ export default function WorkerScanner() {
   const getCompletedBoxes = () => {
     const products = (jobData as any)?.products || [];
     const customers = getUniqueCustomers();
-    
+
     return customers.filter(customer => {
       const customerProducts = products.filter((p: any) => p.customerName === customer);
       return customerProducts.every((p: any) => p.scannedQty >= p.totalQty);
@@ -476,9 +478,7 @@ export default function WorkerScanner() {
 
   // Show job selection interface when no jobId and multiple assignments
   if (!jobId) {
-    const assignments = (assignmentsData as any)?.assignments || [];
-    
-    if (isLoading || !assignmentsData) {
+    if (isAssignmentsLoading || !assignmentsData) {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
@@ -488,6 +488,30 @@ export default function WorkerScanner() {
         </div>
       );
     }
+
+    // Handle assignment loading error
+    if (assignmentsError) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="bg-red-100 w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Package className="text-red-600 w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-bold text-red-900 mb-2">Error Loading Assignments</h2>
+            <p className="text-red-600 mb-4">Failed to fetch your job assignments. Please try again later.</p>
+            <Button onClick={() => {
+              logout();
+              setLocation("/login");
+            }} variant="outline">
+              Back to Login
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+
+    const assignments = (assignmentsData as any)?.assignments || [];
 
     if (assignments.length === 0) {
       return (
@@ -545,17 +569,17 @@ export default function WorkerScanner() {
                 {assignments.map((assignment: any) => {
                   const job = assignment.job;
                   const completionPercentage = job ? Math.round((job.completedItems / job.totalProducts) * 100) : 0;
-                  
+
                   return (
                     <Card key={assignment.id} className="cursor-pointer hover:shadow-lg transition-shadow">
                       <CardContent className="p-6">
-                        <div 
+                        <div
                           className="flex items-center justify-between"
                           onClick={() => setLocation(`/scanner/${assignment.jobId}`)}
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <div 
+                              <div
                                 className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
                                 style={{ backgroundColor: assignment.assignedColor }}
                               />
@@ -739,7 +763,7 @@ export default function WorkerScanner() {
             {!session ? (
               <div className="text-center py-8">
                 <p className="text-gray-600 mb-4">
-                  {(jobData as any)?.job?.isActive === false 
+                  {(jobData as any)?.job?.isActive === false
                     ? "Scanning is paused by manager"
                     : "Getting session ready..."
                   }

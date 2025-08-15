@@ -638,19 +638,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user's assignments with job details
   app.get('/api/users/me/assignments', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
+      console.log(`Fetching assignments for user: ${req.user!.id}`);
+      
       const assignments = await storage.getJobAssignmentsByUser(req.user!.id);
+      console.log(`Found ${assignments.length} assignments for user ${req.user!.id}`);
+      
       const assignmentsWithJobs = await Promise.all(
         assignments.map(async (assignment) => {
-          const job = await storage.getJobById(assignment.jobId);
-          return {
-            ...assignment,
-            job
-          };
+          try {
+            const job = await storage.getJobById(assignment.jobId);
+            return {
+              ...assignment,
+              job
+            };
+          } catch (jobError) {
+            console.error(`Error fetching job ${assignment.jobId}:`, jobError);
+            return {
+              ...assignment,
+              job: null
+            };
+          }
         })
       );
-      res.json({ assignments: assignmentsWithJobs });
+      
+      // Filter out assignments with null jobs (deleted jobs)
+      const validAssignments = assignmentsWithJobs.filter(assignment => assignment.job !== null);
+      
+      res.json({ assignments: validAssignments });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch user assignments' });
+      console.error('Error in /api/users/me/assignments:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch user assignments',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
