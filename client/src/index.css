@@ -299,6 +299,51 @@ button[role="switch"][data-state="unchecked"],
   border-color: hsl(220, 13%, 91%) !important;
 }
 
+/* Switch thumb styling for better visibility */
+[data-radix-switch-thumb],
+.peer + * {
+  background-color: white !important;
+  border: 1px solid hsl(220, 13%, 70%) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Switch thumb when checked - use theme's darkest color */
+[data-radix-switch-root][data-state="checked"] [data-radix-switch-thumb] {
+  background-color: white !important;
+  border: 1px solid var(--primary) !important;
+}
+
+/* Theme-specific dark thumb colors for checked state */
+.theme-blue [data-state="checked"] [data-radix-switch-thumb] {
+  background-color: hsl(224, 76%, 48%) !important;
+  border-color: hsl(224, 76%, 48%) !important;
+}
+
+.theme-green [data-state="checked"] [data-radix-switch-thumb] {
+  background-color: hsl(158, 64%, 28%) !important;
+  border-color: hsl(158, 64%, 28%) !important;
+}
+
+.theme-orange [data-state="checked"] [data-radix-switch-thumb] {
+  background-color: hsl(26, 90%, 37%) !important;
+  border-color: hsl(26, 90%, 37%) !important;
+}
+
+.theme-teal [data-state="checked"] [data-radix-switch-thumb] {
+  background-color: hsl(174, 62%, 30%) !important;
+  border-color: hsl(174, 62%, 30%) !important;
+}
+
+.theme-red [data-state="checked"] [data-radix-switch-thumb] {
+  background-color: hsl(0, 74%, 42%) !important;
+  border-color: hsl(0, 74%, 42%) !important;
+}
+
+.theme-dark [data-state="checked"] [data-radix-switch-thumb] {
+  background-color: hsl(215, 25%, 27%) !important;
+  border-color: hsl(215, 25%, 27%) !important;
+}
+
 /* Ensure primary buttons use theme colors properly */
 button[data-variant="default"]:not([data-variant="outline"]):not([data-variant="ghost"]):not([data-variant="secondary"]):not([data-variant="destructive"]),
 .bg-primary {
