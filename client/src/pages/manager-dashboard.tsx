@@ -384,7 +384,7 @@ export default function ManagerDashboard() {
     }
 
     try {
-      const response = await fetch('/api/jobs/all', {
+      const response = await fetch('/api/jobs/all-data', {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${user?.id}`,
