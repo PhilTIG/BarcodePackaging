@@ -38,10 +38,17 @@ export default function WorkerScanner() {
   });
   const [showJobSelector, setShowJobSelector] = useState(false);
   const [currentBoxIndex, setCurrentBoxIndex] = useState(0);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanResult, setScanResult] = useState<{
+    boxNumber: number;
+    customerName: string;
+    productName: string;
+    progress: string;
+  } | null>(null);
   
-  // Mobile mode detection
-  const isMobileMode = preferences.mobileModePreference || (window.innerWidth <= 768);
-  const isDesktopAndMobile = preferences.mobileModePreference && window.innerWidth > 768;
+  // Mobile mode detection - now based on single box mode preference
+  const isMobileMode = preferences.singleBoxMode || (window.innerWidth <= 768);
+  const isDesktopAndMobile = preferences.singleBoxMode && window.innerWidth > 768;
 
   // Fetch worker's job assignments
   const { data: assignmentsData } = useQuery({
@@ -258,16 +265,77 @@ export default function WorkerScanner() {
     }
   };
 
+  // POC-style barcode processing logic
+  const processBarcodeScanning = (barcode: string, products: any[]) => {
+    // Clear previous scan results and errors
+    setScanError(null);
+    setScanResult(null);
+
+    // Group products by barcode to match POC logic
+    const barcodeItems = products.filter(p => p.barCode === barcode);
+    
+    if (barcodeItems.length === 0) {
+      setScanError('Unexpected stock scanned: unknown stock');
+      setTimeout(() => setScanError(null), 3000);
+      return null;
+    }
+
+    // Find next customer to receive this barcode (POC logic)
+    let targetItem = null;
+    for (let item of barcodeItems) {
+      if ((item.scannedQty || 0) < item.qty) {
+        targetItem = item;
+        break;
+      }
+    }
+
+    if (!targetItem) {
+      const productName = barcodeItems[0].productName;
+      setScanError(`Unexpected stock scanned: ${productName}\nAll quantities for this product have been fulfilled`);
+      setTimeout(() => setScanError(null), 3000);
+      return null;
+    }
+
+    // Calculate box number and progress
+    const customers = getUniqueCustomers();
+    const boxNumber = customers.indexOf(targetItem.customerName) + 1;
+    
+    // Calculate progress for this customer's box
+    const customerProducts = products.filter(p => p.customerName === targetItem.customerName);
+    const totalItems = customerProducts.reduce((sum, p) => sum + p.qty, 0);
+    const scannedItems = customerProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+    
+    // Set scan result to display immediately
+    setScanResult({
+      boxNumber,
+      customerName: targetItem.customerName,
+      productName: targetItem.productName,
+      progress: `${scannedItems + 1}/${totalItems} items`
+    });
+
+    // Clear scan result after 2 seconds to return to normal view
+    setTimeout(() => setScanResult(null), 2000);
+
+    return targetItem;
+  };
+
   const handleBarcodeSubmit = (barcode: string) => {
     if (!barcode.trim()) return;
     
     // Auto-create session if none exists
     if (!activeSession) {
       autoCreateSessionMutation.mutate();
-      toast({
-        title: "Creating session",
-        description: "Please try scanning again",
-      });
+      setScanError("Creating session - please try scanning again");
+      setTimeout(() => setScanError(null), 2000);
+      return;
+    }
+
+    // Get current products for POC-style processing
+    const products = (jobData as any)?.products || [];
+    const targetItem = processBarcodeScanning(barcode.trim(), products);
+    
+    if (!targetItem) {
+      // Error already set by processBarcodeScanning
       return;
     }
     
@@ -522,6 +590,8 @@ export default function WorkerScanner() {
         onSwitchSession={() => setLocation('/scanner')}
         isUndoAvailable={scanStats.totalScans > 0}
         isConnected={isConnected}
+        scanError={scanError}
+        scanResult={scanResult}
       />
     );
   }

@@ -32,6 +32,13 @@ interface MobileScannerInterfaceProps {
   onSwitchSession?: () => void;
   isUndoAvailable?: boolean;
   isConnected?: boolean;
+  scanError?: string | null;
+  scanResult?: {
+    boxNumber: number;
+    customerName: string;
+    productName: string;
+    progress: string;
+  } | null;
 }
 
 export function MobileScannerInterface({
@@ -47,7 +54,9 @@ export function MobileScannerInterface({
   onUndo,
   onSwitchSession,
   isUndoAvailable = false,
-  isConnected = true
+  isConnected = true,
+  scanError = null,
+  scanResult = null
 }: MobileScannerInterfaceProps) {
   const [, setLocation] = useLocation();
   const { preferences, updatePreference } = useUserPreferences();
@@ -70,17 +79,37 @@ export function MobileScannerInterface({
     }
   };
 
-  // Handle mobile toggle change
-  const handleMobileToggle = async (enabled: boolean) => {
-    await updatePreference('mobileModePreference', enabled);
-    if (!enabled) {
-      // If turning off mobile mode, stay on current page
-      return;
-    }
+  // Handle single box toggle change
+  const handleSingleBoxToggle = async (enabled: boolean) => {
+    await updatePreference('singleBoxMode', enabled);
+    // This just toggles the mode without redirecting
   };
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
+      {/* Red Error Screen Overlay */}
+      {scanError && (
+        <div className="fixed inset-0 bg-red-500 bg-opacity-95 z-50 flex items-center justify-center">
+          <div className="text-center text-white p-8">
+            <div className="text-6xl mb-4">⚠️</div>
+            <div className="text-3xl font-bold mb-4">Scan Error</div>
+            <div className="text-xl mb-6">{scanError}</div>
+            <Button
+              onClick={() => {
+                // Error will be cleared automatically by the parent component
+                if (barcodeInputRef.current) {
+                  barcodeInputRef.current.focus();
+                }
+              }}
+              className="bg-white text-red-500 hover:bg-gray-100"
+              data-testid="button-error-dismiss"
+            >
+              Continue Scanning
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Header with title and controls */}
       <div className="bg-white p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -94,11 +123,11 @@ export function MobileScannerInterface({
           
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">Mobile</span>
+              <span className="text-sm text-gray-600">Single Box</span>
               <Switch
-                checked={preferences.mobileModePreference}
-                onCheckedChange={handleMobileToggle}
-                data-testid="mobile-toggle"
+                checked={preferences.singleBoxMode}
+                onCheckedChange={handleSingleBoxToggle}
+                data-testid="single-box-toggle"
               />
             </div>
             <Button
@@ -163,25 +192,44 @@ export function MobileScannerInterface({
         {/* Very large box number display */}
         <div className="text-center mb-8">
           <div className="text-[120px] font-bold text-blue-500 leading-none" data-testid="box-number-display">
-            {currentBoxNumber}
+            {scanResult ? scanResult.boxNumber : (currentBoxNumber || '-')}
           </div>
         </div>
 
         {/* Customer name */}
         <div className="text-center mb-6">
           <div className="text-2xl font-semibold text-gray-900 mb-2" data-testid="customer-name">
-            {currentCustomer}
+            {scanResult ? scanResult.customerName : (currentCustomer || 'Ready to Scan')}
           </div>
           
-          {lastScanEvent && (
+          {scanResult && (
+            <div className="text-lg text-gray-600" data-testid="product-name">
+              {scanResult.productName}
+            </div>
+          )}
+          {!scanResult && lastScanEvent && (
             <div className="text-lg text-gray-600" data-testid="product-name">
               {lastScanEvent.productName}
+            </div>
+          )}
+          {!scanResult && !lastScanEvent && (
+            <div className="text-lg text-gray-500" data-testid="scan-instruction">
+              Scan a barcode to begin
             </div>
           )}
         </div>
 
         {/* Progress indicator */}
-        {currentBoxProgress.total > 0 && (
+        {scanResult && scanResult.progress && (
+          <div className="text-center">
+            <div className="inline-flex items-center px-4 py-2 bg-green-100 border-2 border-green-300 rounded-full">
+              <span className="text-lg font-medium text-green-800" data-testid="progress-indicator">
+                {scanResult.progress}
+              </span>
+            </div>
+          </div>
+        )}
+        {!scanResult && currentBoxProgress.total > 0 && (
           <div className="text-center">
             <div className="inline-flex items-center px-4 py-2 bg-green-100 border-2 border-green-300 rounded-full">
               <span className="text-lg font-medium text-green-800" data-testid="progress-indicator">
