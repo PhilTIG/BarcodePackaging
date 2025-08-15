@@ -95,20 +95,17 @@ export default function WorkerScanner() {
 
     const assignments = (assignmentsData as any)?.assignments || [];
 
-    // Use setTimeout to prevent setState during render
-    setTimeout(() => {
-      if (assignments.length === 0) {
-        // No assignments - stay on scanner page and show no assignments message
-        setShowJobSelector(false);
-        return;
-      } else if (assignments.length === 1) {
-        // Only one assignment - auto-redirect to that job
-        setLocation(`/scanner/${assignments[0].jobId}`);
-      } else {
-        // Multiple assignments - show job selector
-        setShowJobSelector(true);
-      }
-    }, 0);
+    if (assignments.length === 0) {
+      // No assignments - stay on scanner page and show no assignments message
+      setShowJobSelector(false);
+      return;
+    } else if (assignments.length === 1) {
+      // Only one assignment - auto-redirect to that job
+      setLocation(`/scanner/${assignments[0].jobId}`);
+    } else {
+      // Multiple assignments - show job selector
+      setShowJobSelector(true);
+    }
   }, [user, assignmentsData, jobId, setLocation]);
 
   // Create scan session mutation
