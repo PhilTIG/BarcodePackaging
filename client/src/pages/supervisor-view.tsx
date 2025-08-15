@@ -251,7 +251,14 @@ export default function SupervisorView() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setLocation("/supervisor")}
+                onClick={() => {
+                  // Navigate back to correct dashboard based on user role
+                  if (user?.role === "manager") {
+                    setLocation("/manager");
+                  } else {
+                    setLocation("/supervisor");
+                  }
+                }}
                 data-testid="button-back"
               >
                 <ChevronLeft className="h-4 w-4" />
