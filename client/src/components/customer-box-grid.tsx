@@ -141,7 +141,7 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
           <div
             key={box.boxNumber}
             className={boxClasses}
-            style={{ minHeight: '140px' }}
+            style={{ minHeight: '150px' }}
             data-testid={`box-${box.boxNumber}`}
           >
             {/* Lock icon for 100% completed boxes */}
@@ -158,13 +158,13 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
               </div>
             )}
 
-            {/* Customer name at top-left */}
-            <div className="mb-2 pr-16">
+            {/* Customer name spanning full width */}
+            <div className="mb-2 pr-2">
               <h3 className={`font-medium text-sm truncate ${highlighting.textColor}`} data-testid={`customer-name-${box.boxNumber}`}>
                 {box.customerName === "Unassigned" ? "Unassigned" : box.customerName}
               </h3>
               {supervisorView && box.assignedWorker && (
-                <p className={`text-xs ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`}>Worker: {box.assignedWorker}</p>
+                <p className={`text-xs truncate ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`}>Worker: {box.assignedWorker}</p>
               )}
             </div>
 
@@ -193,11 +193,11 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
             <div className="absolute top-20 right-2 flex flex-col items-center">
               {box.isComplete ? (
                 <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
-                  100% Complete
+                  100%
                 </div>
               ) : (
                 <p className={`text-xs text-center ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
-                  {completionPercentage}% Complete
+                  {completionPercentage}%
                 </p>
               )}
             </div>
