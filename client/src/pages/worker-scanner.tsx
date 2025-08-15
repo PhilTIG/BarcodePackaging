@@ -367,7 +367,7 @@ export default function WorkerScanner() {
   const getCurrentCustomer = (): string => {
     if (!preferences.singleBoxMode) return "No Customer Selected";
     const customers = getUniqueCustomers();
-    return customers[currentBoxIndex] || customers[0] || "No Customer Selected";
+    return (customers[currentBoxIndex] as string) || (customers[0] as string) || "No Customer Selected";
   };
 
   const getCurrentBoxProgress = () => {

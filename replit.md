@@ -6,15 +6,17 @@ This is a comprehensive warehouse sorting application designed to streamline the
 
 ## Recent Changes (January 2025)
 
-**Mobile Scanner Interface Enhancement Completed (January 15, 2025):**
+**POC-Style Single Box Scanner Implementation Completed (January 15, 2025):**
 - **POC-Matching Design**: Completely redesigned mobile scanner interface to match original HTML POC specifications
-- **Large Box Display**: Prominent 120px box number display with customer details underneath
-- **Real-time Progress**: Added current box progress tracking showing "X/Y items" for each box
-- **Clean Mobile UI**: Removed navigation buttons and toast notifications during scanning for distraction-free experience
-- **Smart Settings**: Mobile toggle switch and settings icon in header with auto-saved user preferences
-- **Action Controls**: Undo button at top, switch session option always available
-- **Performance Stats**: Light blue bottom section with scanning metrics and performance indicators
-- **Auto-Focus Input**: Barcode input automatically focuses for seamless hardware scanner integration
+- **Single Box Toggle**: Changed "Mobile" to "Single Box" toggle that switches mode without redirecting to settings
+- **POC Barcode Logic**: Implemented exact POC scanning behavior with proper box allocation and error handling
+- **Red Error Screen**: Added full-screen red error overlay for "unexpected stock" and "fully allocated" items
+- **Immediate Scan Feedback**: Shows destination box number, customer name, and product immediately after scan
+- **Real-time Progress**: Displays "X/Y items" progress for current customer box
+- **Auto Box Allocation**: Finds next available customer box based on ascending order for unfulfilled quantities
+- **Error Auto-Clear**: Error screens auto-dismiss after 3 seconds, scan results clear after 2 seconds
+- **User Preference Persistence**: Single box mode setting saved per user and remembered across sessions
+- **Clean Interface**: Removed toast notifications and navigation buttons during scanning for distraction-free experience
 
 **Critical Session Management Fix Completed (January 15, 2025):**
 - **Manager-Controlled Job Activation**: Added Start/Pause Scanning buttons for managers to control when workers can scan
