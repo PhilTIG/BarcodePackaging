@@ -48,7 +48,10 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
 
       boxes[product.boxNumber].totalQty += product.qty;
       boxes[product.boxNumber].scannedQty += product.scannedQty;
-      boxes[product.boxNumber].isComplete = boxes[product.boxNumber].scannedQty >= boxes[product.boxNumber].totalQty;
+      
+      // Box Complete = 100% fulfillment: scannedQty exactly equals totalQty
+      boxes[product.boxNumber].isComplete = boxes[product.boxNumber].totalQty > 0 && 
+                                           boxes[product.boxNumber].scannedQty === boxes[product.boxNumber].totalQty;
       
       // Mark as active if any items have been scanned but not complete
       if (boxes[product.boxNumber].scannedQty > 0 && !boxes[product.boxNumber].isComplete) {
@@ -105,9 +108,9 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
         const boxClasses = [
           "border rounded-lg p-3 relative transition-all duration-200",
           box.isComplete 
-            ? "border-success-200 bg-success-50" 
+            ? "border-green-200 bg-green-50" 
             : box.isActive 
-              ? "border-success-200 bg-success-50" 
+              ? "border-blue-200 bg-blue-50" 
               : "border-gray-200 bg-white"
         ].join(" ");
 
@@ -122,26 +125,26 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
             <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white ${
                 box.isComplete 
-                  ? "bg-success-500" 
+                  ? "bg-green-500" 
                   : box.isActive 
-                    ? "bg-success-500" 
+                    ? "bg-blue-500" 
                     : "bg-gray-400"
               }`}>
                 {box.boxNumber}
               </div>
             </div>
 
-            {/* Lock icon for completed boxes */}
+            {/* Lock icon for 100% completed boxes */}
             {box.isComplete && (
               <div className="absolute top-1 left-1">
-                <Lock className="w-3 h-3 text-success-600" />
+                <Lock className="w-3 h-3 text-green-600" />
               </div>
             )}
 
-            {/* Activity indicator for active boxes */}
+            {/* Activity indicator for active boxes (scanning in progress) */}
             {box.isActive && !box.isComplete && (
               <div className="absolute top-1 left-1">
-                <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               </div>
             )}
 
@@ -157,9 +160,9 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
             <div className="space-y-2 pr-16">
               <div className={`text-lg font-bold ${
                 box.isComplete 
-                  ? "text-success-600" 
+                  ? "text-green-600" 
                   : box.isActive 
-                    ? "text-success-600" 
+                    ? "text-blue-600" 
                     : "text-gray-500"
               }`} data-testid={`quantity-${box.boxNumber}`}>
                 {box.scannedQty}/{box.totalQty}
@@ -167,7 +170,13 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
               
               <Progress 
                 value={completionPercentage} 
-                className="h-2"
+                className={`h-2 ${
+                  box.isComplete 
+                    ? "text-green-600" 
+                    : box.isActive 
+                      ? "text-blue-600" 
+                      : "text-gray-400"
+                }`} 
                 data-testid={`progress-${box.boxNumber}`}
               />
               
@@ -179,18 +188,23 @@ export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBo
             {/* Status badges */}
             <div className="mt-2">
               {box.isComplete && (
-                <Badge variant="outline" className="text-xs">
-                  Complete
+                <Badge variant="default" className="text-xs bg-green-500 text-white">
+                  100% Complete
                 </Badge>
               )}
               {box.isActive && !box.isComplete && (
-                <Badge variant="secondary" className="text-xs">
-                  In Progress
+                <Badge variant="secondary" className="text-xs bg-blue-500 text-white">
+                  Scanning
                 </Badge>
               )}
               {!box.isActive && !box.isComplete && box.totalQty === 0 && (
                 <Badge variant="outline" className="text-xs">
                   Empty
+                </Badge>
+              )}
+              {!box.isActive && !box.isComplete && box.totalQty > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  Pending
                 </Badge>
               )}
             </div>

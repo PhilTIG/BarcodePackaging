@@ -488,7 +488,9 @@ export default function ManagerDashboard() {
                 {(jobsData as any)?.jobs?.map((job: any) => {
                   const progressPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
                   const isCompleted = progressPercentage === 100;
-                  const completedBoxes = Math.round((job.completedItems / job.totalProducts) * job.totalCustomers);
+                  // Note: This is an estimation. For exact box completion, we'd need to call the progress API
+                  // But for dashboard overview, this approximation is acceptable
+                  const estimatedCompletedBoxes = Math.round((job.completedItems / job.totalProducts) * job.totalCustomers);
                   
                   return (
                     <div 
@@ -536,7 +538,7 @@ export default function ManagerDashboard() {
                         <div className="bg-white border border-gray-300 rounded-md px-2 py-1 shadow-sm">
                           <div className="text-xs text-gray-500 font-medium">Boxes Complete</div>
                           <div className="text-sm font-bold text-gray-900" data-testid={`boxes-complete-${job.id}`}>
-                            {completedBoxes}/{job.totalCustomers}
+                            ~{estimatedCompletedBoxes}/{job.totalCustomers}
                           </div>
                         </div>
                       </div>

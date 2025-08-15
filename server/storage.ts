@@ -164,16 +164,16 @@ export class DatabaseStorage implements IStorage {
 
       if (!job) return null;
 
-      // Remove debug logs after fixing
-
       // Calculate overall progress
       const totalItems = jobProducts.reduce((sum, p) => sum + p.qty, 0);
       const scannedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
 
+      // Calculate Box Complete logic using helper method
+      const boxCompletion = this.calculateBoxCompletion(jobProducts);
+
       // Get worker performance data for all assigned workers
       const workersData = await Promise.all(
         assignments.map(async (assignment) => {
-          // Processing assignment
           const session = sessions.find(s => s.userId === assignment.userId);
           const events = session ? await this.getScanEventsBySessionId(session.id) : [];
           const performance = session ? await this.getSessionPerformance(session.id) : null;
@@ -193,13 +193,14 @@ export class DatabaseStorage implements IStorage {
         })
       );
 
-      // Final workers data built successfully
-
       return {
         progress: {
           totalItems,
           scannedItems,
           completionPercentage: totalItems > 0 ? Math.round((scannedItems / totalItems) * 100) : 0,
+          totalBoxes: boxCompletion.totalBoxes,
+          completedBoxes: boxCompletion.completedBoxes,
+          boxCompletionPercentage: boxCompletion.boxCompletionPercentage,
           activeSessions: sessions.filter(s => s.status === 'active').length,
           waitingSessions: sessions.filter(s => s.status === 'paused').length,
           totalAssignedWorkers: assignments.length,
@@ -223,6 +224,43 @@ export class DatabaseStorage implements IStorage {
     // Find the customer for products currently being scanned by this user
     const activeProducts = products.filter(p => (p.scannedQty || 0) > 0 && (p.scannedQty || 0) < p.qty);
     return activeProducts.length > 0 ? activeProducts[0].customerName : null;
+  }
+
+  /**
+   * Helper method to calculate box completion status for a set of products
+   * Box Complete = 100% fulfillment: all items allocated to each box (CustomName) must be scanned
+   */
+  private calculateBoxCompletion(products: Product[]): {
+    totalBoxes: number;
+    completedBoxes: number;
+    boxCompletionPercentage: number;
+    boxDetails: Map<string, { totalQty: number; scannedQty: number; isComplete: boolean }>;
+  } {
+    const boxProgress = new Map<string, { totalQty: number; scannedQty: number; isComplete: boolean }>();
+    
+    products.forEach(product => {
+      const customerName = product.customerName;
+      if (!boxProgress.has(customerName)) {
+        boxProgress.set(customerName, { totalQty: 0, scannedQty: 0, isComplete: false });
+      }
+      
+      const box = boxProgress.get(customerName)!;
+      box.totalQty += product.qty;
+      box.scannedQty += product.scannedQty || 0;
+      
+      // Box Complete = 100% fulfillment: scannedQty exactly equals totalQty
+      box.isComplete = box.totalQty > 0 && box.scannedQty === box.totalQty;
+    });
+
+    const completedBoxes = Array.from(boxProgress.values()).filter(box => box.isComplete).length;
+    const totalBoxes = boxProgress.size;
+
+    return {
+      totalBoxes,
+      completedBoxes,
+      boxCompletionPercentage: totalBoxes > 0 ? Math.round((completedBoxes / totalBoxes) * 100) : 0,
+      boxDetails: boxProgress
+    };
   }
 
   async createProducts(productList: InsertProduct[]): Promise<Product[]> {

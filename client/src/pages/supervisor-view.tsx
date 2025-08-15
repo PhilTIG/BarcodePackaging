@@ -300,9 +300,15 @@ export default function SupervisorView() {
           </CardHeader>
           <CardContent>
             <Progress value={completionPercentage} className="h-4 mb-4" />
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>{job.completedItems} items completed</span>
-              <span>{job.totalProducts - job.completedItems} items remaining</span>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Items: {job.completedItems}/{job.totalProducts}</span>
+                <div className="text-xs text-gray-500">({completionPercentage}% complete)</div>
+              </div>
+              <div>
+                <span className="text-gray-600">Boxes: {progress?.completedBoxes || 0}/{progress?.totalBoxes || job.totalCustomers}</span>
+                <div className="text-xs text-gray-500">({progress?.boxCompletionPercentage || 0}% complete)</div>
+              </div>
             </div>
           </CardContent>
         </Card>
