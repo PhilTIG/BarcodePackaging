@@ -410,453 +410,651 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="p-4 space-y-6">{activeTab === "general" && (
-        <>
-          {/* Color Theme Section */}
-          <Card data-testid="theme-settings">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Palette className="h-5 w-5" />
-                <span>Color Theme</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {AVAILABLE_THEMES.map((themeOption) => (
-                  <div
-                    key={themeOption.name}
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      false // theme === themeOption.name
-                        ? "border-primary-500 bg-primary-50"
-                        : "border-gray-200 bg-white hover:border-gray-300"
-                    }`}
-                    onClick={() => handleThemeChange(themeOption.name)}
-                    data-testid={`theme-${themeOption.name}`}
-                  >
-                    <div className="flex items-center space-x-2 mb-3">
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: themeOption.colors[0] }}
-                      ></div>
-                      <span className="font-medium text-gray-900">{themeOption.label}</span>
-                      {false /* theme === themeOption.name */ && (
-                        <div className="text-primary-500 ml-auto">✓</div>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      {themeOption.colors.map((color, index) => (
-                        <div
-                          key={index}
-                          className="h-2 rounded"
-                          style={{ backgroundColor: color }}
-                        ></div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-        {/* Scanner Settings */}
-        <Card data-testid="scanner-settings">
-          <CardHeader>
-            <CardTitle>Scanner Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Auto-clear Input</h3>
-                <p className="text-sm text-gray-600">Automatically clear input field after successful scan</p>
-              </div>
-              <Switch
-                checked={preferences.autoClearInput}
-                onCheckedChange={(checked) => handleSettingChange("autoClearInput", checked)}
-                data-testid="switch-auto-clear"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Sound Feedback</h3>
-                <p className="text-sm text-gray-600">Play sound on successful scan</p>
-              </div>
-              <Switch
-                checked={preferences.soundFeedback}
-                onCheckedChange={(checked) => handleSettingChange("soundFeedback", checked)}
-                data-testid="switch-sound"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Vibration Feedback</h3>
-                <p className="text-sm text-gray-600">Vibrate device on scan (mobile only)</p>
-              </div>
-              <Switch
-                checked={preferences.vibrationFeedback}
-                onCheckedChange={(checked) => handleSettingChange("vibrationFeedback", checked)}
-                data-testid="switch-vibration"
-              />
-            </div>
-
-            <div>
-              <Label className="text-base font-medium text-gray-900">Scanner Type</Label>
-              <Select
-                value={preferences.scannerType}
-                onValueChange={(value) => handleSettingChange("scannerType", value)}
-              >
-                <SelectTrigger className="mt-2" data-testid="select-scanner-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="camera">Camera Scanner</SelectItem>
-                  <SelectItem value="usb">USB HID Scanner</SelectItem>
-                  <SelectItem value="bluetooth">Bluetooth Scanner</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Mobile Mode</h3>
-                <p className="text-sm text-gray-600">Enable mobile-first interface with touch-optimized controls</p>
-              </div>
-              <Switch
-                checked={preferences.mobileModePreference}
-                onCheckedChange={(checked) => handleSettingChange("mobileModePreference", checked)}
-                data-testid="switch-mobile-mode"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Single Box Mode</h3>
-                <p className="text-sm text-gray-600">Focus on one box at a time with full-screen display (mobile only)</p>
-              </div>
-              <Switch
-                checked={preferences.singleBoxMode}
-                onCheckedChange={(checked) => handleSettingChange("singleBoxMode", checked)}
-                disabled={!preferences.mobileModePreference}
-                data-testid="switch-single-box"
-              />
-            </div>
-
-            <div>
-              <Label className="text-base font-medium text-gray-900">Maximum Boxes Per Row</Label>
-              <Input
-                type="number"
-                value={preferences.maxBoxesPerRow}
-                onChange={(e) => updatePreference("maxBoxesPerRow", parseInt(e.target.value) || 12)}
-                min="4"
-                max="16"
-                className="mt-2"
-                data-testid="input-max-boxes-per-row"
-              />
-              <p className="text-sm text-gray-600 mt-1">
-                Sets maximum boxes displayed per row on wide screens (4-16). Layout automatically adjusts for smaller screens.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Performance Settings - Only for managers */}
-        {user.role === "manager" && (
-          <Card data-testid="performance-settings">
-            <CardHeader>
-              <CardTitle>Performance Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <Label className="text-base font-medium text-gray-900">Target Scans Per Hour</Label>
-                <Input
-                  type="number"
-                  value={preferences.targetScansPerHour}
-                  onChange={(e) => handleSettingChange("targetScansPerHour", parseInt(e.target.value))}
-                  min="1"
-                  max="500"
-                  className="mt-2"
-                  data-testid="input-target-scans"
-                />
-                <p className="text-sm text-gray-600 mt-1">Industry average is 71 items/hour</p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium text-gray-900">Auto-save Sessions</h3>
-                  <p className="text-sm text-gray-600">Automatically save progress every 5 minutes</p>
-                </div>
-                <Switch
-                  checked={preferences.autoSaveSessions}
-                  onCheckedChange={(checked) => handleSettingChange("autoSaveSessions", checked)}
-                  data-testid="switch-auto-save"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium text-gray-900">Show Real-time Stats</h3>
-                  <p className="text-sm text-gray-600">Display performance metrics during scanning</p>
-                </div>
-                <Switch
-                  checked={preferences.showRealtimeStats}
-                  onCheckedChange={(checked) => handleSettingChange("showRealtimeStats", checked)}
-                  data-testid="switch-realtime-stats"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium text-gray-900">Detailed Error Messaging</h3>
-                  <p className="text-sm text-gray-600">Show detailed CSV validation errors instead of summary</p>
-                </div>
-                <Switch
-                  checked={detailedErrorMessages}
-                  onCheckedChange={(checked) => handleSettingChange("detailedErrorMessages", checked)}
-                  data-testid="switch-detailed-errors"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* System Information - Only for managers */}
-        {user.role === "manager" && (
-          <Card data-testid="system-info">
-            <CardHeader>
-              <CardTitle>System Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">App Version</span>
-                  <span className="font-medium text-gray-900">1.0.0</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Last Updated</span>
-                  <span className="font-medium text-gray-900">{new Date().toLocaleDateString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Device Type</span>
-                  <span className="font-medium text-gray-900">
-                    {/Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Storage Used</span>
-                  <span className="font-medium text-gray-900">
-                    {Math.round(JSON.stringify(localStorage).length / 1024)} KB
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  onClick={handleClearData}
-                  data-testid="button-clear-data"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Clear All Data
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        </>
-      )}
-      {activeTab === "job-types" && user.role === "manager" && (
-        <>
-          {/* Job Types Management */}
-          <Card data-testid="job-types-settings">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+      <div className="p-4 space-y-6">
+        {activeTab === "general" && (
+          <>
+            {/* Color Theme Section */}
+            <Card data-testid="theme-settings">
+              <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Package className="h-5 w-5" />
-                  <span>Job Types Management</span>
+                  <Palette className="h-5 w-5" />
+                  <span>Color Theme</span>
                 </CardTitle>
-                <Dialog open={isJobTypeDialogOpen} onOpenChange={setIsJobTypeDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={resetJobTypeForm} data-testid="button-add-job-type">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Job Type
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md bg-white text-black border border-gray-200">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingJobType ? "Edit Job Type" : "Add New Job Type"}
-                      </DialogTitle>
-                      <DialogDescription>
-                        {editingJobType 
-                          ? "Update job type settings and requirements."
-                          : "Create a new job type with benchmark targets and field requirements."
-                        }
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...jobTypeForm}>
-                      <form onSubmit={jobTypeForm.handleSubmit(onSubmitJobType)} className="space-y-4">
-                        <FormField
-                          control={jobTypeForm.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Job Type Name</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="e.g., Standard Sorting, Express Processing..." data-testid="input-job-type-name" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={jobTypeForm.control}
-                          name="benchmarkItemsPerHour"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Benchmark Items Per Hour</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  {...field} 
-                                  type="number"
-                                  min="1"
-                                  placeholder="71"
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 71)}
-                                  data-testid="input-benchmark" 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={jobTypeForm.control}
-                          name="requireGroupField"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                              <div className="space-y-0.5">
-                                <FormLabel className="text-base">Require Group Field</FormLabel>
-                                <div className="text-sm text-muted-foreground">
-                                  When uploading CSV files, require a "Group" column for organizing items
-                                </div>
-                              </div>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  data-testid="switch-require-group"
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="flex justify-end space-x-2 pt-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={resetJobTypeForm}
-                            data-testid="button-cancel-job-type"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="submit"
-                            disabled={createJobTypeMutation.isPending || updateJobTypeMutation.isPending}
-                            data-testid="button-save-job-type"
-                          >
-                            {editingJobType 
-                              ? (updateJobTypeMutation.isPending ? "Updating..." : "Update Job Type")
-                              : (createJobTypeMutation.isPending ? "Creating..." : "Create Job Type")
-                            }
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {jobTypesLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
-                      <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-                      <div className="h-8 bg-gray-200 rounded w-16 float-right"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {(jobTypesData as any)?.jobTypes?.map((jobType: any) => (
-                    <div 
-                      key={jobType.id} 
-                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                      data-testid={`job-type-card-${jobType.id}`}
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {AVAILABLE_THEMES.map((themeOption) => (
+                    <div
+                      key={themeOption.name}
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                        false // theme === themeOption.name
+                          ? "border-primary-500 bg-primary-50"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                      onClick={() => handleThemeChange(themeOption.name)}
+                      data-testid={`theme-${themeOption.name}`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center space-x-3">
-                            <h3 className="font-medium text-gray-900">{jobType.name}</h3>
-                            <Badge 
-                              variant="secondary"
-                              data-testid={`badge-benchmark-${jobType.id}`}
-                            >
-                              {jobType.benchmarkItemsPerHour} items/hour
-                            </Badge>
-                            {jobType.requireGroupField && (
-                              <Badge 
-                                variant="outline"
-                                data-testid={`badge-group-required-${jobType.id}`}
-                              >
-                                Group Required
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Benchmark: {jobType.benchmarkItemsPerHour} items per hour
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Created: {new Date(jobType.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditJobType(jobType)}
-                            data-testid={`button-edit-job-type-${jobType.id}`}
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteJobType(jobType.id)}
-                            data-testid={`button-delete-job-type-${jobType.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: themeOption.colors[0] }}
+                        ></div>
+                        <span className="font-medium text-gray-900">{themeOption.label}</span>
+                        {false /* theme === themeOption.name */ && (
+                          <div className="text-primary-500 ml-auto">✓</div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {themeOption.colors.map((color, index) => (
+                          <div
+                            key={index}
+                            className="h-2 rounded"
+                            style={{ backgroundColor: color }}
+                          ></div>
+                        ))}
                       </div>
                     </div>
                   ))}
-                  {(!(jobTypesData as any)?.jobTypes || (jobTypesData as any)?.jobTypes?.length === 0) && (
-                    <div className="text-center py-8 text-gray-500">
-                      No job types found. Add your first job type to get started.
-                    </div>
-                  )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
+              </CardContent>
+            </Card>
+
+            {/* Scanner Settings */}
+            <Card data-testid="scanner-settings">
+              <CardHeader>
+                <CardTitle>Scanner Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-gray-900">Auto-clear Input</h3>
+                    <p className="text-sm text-gray-600">Automatically clear input field after successful scan</p>
+                  </div>
+                  <Switch
+                    checked={preferences.autoClearInput}
+                    onCheckedChange={(checked) => handleSettingChange("autoClearInput", checked)}
+                    data-testid="switch-auto-clear"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-gray-900">Sound Feedback</h3>
+                    <p className="text-sm text-gray-600">Play sound on successful scan</p>
+                  </div>
+                  <Switch
+                    checked={preferences.soundFeedback}
+                    onCheckedChange={(checked) => handleSettingChange("soundFeedback", checked)}
+                    data-testid="switch-sound"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-gray-900">Vibration Feedback</h3>
+                    <p className="text-sm text-gray-600">Vibrate device on scan (mobile only)</p>
+                  </div>
+                  <Switch
+                    checked={preferences.vibrationFeedback}
+                    onCheckedChange={(checked) => handleSettingChange("vibrationFeedback", checked)}
+                    data-testid="switch-vibration"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-base font-medium text-gray-900">Scanner Type</Label>
+                  <Select
+                    value={preferences.scannerType}
+                    onValueChange={(value) => handleSettingChange("scannerType", value)}
+                  >
+                    <SelectTrigger className="mt-2" data-testid="select-scanner-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="camera">Camera Scanner</SelectItem>
+                      <SelectItem value="usb">USB HID Scanner</SelectItem>
+                      <SelectItem value="bluetooth">Bluetooth Scanner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-gray-900">Mobile Mode</h3>
+                    <p className="text-sm text-gray-600">Enable mobile-first interface with touch-optimized controls</p>
+                  </div>
+                  <Switch
+                    checked={preferences.mobileModePreference}
+                    onCheckedChange={(checked) => handleSettingChange("mobileModePreference", checked)}
+                    data-testid="switch-mobile-mode"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-gray-900">Single Box Mode</h3>
+                    <p className="text-sm text-gray-600">Focus on one box at a time with full-screen display (mobile only)</p>
+                  </div>
+                  <Switch
+                    checked={preferences.singleBoxMode}
+                    onCheckedChange={(checked) => handleSettingChange("singleBoxMode", checked)}
+                    disabled={!preferences.mobileModePreference}
+                    data-testid="switch-single-box"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-base font-medium text-gray-900">Maximum Boxes Per Row</Label>
+                  <Input
+                    type="number"
+                    value={preferences.maxBoxesPerRow}
+                    onChange={(e) => updatePreference("maxBoxesPerRow", parseInt(e.target.value) || 12)}
+                    min="4"
+                    max="16"
+                    className="mt-2"
+                    data-testid="input-max-boxes-per-row"
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Sets maximum boxes displayed per row on wide screens (4-16). Layout automatically adjusts for smaller screens.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Performance Settings - Only for managers */}
+            {user.role === "manager" && (
+              <Card data-testid="performance-settings">
+                <CardHeader>
+                  <CardTitle>Performance Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label className="text-base font-medium text-gray-900">Target Scans Per Hour</Label>
+                    <Input
+                      type="number"
+                      value={preferences.targetScansPerHour}
+                      onChange={(e) => handleSettingChange("targetScansPerHour", parseInt(e.target.value))}
+                      min="1"
+                      max="500"
+                      className="mt-2"
+                      data-testid="input-target-scans"
+                    />
+                    <p className="text-sm text-gray-600 mt-1">Industry average is 71 items/hour</p>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium text-gray-900">Auto-save Sessions</h3>
+                      <p className="text-sm text-gray-600">Automatically save progress every 5 minutes</p>
+                    </div>
+                    <Switch
+                      checked={preferences.autoSaveSessions}
+                      onCheckedChange={(checked) => handleSettingChange("autoSaveSessions", checked)}
+                      data-testid="switch-auto-save"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium text-gray-900">Show Real-time Stats</h3>
+                      <p className="text-sm text-gray-600">Display performance metrics during scanning</p>
+                    </div>
+                    <Switch
+                      checked={preferences.showRealtimeStats}
+                      onCheckedChange={(checked) => handleSettingChange("showRealtimeStats", checked)}
+                      data-testid="switch-realtime-stats"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium text-gray-900">Detailed Error Messaging</h3>
+                      <p className="text-sm text-gray-600">Show detailed CSV validation errors instead of summary</p>
+                    </div>
+                    <Switch
+                      checked={detailedErrorMessages}
+                      onCheckedChange={(checked) => handleSettingChange("detailedErrorMessages", checked)}
+                      data-testid="switch-detailed-errors"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* System Information - Only for managers */}
+            {user.role === "manager" && (
+              <Card data-testid="system-info">
+                <CardHeader>
+                  <CardTitle>System Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">App Version</span>
+                      <span className="font-medium text-gray-900">1.0.0</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Last Updated</span>
+                      <span className="font-medium text-gray-900">{new Date().toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Device Type</span>
+                      <span className="font-medium text-gray-900">
+                        {/Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Storage Used</span>
+                      <span className="font-medium text-gray-900">
+                        {Math.round(JSON.stringify(localStorage).length / 1024)} KB
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={handleClearData}
+                      data-testid="button-clear-data"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Clear All Data
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
+
+        {activeTab === "users" && user.role === "manager" && (
+          <>
+            {/* User Management */}
+            <Card data-testid="user-management">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2">
+                    <Users className="h-5 w-5" />
+                    <span>User Management</span>
+                  </CardTitle>
+                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button onClick={resetForm} data-testid="button-add-user">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add User
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md bg-white text-black border border-gray-200">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingUser ? "Edit User" : "Add New User"}
+                        </DialogTitle>
+                        <DialogDescription>
+                          {editingUser 
+                            ? "Update user information. Leave PIN blank to keep current PIN."
+                            : "Create a new user account with staff ID, name, role and PIN."
+                          }
+                        </DialogDescription>
+                      </DialogHeader>
+                      <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmitUser)} className="space-y-4">
+                          <FormField
+                            control={form.control}
+                            name="staffId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Staff ID</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="e.g., EMP001" data-testid="input-staff-id" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Full Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="e.g., John Smith" data-testid="input-name" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="role"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Role</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-role">
+                                      <SelectValue placeholder="Select a role" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="worker">Worker</SelectItem>
+                                    <SelectItem value="supervisor">Supervisor</SelectItem>
+                                    <SelectItem value="manager">Manager</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="pin"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>PIN {editingUser && "(leave blank to keep current)"}</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    type="password" 
+                                    placeholder={editingUser ? "••••" : "Enter 4+ digit PIN"}
+                                    data-testid="input-pin" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="flex justify-end space-x-2 pt-4">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={resetForm}
+                              data-testid="button-cancel"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="submit"
+                              disabled={createUserMutation.isPending || updateUserMutation.isPending}
+                              data-testid="button-save"
+                            >
+                              {editingUser 
+                                ? (updateUserMutation.isPending ? "Updating..." : "Update User")
+                                : (createUserMutation.isPending ? "Creating..." : "Create User")
+                              }
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {usersLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                        <div className="h-8 bg-gray-200 rounded w-16 float-right"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(usersData as any)?.users?.map((userItem: any) => (
+                      <div 
+                        key={userItem.id} 
+                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                        data-testid={`user-card-${userItem.id}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center space-x-3">
+                              <h3 className="font-medium text-gray-900">{userItem.name}</h3>
+                              <Badge 
+                                variant={userItem.role === "manager" ? "default" : userItem.role === "supervisor" ? "secondary" : "outline"}
+                                data-testid={`badge-role-${userItem.id}`}
+                              >
+                                {userItem.role}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">Staff ID: {userItem.staffId}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Created: {new Date(userItem.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditUser(userItem)}
+                              data-testid={`button-edit-${userItem.id}`}
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteUser(userItem.id)}
+                              data-testid={`button-delete-${userItem.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {(!(usersData as any)?.users || (usersData as any)?.users?.length === 0) && (
+                      <div className="text-center py-8 text-gray-500">
+                        No users found. Add your first user to get started.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {activeTab === "job-types" && user.role === "manager" && (
+          <>
+            {/* Job Types Management */}
+            <Card data-testid="job-types-settings">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2">
+                    <Package className="h-5 w-5" />
+                    <span>Job Types Management</span>
+                  </CardTitle>
+                  <Dialog open={isJobTypeDialogOpen} onOpenChange={setIsJobTypeDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button onClick={resetJobTypeForm} data-testid="button-add-job-type">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Job Type
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md bg-white text-black border border-gray-200">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingJobType ? "Edit Job Type" : "Add New Job Type"}
+                        </DialogTitle>
+                        <DialogDescription>
+                          {editingJobType 
+                            ? "Update job type settings and requirements."
+                            : "Create a new job type with benchmark targets and field requirements."
+                          }
+                        </DialogDescription>
+                      </DialogHeader>
+                      <Form {...jobTypeForm}>
+                        <form onSubmit={jobTypeForm.handleSubmit(onSubmitJobType)} className="space-y-4">
+                          <FormField
+                            control={jobTypeForm.control}
+                            name="name"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Job Type Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="e.g., Standard Sorting, Express Processing..." data-testid="input-job-type-name" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={jobTypeForm.control}
+                            name="benchmarkItemsPerHour"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Benchmark Items Per Hour</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    type="number"
+                                    min="1"
+                                    placeholder="71"
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 71)}
+                                    data-testid="input-benchmark" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={jobTypeForm.control}
+                            name="requireGroupField"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-base">Require Group Field</FormLabel>
+                                  <div className="text-sm text-muted-foreground">
+                                    When uploading CSV files, require a "Group" column for organizing items
+                                  </div>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    data-testid="switch-require-group"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="flex justify-end space-x-2 pt-4">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={resetJobTypeForm}
+                              data-testid="button-cancel-job-type"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="submit"
+                              disabled={createJobTypeMutation.isPending || updateJobTypeMutation.isPending}
+                              data-testid="button-save-job-type"
+                            >
+                              {editingJobType 
+                                ? (updateJobTypeMutation.isPending ? "Updating..." : "Update Job Type")
+                                : (createJobTypeMutation.isPending ? "Creating..." : "Create Job Type")
+                              }
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {jobTypesLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                        <div className="h-8 bg-gray-200 rounded w-16 float-right"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(jobTypesData as any)?.jobTypes?.map((jobType: any) => (
+                      <div 
+                        key={jobType.id} 
+                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                        data-testid={`job-type-card-${jobType.id}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center space-x-3">
+                              <h3 className="font-medium text-gray-900">{jobType.name}</h3>
+                              <Badge 
+                                variant="secondary"
+                                data-testid={`badge-benchmark-${jobType.id}`}
+                              >
+                                {jobType.benchmarkItemsPerHour} items/hour
+                              </Badge>
+                              {jobType.requireGroupField && (
+                                <Badge 
+                                  variant="outline"
+                                  data-testid={`badge-group-required-${jobType.id}`}
+                                >
+                                  Group Required
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Benchmark: {jobType.benchmarkItemsPerHour} items per hour
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Created: {new Date(jobType.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditJobType(jobType)}
+                              data-testid={`button-edit-job-type-${jobType.id}`}
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteJobType(jobType.id)}
+                              data-testid={`button-delete-job-type-${jobType.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {(!(jobTypesData as any)?.jobTypes || (jobTypesData as any)?.jobTypes?.length === 0) && (
+                      <div className="text-center py-8 text-gray-500">
+                        No job types found. Add your first job type to get started.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
       </div>
     </div>
   );
