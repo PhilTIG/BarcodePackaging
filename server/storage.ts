@@ -43,6 +43,7 @@ export interface IStorage {
   getAllJobs(): Promise<Job[]>;
   updateJobStatus(id: string, status: string): Promise<Job | undefined>;
   getJobProgress(id: string): Promise<any>;
+  getJobs(): Promise<{ jobs: any[] }>;
 
   // Product methods
   createProducts(products: InsertProduct[]): Promise<Product[]>;
@@ -213,6 +214,45 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getJobs(): Promise<{ jobs: any[] }> {
+    try {
+      const jobs = await this.db.select().from(jobsTable).orderBy(desc(jobsTable.createdAt));
+
+      const jobsWithStats = await Promise.all(jobs.map(async (job) => {
+        const products = await this.getJobProducts(job.id);
+        const assignments = await this.getJobAssignments(job.id);
+
+        const totalProducts = products.length;
+        const completedItems = products.filter(p => (p.scannedQty || 0) >= p.qty).length;
+
+        // Calculate box completion using the same logic as getJobProgress
+        const boxCompletion = this.calculateBoxCompletion(products);
+
+        return {
+          ...job,
+          totalProducts,
+          completedItems,
+          totalCustomers: new Set(products.map(p => p.customerName)).size,
+          completedBoxes: boxCompletion.completedBoxes,
+          assignments: assignments.map(a => ({
+            id: a.id,
+            assignedColor: a.assignedColor,
+            assignee: {
+              id: a.assignee.id,
+              name: a.assignee.name,
+              staffId: a.assignee.staffId,
+            }
+          }))
+        };
+      }));
+
+      return { jobs: jobsWithStats };
+    } catch (error) {
+      console.error('[ERROR] getJobs failed:', error);
+      throw error;
+    }
+  }
+
   private getCurrentBox(products: Product[], userId: string): number | null {
     // Find the box number for products currently being scanned by this user
     // This would need more sophisticated logic based on session data
@@ -237,17 +277,17 @@ export class DatabaseStorage implements IStorage {
     boxDetails: Map<string, { totalQty: number; scannedQty: number; isComplete: boolean }>;
   } {
     const boxProgress = new Map<string, { totalQty: number; scannedQty: number; isComplete: boolean }>();
-    
+
     products.forEach(product => {
       const customerName = product.customerName;
       if (!boxProgress.has(customerName)) {
         boxProgress.set(customerName, { totalQty: 0, scannedQty: 0, isComplete: false });
       }
-      
+
       const box = boxProgress.get(customerName)!;
       box.totalQty += product.qty;
       box.scannedQty += product.scannedQty || 0;
-      
+
       // Box Complete = 100% fulfillment: scannedQty exactly equals totalQty
       box.isComplete = box.totalQty > 0 && box.scannedQty === box.totalQty;
     });
@@ -265,7 +305,7 @@ export class DatabaseStorage implements IStorage {
 
   async createProducts(productList: InsertProduct[]): Promise<Product[]> {
     if (productList.length === 0) return [];
-    
+
     return await db
       .insert(products)
       .values(productList)
@@ -300,7 +340,7 @@ export class DatabaseStorage implements IStorage {
 
         // Update job's completed items count
         await this.updateJobCompletedItems(jobId);
-        
+
         return updatedProduct;
       }
     }
@@ -311,7 +351,7 @@ export class DatabaseStorage implements IStorage {
   private async updateJobCompletedItems(jobId: string): Promise<void> {
     const jobProducts = await this.getProductsByJobId(jobId);
     const completedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
-    
+
     await db
       .update(jobs)
       .set({ completedItems })
@@ -361,7 +401,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateScanSessionStats(sessionId: string): Promise<void> {
     const events = await this.getScanEventsBySessionId(sessionId);
-    
+
     const totalScans = events.length;
     const successfulScans = events.filter(e => e.eventType === 'scan').length;
     const errorScans = events.filter(e => e.eventType === 'error').length;
@@ -401,7 +441,7 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     const productInfo = jobProducts[0];
-    
+
     const eventData = {
       ...insertEvent,
       productName: productInfo?.productName,
@@ -497,7 +537,7 @@ export class DatabaseStorage implements IStorage {
 
     const sessionHours = sessionDuration / (1000 * 60 * 60);
     const scansPerHour = sessionHours > 0 ? Math.round(scanEvents.length / sessionHours) : 0;
-    
+
     const accuracy = events.length > 0 
       ? Math.round((scanEvents.length / (scanEvents.length + errorEvents.length)) * 100)
       : 100;
@@ -589,7 +629,7 @@ export class DatabaseStorage implements IStorage {
         eq(jobAssignments.isActive, true)
       ))
       .returning();
-    
+
     return result.length > 0;
   }
 
@@ -602,7 +642,7 @@ export class DatabaseStorage implements IStorage {
         eq(jobAssignments.userId, userId),
         eq(jobAssignments.isActive, true)
       ));
-    
+
     return assignment || undefined;
   }
 
@@ -612,11 +652,11 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(userPreferences)
       .where(eq(userPreferences.userId, userId));
-    
+
     if (!result) {
       return undefined;
     }
-    
+
     // Return structured preferences using the interface format
     return {
       maxBoxesPerRow: result.maxBoxesPerRow || 12,
@@ -641,7 +681,7 @@ export class DatabaseStorage implements IStorage {
       .insert(userPreferences)
       .values(insertPrefs)
       .returning();
-    
+
     // Return structured preferences using the interface format
     return {
       maxBoxesPerRow: result.maxBoxesPerRow || 12,
@@ -670,11 +710,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(userPreferences.userId, userId))
       .returning();
-    
+
     if (!result) {
       return undefined;
     }
-    
+
     // Return structured preferences using the interface format
     return {
       maxBoxesPerRow: result.maxBoxesPerRow || 12,
@@ -699,7 +739,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(roleDefaults)
       .where(eq(roleDefaults.role, role));
-    
+
     return defaults ? defaults.defaultPreferences as UserPreferencesData : undefined;
   }
 
@@ -721,7 +761,7 @@ export class DatabaseStorage implements IStorage {
       .insert(roleDefaults)
       .values({ role, defaultPreferences: preferences, createdBy })
       .returning();
-    
+
     return created;
   }
 
