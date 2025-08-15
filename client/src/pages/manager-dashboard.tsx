@@ -536,13 +536,7 @@ export default function ManagerDashboard() {
         {/* Active Jobs */}
         <Card data-testid="active-jobs">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Active Jobs</CardTitle>
-              <Button variant="outline" size="sm" data-testid="button-create-job">
-                <Plus className="mr-1 h-4 w-4" />
-                Create Job
-              </Button>
-            </div>
+            <CardTitle>Active Jobs</CardTitle>
           </CardHeader>
           <CardContent>
             {jobsLoading ? (
