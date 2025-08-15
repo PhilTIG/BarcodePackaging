@@ -6,6 +6,14 @@ This is a comprehensive warehouse sorting application designed to streamline the
 
 ## Recent Changes (January 2025)
 
+**Critical Multi-Worker System Requirements Identified (January 15, 2025):**
+- **POC Box Assignment Issue**: Current system incorrectly assigns box numbers using product index grouping instead of customer first-appearance order
+- **Multi-Worker Allocation Patterns**: Need to implement 4-worker system with ascending/descending/middle allocation patterns
+- **Worker Color Tracking**: Must track last worker to scan into each box for proper color highlighting
+- **Database Schema Gaps**: Missing worker tracking fields in products and scan_events tables
+- **Box Highlighting Priority**: GREEN (just-scanned) > Grey-Red (complete) > Worker Color > Grey (empty)
+- **Comprehensive PRD v3.0**: Created detailed requirements document with 12 implementation phases and technical architecture
+
 **POC-Style Single Box Scanner Implementation Completed (January 15, 2025):**
 - **POC-Matching Design**: Completely redesigned mobile scanner interface to match original HTML POC specifications
 - **Single Box Toggle**: Changed "Mobile" to "Single Box" toggle that switches mode without redirecting to settings
