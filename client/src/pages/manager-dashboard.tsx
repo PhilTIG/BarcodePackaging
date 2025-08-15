@@ -349,73 +349,6 @@ export default function ManagerDashboard() {
     return null;
   }
 
-  // Handler for deleting all job data
-  const handleDeleteAllJobs = async () => {
-    const confirmDelete = window.confirm(
-      "⚠️ WARNING: This will permanently delete ALL job data including:\n\n" +
-      "• All jobs and their products\n" +
-      "• All scan sessions and events\n" +
-      "• All job assignments\n" +
-      "• All progress data\n\n" +
-      "User accounts and settings will be preserved.\n\n" +
-      "This action cannot be undone. Are you sure you want to continue?"
-    );
-
-    if (!confirmDelete) return;
-
-    const finalConfirm = window.confirm(
-      "🚨 FINAL CONFIRMATION\n\n" +
-      "You are about to DELETE ALL JOB DATA.\n\n" +
-      "Type 'DELETE' in the next prompt to confirm."
-    );
-
-    if (!finalConfirm) return;
-
-    const typeConfirm = window.prompt(
-      "Type 'DELETE' (in capital letters) to confirm deletion of all job data:"
-    );
-
-    if (typeConfirm !== "DELETE") {
-      toast({
-        title: "Cancelled",
-        description: "Job data deletion cancelled",
-      });
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/jobs/all-data', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${user?.id}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete all job data');
-      }
-
-      const result = await response.json();
-
-      // Refresh all data
-      queryClient.invalidateQueries({ queryKey: ['/api/jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
-
-      toast({
-        title: "Success",
-        description: result.message,
-        duration: 5000,
-      });
-    } catch (error) {
-      console.error('Error deleting all job data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete all job data",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -782,36 +715,6 @@ export default function ManagerDashboard() {
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Danger Zone - Delete All Data */}
-        <Card data-testid="danger-zone" className="border-red-200 bg-red-50">
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <Trash2 className="h-5 w-5 text-red-600" />
-              <CardTitle className="text-red-800">Danger Zone</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium text-red-900 mb-2">Delete All Job Data</h3>
-                <p className="text-sm text-red-700 mb-4">
-                  This will permanently delete all jobs, products, scan sessions, and progress data. 
-                  User accounts and settings will be preserved. This action cannot be undone.
-                </p>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteAllJobs}
-                  data-testid="button-delete-all-data"
-                  className="bg-red-600 hover:bg-red-700"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete All Job Data
-                </Button>
-              </div>
-            </div>
           </CardContent>
         </Card>
 

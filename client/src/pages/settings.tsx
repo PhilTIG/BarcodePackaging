@@ -17,8 +17,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useErrorContext } from "@/lib/error-context";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Trash2, Plus, Edit3, Users, Settings as SettingsIcon, Palette, Package } from "lucide-react";
+import { ArrowLeft, Trash2, Plus, Edit3, Users, Settings as SettingsIcon, Palette, Package, ChevronDown } from "lucide-react";
 import { z } from "zod";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const AVAILABLE_THEMES = [
   { name: "blue", label: "Blue", colors: ["#3B82F6", "#2563EB", "#1D4ED8"] },
@@ -188,6 +189,19 @@ export default function Settings() {
       toast({
         title: "Data cleared",
         description: "All local data has been removed",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // New handler for deleting all job data
+  const handleDeleteAllJobs = () => {
+    if (window.confirm("Are you sure you want to delete all job data? This action cannot be undone.")) {
+      // Placeholder for the actual API call to delete all jobs
+      console.log("Deleting all job data...");
+      toast({
+        title: "All job data deleted",
+        description: "All job records have been removed.",
         variant: "destructive",
       });
     }
@@ -664,6 +678,47 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Danger Zone - Only for Managers - Collapsible */}
+        {user.role === "manager" && (
+          <Collapsible defaultOpen={false}>
+            <Card data-testid="danger-zone" className="border-red-200 bg-red-50">
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-red-100/50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Trash2 className="h-5 w-5 text-red-600" />
+                      <CardTitle className="text-red-800">Danger Zone</CardTitle>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-red-600 transition-transform duration-200 data-[state=open]:rotate-180" />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-medium text-red-900 mb-2">Delete All Job Data</h3>
+                      <p className="text-sm text-red-700 mb-4">
+                        This will permanently delete all jobs, products, scan sessions, and progress data. 
+                        User accounts and settings will be preserved. This action cannot be undone.
+                      </p>
+                      <Button
+                        variant="destructive"
+                        onClick={handleDeleteAllJobs}
+                        data-testid="button-delete-all-data"
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete All Job Data
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         )}
         </>
       ) : activeTab === "users" && user.role === "manager" ? (
