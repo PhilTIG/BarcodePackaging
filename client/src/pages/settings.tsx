@@ -61,11 +61,9 @@ export default function Settings() {
     maxBoxesPerRow: 12,
   });
 
-  // Redirect if not authenticated or not a manager
+  // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !user) {
-      setLocation("/login");
-    } else if (user && user.role !== "manager") {
       setLocation("/login");
     }
   }, [user, isLoading, setLocation]);
@@ -218,7 +216,7 @@ export default function Settings() {
     return null; // Or a loading spinner
   }
 
-  if (!user || user.role !== "manager") {
+  if (!user) {
     return null;
   }
 
@@ -232,7 +230,15 @@ export default function Settings() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setLocation("/manager")}
+                onClick={() => {
+                  if (user.role === "manager") {
+                    setLocation("/manager");
+                  } else if (user.role === "supervisor") {
+                    setLocation("/supervisor");
+                  } else {
+                    setLocation("/scanner");
+                  }
+                }}
                 data-testid="button-back"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -262,18 +268,20 @@ export default function Settings() {
               <SettingsIcon className="h-4 w-4 mr-2 inline" />
               General
             </button>
-            <button
-              onClick={() => setActiveTab("users")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "users"
-                  ? "border-primary-500 text-primary-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-              data-testid="tab-users"
-            >
-              <Users className="h-4 w-4 mr-2 inline" />
-              User Management
-            </button>
+            {user.role === "manager" && (
+              <button
+                onClick={() => setActiveTab("users")}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "users"
+                    ? "border-primary-500 text-primary-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+                data-testid="tab-users"
+              >
+                <Users className="h-4 w-4 mr-2 inline" />
+                User Management
+              </button>
+            )}
           </nav>
         </div>
       </div>
@@ -403,108 +411,112 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Performance Settings */}
-        <Card data-testid="performance-settings">
-          <CardHeader>
-            <CardTitle>Performance Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <Label className="text-base font-medium text-gray-900">Target Scans Per Hour</Label>
-              <Input
-                type="number"
-                value={settings.targetScansPerHour}
-                onChange={(e) => handleSettingChange("targetScansPerHour", parseInt(e.target.value))}
-                min="1"
-                max="500"
-                className="mt-2"
-                data-testid="input-target-scans"
-              />
-              <p className="text-sm text-gray-600 mt-1">Industry average is 71 items/hour</p>
-            </div>
-
-            <div className="flex items-center justify-between">
+        {/* Performance Settings - Only for managers */}
+        {user.role === "manager" && (
+          <Card data-testid="performance-settings">
+            <CardHeader>
+              <CardTitle>Performance Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div>
-                <h3 className="font-medium text-gray-900">Auto-save Sessions</h3>
-                <p className="text-sm text-gray-600">Automatically save progress every 5 minutes</p>
+                <Label className="text-base font-medium text-gray-900">Target Scans Per Hour</Label>
+                <Input
+                  type="number"
+                  value={settings.targetScansPerHour}
+                  onChange={(e) => handleSettingChange("targetScansPerHour", parseInt(e.target.value))}
+                  min="1"
+                  max="500"
+                  className="mt-2"
+                  data-testid="input-target-scans"
+                />
+                <p className="text-sm text-gray-600 mt-1">Industry average is 71 items/hour</p>
               </div>
-              <Switch
-                checked={settings.autoSaveSessions}
-                onCheckedChange={(checked) => handleSettingChange("autoSaveSessions", checked)}
-                data-testid="switch-auto-save"
-              />
-            </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Show Real-time Stats</h3>
-                <p className="text-sm text-gray-600">Display performance metrics during scanning</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900">Auto-save Sessions</h3>
+                  <p className="text-sm text-gray-600">Automatically save progress every 5 minutes</p>
+                </div>
+                <Switch
+                  checked={settings.autoSaveSessions}
+                  onCheckedChange={(checked) => handleSettingChange("autoSaveSessions", checked)}
+                  data-testid="switch-auto-save"
+                />
               </div>
-              <Switch
-                checked={settings.showRealtimeStats}
-                onCheckedChange={(checked) => handleSettingChange("showRealtimeStats", checked)}
-                data-testid="switch-realtime-stats"
-              />
-            </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Detailed Error Messaging</h3>
-                <p className="text-sm text-gray-600">Show detailed CSV validation errors instead of summary</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900">Show Real-time Stats</h3>
+                  <p className="text-sm text-gray-600">Display performance metrics during scanning</p>
+                </div>
+                <Switch
+                  checked={settings.showRealtimeStats}
+                  onCheckedChange={(checked) => handleSettingChange("showRealtimeStats", checked)}
+                  data-testid="switch-realtime-stats"
+                />
               </div>
-              <Switch
-                checked={detailedErrorMessages}
-                onCheckedChange={(checked) => handleSettingChange("detailedErrorMessages", checked)}
-                data-testid="switch-detailed-errors"
-              />
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* System Information */}
-        <Card data-testid="system-info">
-          <CardHeader>
-            <CardTitle>System Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">App Version</span>
-                <span className="font-medium text-gray-900">1.0.0</span>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900">Detailed Error Messaging</h3>
+                  <p className="text-sm text-gray-600">Show detailed CSV validation errors instead of summary</p>
+                </div>
+                <Switch
+                  checked={detailedErrorMessages}
+                  onCheckedChange={(checked) => handleSettingChange("detailedErrorMessages", checked)}
+                  data-testid="switch-detailed-errors"
+                />
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Last Updated</span>
-                <span className="font-medium text-gray-900">{new Date().toLocaleDateString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Device Type</span>
-                <span className="font-medium text-gray-900">
-                  {/Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Storage Used</span>
-                <span className="font-medium text-gray-900">
-                  {Math.round(JSON.stringify(localStorage).length / 1024)} KB
-                </span>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
+        )}
 
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <Button
-                variant="destructive"
-                className="w-full"
-                onClick={handleClearData}
-                data-testid="button-clear-data"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear All Data
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* System Information - Only for managers */}
+        {user.role === "manager" && (
+          <Card data-testid="system-info">
+            <CardHeader>
+              <CardTitle>System Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">App Version</span>
+                  <span className="font-medium text-gray-900">1.0.0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Last Updated</span>
+                  <span className="font-medium text-gray-900">{new Date().toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Device Type</span>
+                  <span className="font-medium text-gray-900">
+                    {/Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Storage Used</span>
+                  <span className="font-medium text-gray-900">
+                    {Math.round(JSON.stringify(localStorage).length / 1024)} KB
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={handleClearData}
+                  data-testid="button-clear-data"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear All Data
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         </>
-      ) : (
+      ) : user.role === "manager" ? (
         <>
           {/* User Management Section */}
           <Card data-testid="user-management">
@@ -702,6 +714,16 @@ export default function Settings() {
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <>
+          {/* Fallback for non-managers who somehow get to users tab */}
+          <Card>
+            <CardContent className="p-8 text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
+              <p className="text-gray-600">User management is only available to managers.</p>
             </CardContent>
           </Card>
         </>

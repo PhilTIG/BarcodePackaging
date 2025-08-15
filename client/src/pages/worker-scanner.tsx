@@ -426,7 +426,7 @@ export default function WorkerScanner() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowJobSelector(true)}
+                  onClick={() => setLocation("/scanner")}
                   data-testid="button-switch-job"
                 >
                   Switch Job
