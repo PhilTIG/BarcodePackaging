@@ -6,6 +6,17 @@ This is a comprehensive warehouse sorting application designed to streamline the
 
 ## Recent Changes (January 2025)
 
+**Phase 3.1 Multi-Worker Assignment Interface Completed (January 15, 2025):**
+- **Enhanced Manager Dashboard**: Implemented comprehensive worker-to-job assignment interface with up to 4 workers per job
+- **Automatic Allocation Pattern Assignment**: Each worker automatically gets assigned a box allocation pattern based on assignment order (Worker 1: Ascending, Worker 2: Descending, Worker 3: Middle Up, Worker 4: Middle Down)
+- **Visual Allocation Pattern Preview**: Assignment dialog shows preview of worker allocation pattern with descriptive labels
+- **Database Schema Enhancement**: Added `allocation_pattern` and `worker_index` fields to job_assignments table
+- **Enhanced Worker Display**: Worker assignments now show allocation pattern labels (↗ Asc, ↙ Desc, ↑ Mid+, ↓ Mid-) with worker color indicators
+- **Server-Side API Support**: Updated job assignment API with allocation pattern handling and 4-worker limit validation
+- **Worker Color Infrastructure**: Preserved existing worker color tracking with allocation pattern integration
+- **Assignment State Management**: Fixed React setState during render issues for stable worker scanner interface
+- **Database Migration Success**: Successfully deployed schema updates with proper allocation pattern defaults
+
 **Phase 2 Box Highlighting System Completed (January 15, 2025):**
 - **POC-Style Single Box Highlighting**: Implemented proper single box highlighting where only ONE box shows green at a time
 - **Worker Color System**: Created infrastructure to track last worker per box and display assigned worker colors
