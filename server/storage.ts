@@ -62,12 +62,13 @@ export interface IStorage {
   getJobs(): Promise<{ jobs: any[] }>;
   jobHasScanEvents(jobId: string): Promise<boolean>;
   deleteJob(jobId: string): Promise<boolean>;
+  updateJobStatusBasedOnProgress(jobId: string): Promise<void>;
 
   // Product methods
   createProducts(products: InsertProduct[]): Promise<Product[]>;
   getProductsByJobId(jobId: string): Promise<Product[]>;
   updateProductScannedQty(barCode: string, jobId: string, increment: number, workerId?: string, workerColor?: string): Promise<Product | undefined>;
-  
+
   // Box requirement methods - NEW SCANNING LOGIC
   createBoxRequirements(requirements: InsertBoxRequirement[]): Promise<BoxRequirement[]>;
   getBoxRequirementsByJobId(jobId: string): Promise<BoxRequirement[]>;
@@ -223,6 +224,55 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error updating job active status:', error);
       throw error;
+    }
+  }
+
+  async updateJobStatusBasedOnProgress(jobId: string): Promise<void> {
+    try {
+      // Get current job
+      const job = await this.getJobById(jobId);
+      if (!job) return;
+
+      // Get products to calculate progress
+      const products = await this.getProductsByJobId(jobId);
+      const totalItems = products.reduce((sum, p) => sum + p.qty, 0);
+      const completedItems = products.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+
+      let newStatus = job.status;
+
+      // Determine new status based on progress
+      if (completedItems === 0 && job.status === 'pending') {
+        // Stay pending if no scans yet
+        newStatus = 'pending';
+      } else if (completedItems > 0 && completedItems < totalItems) {
+        // Job is active if scanning has started but not complete
+        newStatus = 'active';
+      } else if (completedItems >= totalItems) {
+        // Job is completed if all items scanned
+        newStatus = 'completed';
+      }
+
+      // Update status if it has changed
+      if (newStatus !== job.status) {
+        await this.db
+          .update(jobs)
+          .set({ 
+            status: newStatus,
+            completedAt: newStatus === 'completed' ? new Date() : null
+          })
+          .where(eq(jobs.id, jobId));
+
+        console.log(`Job ${jobId} status updated from ${job.status} to ${newStatus}`);
+      }
+
+      // Also update completedItems count
+      await this.db
+        .update(jobs)
+        .set({ completedItems })
+        .where(eq(jobs.id, jobId));
+
+    } catch (error) {
+      console.error('Error updating job status based on progress:', error);
     }
   }
 
@@ -490,6 +540,8 @@ export class DatabaseStorage implements IStorage {
 
         // Update job's completed items count
         await this.updateJobCompletedItems(jobId);
+        // Automatically update job status based on progress after quantity update
+        await this.updateJobStatusBasedOnProgress(jobId);
 
         return updatedProduct;
       }
@@ -640,7 +692,7 @@ export class DatabaseStorage implements IStorage {
         console.log('Using new box requirements system for scanning');
         const workerId = session.userId;
         targetBox = await this.findNextTargetBox(insertEvent.barCode, session.jobId, workerId);
-        
+
         if (targetBox) {
           // Get box requirement info for the target box
           const boxReq = await this.db
@@ -652,7 +704,7 @@ export class DatabaseStorage implements IStorage {
               eq(boxRequirements.boxNumber, targetBox)
             ))
             .limit(1);
-          
+
           if (boxReq.length > 0) {
             productName = boxReq[0].productName;
             customerName = boxReq[0].customerName;
@@ -683,7 +735,7 @@ export class DatabaseStorage implements IStorage {
               break;
             }
           }
-          
+
           if (targetProduct) {
             productName = targetProduct.productName;
             customerName = targetProduct.customerName;
@@ -739,6 +791,9 @@ export class DatabaseStorage implements IStorage {
           );
         }
       }
+
+      // Automatically update job status after a scan event
+      await this.updateJobStatusBasedOnProgress(session.jobId);
 
       return event;
     } catch (error) {
@@ -806,6 +861,12 @@ export class DatabaseStorage implements IStorage {
           }
         }
       }
+    }
+
+    // Automatically update job status after an undo event
+    const session = await this.getScanSessionById(sessionId);
+    if (session) {
+      await this.updateJobStatusBasedOnProgress(session.jobId);
     }
 
     return createdUndoEvents;
@@ -1181,7 +1242,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const workerPattern = workerAssignments[0].assignmentType as 'ascending' | 'descending' | 'middle_up' | 'middle_down';
-    
+
     // Get all box requirements for this item that still need more items
     const availableBoxes = await this.db
       .select()
@@ -1199,29 +1260,29 @@ export class DatabaseStorage implements IStorage {
     }
 
     const boxNumbers = availableBoxes.map((box: BoxRequirement) => box.boxNumber);
-    
+
     // Apply worker allocation pattern to find next box
     switch (workerPattern) {
       case 'ascending':
         // Worker 1: Find lowest numbered box
         return Math.min(...boxNumbers);
-        
+
       case 'descending':
         // Worker 2: Find highest numbered box
         return Math.max(...boxNumbers);
-        
+
       case 'middle_up':
         // Worker 3: Find middle or next higher box
         const sortedAsc = [...boxNumbers].sort((a, b) => a - b);
         const middleIndex = Math.floor(sortedAsc.length / 2);
         return sortedAsc[middleIndex];
-        
+
       case 'middle_down':
         // Worker 4: Find middle or next lower box  
         const sortedDesc = [...boxNumbers].sort((a, b) => b - a);
         const middleDownIndex = Math.floor(sortedDesc.length / 2);
         return sortedDesc[middleDownIndex];
-        
+
       default:
         // Fallback to ascending
         return Math.min(...boxNumbers);
@@ -1255,7 +1316,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const currentRequirement = requirement[0];
-    
+
     // Check if box can accept more items
     if ((currentRequirement.scannedQty || 0) >= currentRequirement.requiredQty) {
       console.log(`Box ${boxNumber} is already full for barcode ${barCode}`);
@@ -1287,10 +1348,10 @@ export class DatabaseStorage implements IStorage {
    */
   async migrateProductsToBoxRequirements(jobId: string): Promise<void> {
     console.log(`Starting migration of products to box requirements for job ${jobId}`);
-    
+
     // Get existing products for this job
     const existingProducts = await this.getProductsByJobId(jobId);
-    
+
     if (existingProducts.length === 0) {
       console.log('No products found to migrate');
       return;
@@ -1299,7 +1360,7 @@ export class DatabaseStorage implements IStorage {
     // Group products by customer and assign sequential box numbers
     const customerBoxMap = new Map<string, number>();
     let nextBoxNumber = 1;
-    
+
     // First pass: assign box numbers to customers in order of appearance
     existingProducts.forEach(product => {
       if (!customerBoxMap.has(product.customerName)) {
@@ -1323,11 +1384,11 @@ export class DatabaseStorage implements IStorage {
 
     // Insert box requirements
     await this.createBoxRequirements(boxRequirements);
-    
+
     // Create worker assignments for the job (up to 4 workers with their patterns)
     const jobAssignments = await this.getJobAssignmentsWithUsers(jobId);
     const workers = jobAssignments.slice(0, 4); // Max 4 workers
-    
+
     const workerAssignments: InsertWorkerBoxAssignment[] = workers.map((assignment, index) => {
       const patterns = ['ascending', 'descending', 'middle_up', 'middle_down'];
       return {
@@ -1417,32 +1478,32 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get count of jobs before deletion
       const jobCount = await this.db.select().from(jobs);
-      
+
       // Delete in correct order due to foreign key constraints
       // 1. Delete scan events first (references scan sessions)
       await this.db.delete(scanEvents);
-      
+
       // 2. Delete session snapshots (references scan sessions)
       await this.db.delete(sessionSnapshots);
-      
+
       // 3. Delete scan sessions (references jobs and users)
       await this.db.delete(scanSessions);
-      
+
       // 4. Delete worker box assignments (references jobs and users)
       await this.db.delete(workerBoxAssignments);
-      
+
       // 5. Delete job assignments (references jobs and users)
       await this.db.delete(jobAssignments);
-      
+
       // 6. Delete products (references jobs)
       await this.db.delete(products);
-      
+
       // 7. Delete job archives
       await this.db.delete(jobArchives);
-      
+
       // 8. Finally delete jobs (parent table)
       await this.db.delete(jobs);
-      
+
       return {
         deletedJobs: jobCount.length,
         message: `Successfully deleted ${jobCount.length} jobs and all associated data. User accounts and settings preserved.`

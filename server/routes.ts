@@ -776,6 +776,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update session statistics
       await storage.updateScanSessionStats(eventData.sessionId);
       
+      // Auto-update job status based on scan progress
+      await storage.updateJobStatusBasedOnProgress(eventData.jobId);
+      
       // Broadcast scan event to supervisors and managers
       broadcastToJob(eventData.jobId, {
         type: 'scan_event',
@@ -799,9 +802,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const undoneEvents = await storage.undoScanEvents(sessionId, count);
       await storage.updateScanSessionStats(sessionId);
 
-      // Broadcast undo event
+      // Broadcast undo event and update job status
       const session = await storage.getScanSessionById(sessionId);
       if (session) {
+        // Auto-update job status after undo
+        await storage.updateJobStatusBasedOnProgress(session.jobId);
+        
         broadcastToJob(session.jobId, {
           type: 'undo_event',
           data: {
