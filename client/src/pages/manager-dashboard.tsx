@@ -24,6 +24,7 @@ import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPatte
 
 const uploadFormSchema = z.object({
   name: z.string().min(1, "Job name is required"),
+  jobTypeId: z.string().min(1, "Job type is required"),
   description: z.string().optional(),
   file: z.instanceof(File).optional(),
 });
@@ -56,6 +57,7 @@ export default function ManagerDashboard() {
     resolver: zodResolver(uploadFormSchema),
     defaultValues: {
       name: "",
+      jobTypeId: "",
       description: "",
     },
   });
@@ -72,12 +74,19 @@ export default function ManagerDashboard() {
     enabled: !!user,
   });
 
+  // Fetch job types for upload form
+  const { data: jobTypesData } = useQuery({
+    queryKey: ["/api/job-types"],
+    enabled: !!user,
+  });
+
   // Upload CSV mutation
   const uploadMutation = useMutation({
     mutationFn: async (data: UploadForm & { file: File }) => {
       const formData = new FormData();
       formData.append("csv", data.file);
       formData.append("name", data.name);
+      formData.append("jobTypeId", data.jobTypeId);
       formData.append("description", data.description || "");
 
       const response = await apiRequest("POST", "/api/jobs", formData);
@@ -438,6 +447,31 @@ export default function ManagerDashboard() {
                       <FormControl>
                         <Input {...field} placeholder="Enter job name" data-testid="input-job-name" />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="jobTypeId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Job Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-job-type">
+                            <SelectValue placeholder="Select a job type..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {(jobTypesData as any)?.jobTypes?.map((jobType: any) => (
+                            <SelectItem key={jobType.id} value={jobType.id}>
+                              {jobType.name} ({jobType.benchmarkItemsPerHour} items/hr)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

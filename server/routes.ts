@@ -300,10 +300,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Validate job type and group field requirements
+      const jobTypeId = req.body.jobTypeId;
+      if (!jobTypeId) {
+        return res.status(400).json({ 
+          message: 'Job type is required',
+          details: 'Please select a job type for this job'
+        });
+      }
+
+      // Check if job type exists and get its requirements
+      const jobType = await storage.getJobTypeById(jobTypeId);
+      if (!jobType) {
+        return res.status(400).json({ 
+          message: 'Invalid job type selected',
+          details: 'The selected job type does not exist'
+        });
+      }
+
+      // Validate Group field requirement
+      if (jobType.requireGroupField) {
+        const hasGroupField = csvData.every(row => row.Group !== undefined && row.Group !== null);
+        if (!hasGroupField) {
+          return res.status(400).json({ 
+            message: `CSV validation failed: Group field is required for job type "${jobType.name}"`,
+            details: 'This job type requires all products to have a Group value. Please ensure your CSV includes a Group column with values for all rows.'
+          });
+        }
+      }
+
       // Create job
       const jobData = {
         name: req.body.name || `Job ${new Date().toISOString().split('T')[0]}`,
         description: req.body.description || '',
+        jobTypeId: jobTypeId,
         totalProducts: csvData.length,
         totalCustomers: Array.from(new Set(csvData.map(row => row.CustomName))).length,
         csvData,
