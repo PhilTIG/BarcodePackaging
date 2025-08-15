@@ -78,7 +78,7 @@ export default function WorkerScanner() {
   useEffect(() => {
     if (!user || user.role !== "worker" || !assignmentsData || jobId) return;
 
-    const assignments = assignmentsData.assignments || [];
+    const assignments = (assignmentsData as any)?.assignments || [];
     
     if (assignments.length === 0) {
       // No assignments - stay on scanner page and show no assignments message
@@ -131,14 +131,14 @@ export default function WorkerScanner() {
         type: "scan_event",
         data: data.scanEvent,
         jobId,
-        sessionId: activeSession.id,
+        sessionId: activeSession?.id || '',
       });
 
       // Update stats
       setScanStats(prev => ({
         ...prev,
         totalScans: prev.totalScans + 1,
-        scansPerHour: calculateScansPerHour(prev.totalScans + 1, activeSession?.startTime),
+        scansPerHour: calculateScansPerHour(prev.totalScans + 1, activeSession?.startTime?.toString() || Date.now().toString()),
         score: calculateScore(prev.totalScans + 1, Date.now() - new Date(activeSession?.startTime || "").getTime()),
       }));
 
@@ -168,7 +168,7 @@ export default function WorkerScanner() {
 
   // Undo mutation
   const undoMutation = useMutation({
-    mutationFn: async (count = 1) => {
+    mutationFn: async (count?: number) => {
       if (!activeSession) throw new Error("No active session");
 
       const response = await apiRequest("POST", "/api/scan-events/undo", {
@@ -274,7 +274,7 @@ export default function WorkerScanner() {
 
   // Show job selection interface when no jobId and multiple assignments
   if (!jobId) {
-    const assignments = assignmentsData?.assignments || [];
+    const assignments = (assignmentsData as any)?.assignments || [];
     
     if (isLoading || !assignmentsData) {
       return (
@@ -340,7 +340,7 @@ export default function WorkerScanner() {
           <div className="p-4">
             <div className="max-w-2xl mx-auto">
               <div className="grid gap-4">
-                {assignments.map((assignment) => {
+                {assignments.map((assignment: any) => {
                   const job = assignment.job;
                   const completionPercentage = job ? Math.round((job.completedItems / job.totalProducts) * 100) : 0;
                   
@@ -391,7 +391,7 @@ export default function WorkerScanner() {
     }
   }
 
-  if (!jobData?.job) {
+  if (!(jobData as any)?.job) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -402,8 +402,8 @@ export default function WorkerScanner() {
     );
   }
 
-  const { job, products } = jobData;
-  const session = sessionData?.session || activeSession;
+  const { job, products } = jobData as any;
+  const session = (sessionData as any)?.session || activeSession;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -422,7 +422,7 @@ export default function WorkerScanner() {
             </div>
             <div className="flex items-center space-x-2">
               {/* Show job switching button if worker has multiple assignments */}
-              {assignmentsData?.assignments && assignmentsData.assignments.length > 1 && (
+              {(assignmentsData as any)?.assignments && (assignmentsData as any).assignments.length > 1 && (
                 <Button
                   variant="outline"
                   size="sm"

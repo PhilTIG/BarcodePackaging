@@ -15,7 +15,7 @@ export function PerformanceDashboard({ jobId, supervisorView = false }: Performa
     refetchInterval: 5000,
   });
 
-  if (!progressData?.progress?.workers || progressData.progress.workers.length === 0) {
+  if (!(progressData as any)?.progress?.workers || (progressData as any)?.progress?.workers?.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
         No assigned workers found
@@ -23,7 +23,7 @@ export function PerformanceDashboard({ jobId, supervisorView = false }: Performa
     );
   }
 
-  const workers = progressData.progress.workers;
+  const workers = (progressData as any)?.progress?.workers || [];
 
   return (
     <div className="space-y-4" data-testid="performance-dashboard">

@@ -657,8 +657,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User preferences routes - COMPLETELY REMOVED to stop runaway mutations
-  // These routes are disabled until the infinite loop issue is resolved
+  // User preferences routes - EMERGENCY BLOCK to stop infinite requests
+  app.all('/api/users/me/preferences*', (req, res) => {
+    res.status(410).json({ message: 'Preferences endpoints permanently disabled due to infinite loop bug' });
+  });
 
   // User management
   app.get('/api/users', requireAuth, requireRole(['manager']), async (req, res) => {

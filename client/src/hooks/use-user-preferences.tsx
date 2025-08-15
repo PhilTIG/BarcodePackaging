@@ -55,10 +55,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
   // Initialize preferences from server or localStorage fallback
   useEffect(() => {
-    if (serverPreferences?.preferences) {
-      setPreferences(serverPreferences.preferences);
+    if ((serverPreferences as any)?.preferences) {
+      setPreferences((serverPreferences as any).preferences);
       // Sync to localStorage for offline fallback
-      localStorage.setItem('userPreferences', JSON.stringify(serverPreferences.preferences));
+      localStorage.setItem('userPreferences', JSON.stringify((serverPreferences as any).preferences));
     } else if (!isLoading && !serverPreferences) {
       // Only use localStorage fallback if server data failed to load
       const stored = localStorage.getItem('userPreferences');

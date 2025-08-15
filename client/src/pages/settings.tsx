@@ -658,7 +658,7 @@ export default function Settings() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {usersData?.users?.map((userData: any) => (
+                  {(usersData as any)?.users?.map((userData: any) => (
                     <div 
                       key={userData.id} 
                       className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -707,7 +707,7 @@ export default function Settings() {
                       </div>
                     </div>
                   ))}
-                  {(!usersData?.users || usersData.users.length === 0) && (
+                  {(!(usersData as any)?.users || (usersData as any)?.users?.length === 0) && (
                     <div className="text-center py-8 text-gray-500">
                       No users found. Add your first user to get started.
                     </div>

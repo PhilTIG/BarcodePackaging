@@ -79,7 +79,7 @@ export default function SupervisorView() {
       );
     }
 
-    const jobs = allJobsData?.jobs || [];
+    const jobs = (allJobsData as any)?.jobs || [];
     // Supervisors can see all jobs regardless of status
     const visibleJobs = jobs;
 
@@ -226,7 +226,7 @@ export default function SupervisorView() {
     );
   }
 
-  if (!jobData?.job) {
+  if (!(jobData as any)?.job) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -237,8 +237,8 @@ export default function SupervisorView() {
     );
   }
 
-  const { job, products } = jobData;
-  const progress = progressData?.progress;
+  const { job, products } = jobData as any;
+  const progress = (progressData as any)?.progress;
   const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
 
   return (
