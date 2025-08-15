@@ -141,36 +141,9 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
           <div
             key={box.boxNumber}
             className={boxClasses}
-
+            style={{ minHeight: '140px' }}
             data-testid={`box-${box.boxNumber}`}
           >
-            {/* Box Number Badge and Percentage Text - Right Side */}
-            <div className="absolute top-4 right-2 flex flex-col items-center">
-              <div 
-                className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
-                  box.lastWorkerColor ? '' : 'bg-primary'
-                }`}
-                style={box.lastWorkerColor ? { 
-                  backgroundColor: box.lastWorkerColor
-                } : undefined}
-              >
-                {box.boxNumber}
-              </div>
-              
-              {/* Percentage text positioned below box number */}
-              <div className="mt-2">
-                {box.isComplete ? (
-                  <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
-                    100% Complete
-                  </div>
-                ) : (
-                  <p className={`text-xs ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
-                    {completionPercentage}% Complete
-                  </p>
-                )}
-              </div>
-            </div>
-
             {/* Lock icon for 100% completed boxes */}
             {box.isComplete && (
               <div className="absolute top-1 right-1">
@@ -185,7 +158,8 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
               </div>
             )}
 
-            <div className="mb-3 pr-16">
+            {/* Customer name at top-left */}
+            <div className="mb-2 pr-16">
               <h3 className={`font-medium text-sm truncate ${highlighting.textColor}`} data-testid={`customer-name-${box.boxNumber}`}>
                 {box.customerName === "Unassigned" ? "Unassigned" : box.customerName}
               </h3>
@@ -194,24 +168,52 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
               )}
             </div>
 
-            <div className="pr-16 flex-1 flex flex-col">
-              <div className={`text-lg font-bold ${highlighting.textColor} mb-2`} data-testid={`quantity-${box.boxNumber}`}>
-                {box.scannedQty}/{box.totalQty}
-              </div>
-              
-              {/* Progress bar at bottom with light grey background for unfilled portion */}
-              <div className="mt-auto">
-                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-green-500 transition-all duration-300"
-                    style={{ width: `${completionPercentage}%` }}
-                  ></div>
-                </div>
+            {/* Box Number Badge - Top Right */}
+            <div className="absolute top-6 right-2">
+              <div 
+                className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
+                  box.lastWorkerColor ? '' : 'bg-primary'
+                }`}
+                style={box.lastWorkerColor ? { 
+                  backgroundColor: box.lastWorkerColor
+                } : undefined}
+              >
+                {box.boxNumber}
               </div>
             </div>
 
-            {/* Status badges - Removed "Scanning" and "Pending" badges per requirements */}
-            <div className="mt-2">
+            {/* Quantity fraction - Left side at same height as box number */}
+            <div className="absolute top-8 left-2">
+              <div className={`text-lg font-bold ${highlighting.textColor}`} data-testid={`quantity-${box.boxNumber}`}>
+                {box.scannedQty}/{box.totalQty}
+              </div>
+            </div>
+
+            {/* Percentage text below box number */}
+            <div className="absolute top-20 right-2 flex flex-col items-center">
+              {box.isComplete ? (
+                <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
+                  100% Complete
+                </div>
+              ) : (
+                <p className={`text-xs text-center ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
+                  {completionPercentage}% Complete
+                </p>
+              )}
+            </div>
+
+            {/* Progress bar directly below percentage text */}
+            <div className="absolute top-28 right-2 w-16">
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-green-500 transition-all duration-300"
+                  style={{ width: `${completionPercentage}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Status badges at bottom */}
+            <div className="absolute bottom-2 left-2">
               {!box.isComplete && box.totalQty === 0 && (
                 <Badge variant="outline" className="text-xs">
                   Empty
