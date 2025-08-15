@@ -649,7 +649,7 @@ export default function ManagerDashboard() {
                             )}
                           </div>
                         </div>
-                        <div className="border border-gray-300 rounded-md p-1 bg-gray-50">
+                        <div className="rounded-md p-1 bg-gray-50">
                           <Progress value={progressPercentage} className="mb-2" />
                         </div>
                       </div>
