@@ -161,6 +161,8 @@ export const jobAssignments = pgTable("job_assignments", {
   assignedAt: timestamp("assigned_at").default(sql`now()`),
   isActive: boolean("is_active").default(true),
   assignedColor: text("assigned_color"), // Color for the worker in dashboards/reports
+  allocationPattern: text("allocation_pattern").default('ascending'), // Box allocation pattern (ascending, descending, middle_up, middle_down)
+  workerIndex: integer("worker_index").default(0), // Position in worker assignment order (0-3)
 });
 
 // Relations

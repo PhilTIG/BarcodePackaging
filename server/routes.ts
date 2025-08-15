@@ -357,7 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/jobs/:jobId/assign', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId } = req.params;
-      const { userId, assignedColor } = req.body;
+      const { userId, assignedColor, allocationPattern, workerIndex } = req.body;
 
       if (!userId) {
         return res.status(400).json({ message: 'User ID is required' });
@@ -381,18 +381,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Worker is already assigned to this job' });
       }
 
-      // Create assignment
+      // Validate worker limit (max 4 workers)
+      const currentAssignments = await storage.getJobAssignmentsWithUsers(jobId);
+      if (currentAssignments.length >= 4) {
+        return res.status(400).json({ message: 'Maximum of 4 workers can be assigned per job' });
+      }
+
+      // Create assignment with allocation pattern
       const assignment = await storage.createJobAssignment({
         jobId,
         userId,
         assignedBy: req.user!.id,
         assignedColor: assignedColor || '#3B82F6',
+        allocationPattern: allocationPattern || 'ascending',
+        workerIndex: typeof workerIndex === 'number' ? workerIndex : currentAssignments.length,
         isActive: true,
       });
 
       res.status(201).json({ 
-        assignment,
-        message: 'Worker assigned to job successfully' 
+        assignment: {
+          ...assignment,
+          allocationPattern: allocationPattern || 'ascending'
+        },
+        message: `Worker assigned to job with ${allocationPattern || 'ascending'} box allocation pattern`
       });
     } catch (error: any) {
       console.error('Job assignment error:', error);

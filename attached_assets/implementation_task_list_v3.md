@@ -65,49 +65,49 @@ Complete task breakdown for implementing POC-compliant multi-worker warehouse sc
 ## Phase 2: Box Highlighting System (Week 3)
 
 ### 2.1 POC-Style Single Box Highlighting
-- [ ] **Task 2.1.1**: Track last scanned box globally (not per worker)
+- [x] **Task 2.1.1**: Track last scanned box globally (not per worker)
   - Add `lastScannedBoxNumber` state management
   - Ensure only ONE box highlighted at a time across all workers
   - Files: `client/src/pages/worker-scanner.tsx`, state management
 
-- [ ] **Task 2.1.2**: Implement GREEN highlighting for just-scanned box
+- [x] **Task 2.1.2**: Implement GREEN highlighting for just-scanned box
   - Green background and border for most recently scanned box
   - Green persists until next scan by any worker
   - Files: `client/src/components/customer-box-grid.tsx`
 
-- [ ] **Task 2.1.3**: Remove blue "active" highlighting logic
+- [x] **Task 2.1.3**: Remove blue "active" highlighting logic
   - Remove `isActive` concept from box highlighting
   - Remove blue highlighting for multiple boxes
   - Files: `client/src/components/customer-box-grid.tsx`
 
 ### 2.2 Worker Color System
-- [ ] **Task 2.2.1**: Track last worker to scan into each box
+- [x] **Task 2.2.1**: Track last worker to scan into each box
   - Update products table when worker scans item
   - Store worker color and user ID per box
   - Files: Database update logic, `server/storage.ts`
 
-- [ ] **Task 2.2.2**: Display worker color for boxes with items
+- [x] **Task 2.2.2**: Display worker color for boxes with items
   - Show worker's assigned color if box has items (not empty)
   - Worker color has lower priority than green/grey-red
   - Files: `client/src/components/customer-box-grid.tsx`
 
-- [ ] **Task 2.2.3**: Handle color priority system
+- [x] **Task 2.2.3**: Handle color priority system
   - Priority: GREEN (just-scanned) > Grey-Red (complete) > Worker Color > Grey (empty)
   - Ensure proper color cascading logic
   - Files: `client/src/components/customer-box-grid.tsx`
 
 ### 2.3 Completed Box Styling
-- [ ] **Task 2.3.1**: Grey-red background for 100% complete boxes
+- [x] **Task 2.3.1**: Grey-red background for 100% complete boxes
   - Update completed box styling to grey-red instead of green
   - Ensure good contrast for readability
   - Files: `client/src/components/customer-box-grid.tsx`
 
-- [ ] **Task 2.3.2**: White text and white lock icon for completed boxes
+- [x] **Task 2.3.2**: White text and white lock icon for completed boxes
   - Change lock icon color to white for visibility
   - Update text color to white for contrast
   - Files: `client/src/components/customer-box-grid.tsx`
 
-- [ ] **Task 2.3.3**: Remove green highlighting for completed boxes
+- [x] **Task 2.3.3**: Remove green highlighting for completed boxes
   - Completed boxes should never show green highlighting
   - Grey-red takes priority over just-scanned green
   - Files: Box highlighting logic
@@ -117,20 +117,20 @@ Complete task breakdown for implementing POC-compliant multi-worker warehouse sc
 ## Phase 3: Multi-Worker Coordination (Week 4-5)
 
 ### 3.1 Worker Assignment Interface
-- [ ] **Task 3.1.1**: Manager interface for worker-job assignment
+- [x] **Task 3.1.1**: Manager interface for worker-job assignment
   - Assign up to 4 workers per job
   - Each worker gets assigned color and allocation pattern
   - Visual interface showing worker assignments
   - Files: `client/src/pages/manager-dashboard.tsx`
 
-- [ ] **Task 3.1.2**: Automatic allocation pattern assignment
+- [x] **Task 3.1.2**: Automatic allocation pattern assignment
   - 1st worker: Ascending pattern
   - 2nd worker: Descending pattern
   - 3rd worker: Middle up pattern
   - 4th worker: Middle down pattern
   - Files: Assignment logic, `server/storage.ts`
 
-- [ ] **Task 3.1.3**: Display worker allocation pattern in UI
+- [x] **Task 3.1.3**: Display worker allocation pattern in UI
   - Show each worker their assigned pattern (ascending/descending/etc.)
   - Display current box or next box in pattern
   - Files: `client/src/pages/worker-scanner.tsx`, UI components

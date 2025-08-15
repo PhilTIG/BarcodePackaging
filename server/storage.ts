@@ -781,6 +781,8 @@ export class DatabaseStorage implements IStorage {
         assignedAt: jobAssignments.assignedAt,
         isActive: jobAssignments.isActive,
         assignedColor: jobAssignments.assignedColor,
+        allocationPattern: jobAssignments.allocationPattern,
+        workerIndex: jobAssignments.workerIndex,
         assignee: {
           id: users.id,
           staffId: users.staffId,
@@ -793,7 +795,8 @@ export class DatabaseStorage implements IStorage {
       })
       .from(jobAssignments)
       .innerJoin(users, eq(jobAssignments.userId, users.id))
-      .where(and(eq(jobAssignments.jobId, jobId), eq(jobAssignments.isActive, true)));
+      .where(and(eq(jobAssignments.jobId, jobId), eq(jobAssignments.isActive, true)))
+      .orderBy(jobAssignments.workerIndex);
   }
 
   async getJobAssignmentsByUser(userId: string): Promise<JobAssignment[]> {

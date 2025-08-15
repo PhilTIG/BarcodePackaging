@@ -18,8 +18,9 @@ import { useErrorContext } from "@/lib/error-context";
 import { ErrorDialog } from "@/components/ui/error-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown } from "lucide-react";
+import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette } from "lucide-react";
 import { z } from "zod";
+import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPattern } from "../../../lib/worker-allocation";
 
 const uploadFormSchema = z.object({
   name: z.string().min(1, "Job name is required"),
@@ -147,22 +148,33 @@ export default function ManagerDashboard() {
     },
   });
 
-  // Worker assignment mutation
+  // Multi-Worker Assignment mutation with automatic pattern assignment
   const assignWorkerMutation = useMutation({
     mutationFn: async (data: { jobId: string; userId: string; assignedColor: string }) => {
+      // Get current job assignments to determine worker count and pattern
+      const jobResponse = await apiRequest("GET", `/api/jobs/${data.jobId}`);
+      const jobData = await jobResponse.json();
+      const currentAssignments = jobData.job?.assignments || [];
+      
+      // Automatically assign allocation pattern based on worker order
+      const workerIndex = currentAssignments.length;
+      const allocationPattern = assignWorkerPattern(workerIndex);
+      
       const response = await apiRequest("POST", `/api/jobs/${data.jobId}/assign`, {
         userId: data.userId,
         assignedColor: data.assignedColor,
+        allocationPattern,
+        workerIndex,
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       setAssignDialogOpen(false);
       setAssignForm({ userId: "", assignedColor: "#3B82F6" });
       toast({
         title: "Worker assigned successfully",
-        description: "The worker has been assigned to this job with the selected color.",
+        description: `Worker assigned with ${data.assignment?.allocationPattern || 'ascending'} box allocation pattern`,
       });
     },
     onError: (error: any) => {
@@ -619,32 +631,50 @@ export default function ManagerDashboard() {
                         </div>
                       </div>
 
-                      {/* Assigned Workers Display */}
+                      {/* Assigned Workers Display with Allocation Patterns */}
                       {job.assignments && job.assignments.length > 0 && (
                         <div className="mb-4 mr-24">
-                          <p className="text-sm text-gray-600 mb-2">Assigned Workers:</p>
+                          <p className="text-sm text-gray-600 mb-2">Assigned Workers ({job.assignments.length}/4):</p>
                           <div className="flex flex-wrap gap-2">
-                            {job.assignments.map((assignment: any) => (
-                              <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1 group">
-                                <div 
-                                  className="w-3 h-3 rounded-full border border-gray-300"
-                                  style={{ backgroundColor: assignment.assignedColor || '#3B82F6' }}
-                                  data-testid={`worker-color-${assignment.assignee.id}`}
-                                ></div>
-                                <span className="text-sm text-gray-700 font-medium">
-                                  {assignment.assignee.name}
-                                </span>
-                                <button
-                                  onClick={() => handleUnassignWorker(job.id, assignment.assignee.id)}
-                                  className="ml-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  data-testid={`unassign-${assignment.assignee.id}`}
-                                  title="Unassign worker"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
+                            {job.assignments.map((assignment: any, index: number) => {
+                              const pattern = assignWorkerPattern(index);
+                              const patternLabels = {
+                                'ascending': '↗ Asc',
+                                'descending': '↙ Desc', 
+                                'middle_up': '↑ Mid+',
+                                'middle_down': '↓ Mid-'
+                              };
+                              
+                              return (
+                                <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1 group">
+                                  <div 
+                                    className="w-3 h-3 rounded-full border border-gray-300"
+                                    style={{ backgroundColor: assignment.assignedColor || '#3B82F6' }}
+                                    data-testid={`worker-color-${assignment.assignee.id}`}
+                                  />
+                                  <span className="text-sm text-gray-700 font-medium">
+                                    {assignment.assignee.name}
+                                  </span>
+                                  <span className="text-xs text-gray-500 bg-white px-1 rounded">
+                                    {patternLabels[pattern as keyof typeof patternLabels]}
+                                  </span>
+                                  <button
+                                    onClick={() => handleUnassignWorker(job.id, assignment.assignee.id)}
+                                    className="ml-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    data-testid={`unassign-${assignment.assignee.id}`}
+                                    title="Unassign worker"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              );
+                            })}
                           </div>
+                          {job.assignments.length < 4 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Can assign {4 - job.assignments.length} more worker(s) for optimal multi-worker coordination
+                            </p>
+                          )}
                         </div>
                       )}
 
@@ -748,7 +778,7 @@ export default function ManagerDashboard() {
           <DialogHeader>
             <DialogTitle>Assign Worker to Job</DialogTitle>
             <DialogDescription>
-              Select a worker and choose their identification color for this job assignment.
+              Select a worker and choose their color. Each worker will be automatically assigned a box allocation pattern based on assignment order.
             </DialogDescription>
           </DialogHeader>
           
@@ -803,6 +833,43 @@ export default function ManagerDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Allocation Pattern Preview */}
+            {selectedJobId && (
+              <div className="border border-gray-200 rounded-lg p-3">
+                <Label className="text-sm font-medium">Worker Allocation Pattern</Label>
+                <div className="mt-2">
+                  {(() => {
+                    const currentJob = (jobsData as any)?.jobs?.find((job: any) => job.id === selectedJobId);
+                    const currentAssignments = currentJob?.assignments || [];
+                    const workerIndex = currentAssignments.length;
+                    const pattern = assignWorkerPattern(workerIndex);
+                    
+                    const patternDescriptions = {
+                      'ascending': 'Ascending: Boxes 1, 2, 3, 4... (Worker 1)',
+                      'descending': 'Descending: Boxes 100, 99, 98, 97... (Worker 2)', 
+                      'middle_up': 'Middle Up: Boxes 50, 51, 52, 53... (Worker 3)',
+                      'middle_down': 'Middle Down: Boxes 49, 48, 47, 46... (Worker 4)'
+                    };
+                    
+                    return (
+                      <div className="flex items-center space-x-2 text-sm text-gray-700">
+                        <div 
+                          className="w-4 h-4 rounded-full border"
+                          style={{ backgroundColor: assignForm.assignedColor }}
+                        />
+                        <span className="font-medium">
+                          {patternDescriptions[pattern as keyof typeof patternDescriptions]}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Allocation patterns ensure workers don't conflict when scanning boxes
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Color Preview */}
             <div className="border border-gray-200 rounded-lg p-3">
