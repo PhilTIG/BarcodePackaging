@@ -657,6 +657,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User preferences routes
+  app.get('/api/users/me/preferences', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      let preferences = await storage.getUserPreferences(user.id);
+      
+      if (!preferences) {
+        // Check for role defaults first
+        const roleDefaults = await storage.getRoleDefaults(user.role);
+        
+        // Use role defaults or fallback to hard-coded defaults
+        const defaultPreferences = roleDefaults || {
+          maxBoxesPerRow: 12,
+          autoClearInput: true,
+          soundFeedback: true,
+          vibrationFeedback: false,
+          scannerType: "camera" as const,
+          targetScansPerHour: 71,
+          autoSaveSessions: true,
+          showRealtimeStats: true,
+        };
+
+        // Check localStorage migration (if provided in request body)
+        const localStoragePrefs = req.body?.localStoragePrefs;
+        if (localStoragePrefs) {
+          Object.assign(defaultPreferences, localStoragePrefs);
+        }
+
+        // Create preferences for user
+        await storage.createUserPreferences(user.id, defaultPreferences);
+        preferences = defaultPreferences;
+      }
+      
+      res.json({ preferences });
+    } catch (error) {
+      console.error('Failed to fetch user preferences:', error);
+      res.status(500).json({ message: 'Failed to fetch user preferences' });
+    }
+  });
+
+  app.put('/api/users/me/preferences', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { preferences: updatedPrefs } = req.body;
+      
+      let preferences = await storage.getUserPreferences(user.id);
+      
+      if (!preferences) {
+        // Create new preferences if they don't exist
+        const created = await storage.createUserPreferences(user.id, updatedPrefs);
+        res.json({ preferences: created.preferences });
+      } else {
+        // Update existing preferences
+        const updated = await storage.updateUserPreferences(user.id, updatedPrefs);
+        res.json({ preferences: updated?.preferences });
+      }
+    } catch (error) {
+      console.error('Failed to update user preferences:', error);
+      res.status(500).json({ message: 'Failed to update user preferences' });
+    }
+  });
+
   // User management
   app.get('/api/users', requireAuth, requireRole(['manager']), async (req, res) => {
     try {

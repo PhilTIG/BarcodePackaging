@@ -5,6 +5,8 @@ import {
   scanSessions, 
   scanEvents, 
   jobAssignments,
+  userPreferences,
+  roleDefaults,
   type User, 
   type InsertUser,
   type Job,
@@ -16,7 +18,12 @@ import {
   type ScanEvent,
   type InsertScanEvent,
   type JobAssignment,
-  type InsertJobAssignment
+  type InsertJobAssignment,
+  type UserPreferences,
+  type InsertUserPreferences,
+  type RoleDefaults,
+  type InsertRoleDefaults,
+  type UserPreferencesData
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
@@ -64,6 +71,14 @@ export interface IStorage {
   getJobAssignmentsByUser(userId: string): Promise<JobAssignment[]>;
   unassignWorkerFromJob(jobId: string, userId: string): Promise<boolean>;
   checkExistingAssignment(jobId: string, userId: string): Promise<JobAssignment | undefined>;
+
+  // User preferences methods
+  getUserPreferences(userId: string): Promise<UserPreferencesData | undefined>;
+  createUserPreferences(userId: string, preferences: UserPreferencesData): Promise<UserPreferences>;
+  updateUserPreferences(userId: string, preferences: Partial<UserPreferencesData>): Promise<UserPreferences | undefined>;
+  getRoleDefaults(role: string): Promise<UserPreferencesData | undefined>;
+  createOrUpdateRoleDefaults(role: string, preferences: UserPreferencesData, createdBy: string): Promise<RoleDefaults>;
+  getAllRoleDefaults(): Promise<RoleDefaults[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -555,6 +570,82 @@ export class DatabaseStorage implements IStorage {
       ));
     
     return assignment || undefined;
+  }
+
+  // User preferences methods
+  async getUserPreferences(userId: string): Promise<UserPreferencesData | undefined> {
+    const [prefs] = await db
+      .select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId));
+    
+    return prefs ? prefs.preferences as UserPreferencesData : undefined;
+  }
+
+  async createUserPreferences(userId: string, preferences: UserPreferencesData): Promise<UserPreferences> {
+    const [created] = await db
+      .insert(userPreferences)
+      .values({ userId, preferences })
+      .returning();
+    
+    return created;
+  }
+
+  async updateUserPreferences(userId: string, prefsData: Partial<UserPreferencesData>): Promise<UserPreferences | undefined> {
+    // Get existing preferences first
+    const existing = await this.getUserPreferences(userId);
+    if (!existing) return undefined;
+
+    // Merge with new preferences
+    const updatedPreferences = { ...existing, ...prefsData };
+
+    const [updated] = await db
+      .update(userPreferences)
+      .set({ 
+        preferences: updatedPreferences,
+        updatedAt: sql`now()`
+      })
+      .where(eq(userPreferences.userId, userId))
+      .returning();
+    
+    return updated || undefined;
+  }
+
+  async getRoleDefaults(role: string): Promise<UserPreferencesData | undefined> {
+    const [defaults] = await db
+      .select()
+      .from(roleDefaults)
+      .where(eq(roleDefaults.role, role));
+    
+    return defaults ? defaults.defaultPreferences as UserPreferencesData : undefined;
+  }
+
+  async createOrUpdateRoleDefaults(role: string, preferences: UserPreferencesData, createdBy: string): Promise<RoleDefaults> {
+    // Try to update existing first
+    const [updated] = await db
+      .update(roleDefaults)
+      .set({ 
+        defaultPreferences: preferences,
+        updatedAt: sql`now()`
+      })
+      .where(eq(roleDefaults.role, role))
+      .returning();
+
+    if (updated) return updated;
+
+    // Create new if doesn't exist
+    const [created] = await db
+      .insert(roleDefaults)
+      .values({ role, defaultPreferences: preferences, createdBy })
+      .returning();
+    
+    return created;
+  }
+
+  async getAllRoleDefaults(): Promise<RoleDefaults[]> {
+    return await db
+      .select()
+      .from(roleDefaults);
   }
 }
 

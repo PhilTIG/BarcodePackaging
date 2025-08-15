@@ -45,21 +45,10 @@ export default function Settings() {
   const { toast } = useToast();
   const { user, isLoading } = useAuth();
   const { detailedErrorMessages, setDetailedErrorMessages } = useErrorContext();
-  const { preferences, updatePreference } = useUserPreferences();
+  const { preferences, updatePreference, isLoading: preferencesLoading } = useUserPreferences();
   const [activeTab, setActiveTab] = useState<"general" | "users">("general");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
-
-  const [settings, setSettings] = useState({
-    autoClearInput: true,
-    soundFeedback: true,
-    vibrationFeedback: false,
-    scannerType: "camera",
-    targetScansPerHour: 71,
-    autoSaveSessions: true,
-    showRealtimeStats: true,
-    maxBoxesPerRow: 12,
-  });
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -163,10 +152,7 @@ export default function Settings() {
     if (key === "detailedErrorMessages") {
       setDetailedErrorMessages(value);
     } else {
-      setSettings(prev => ({
-        ...prev,
-        [key]: value,
-      }));
+      updatePreference(key as keyof typeof preferences, value);
     }
   };
 
@@ -346,7 +332,7 @@ export default function Settings() {
                 <p className="text-sm text-gray-600">Automatically clear input field after successful scan</p>
               </div>
               <Switch
-                checked={settings.autoClearInput}
+                checked={preferences.autoClearInput}
                 onCheckedChange={(checked) => handleSettingChange("autoClearInput", checked)}
                 data-testid="switch-auto-clear"
               />
@@ -358,7 +344,7 @@ export default function Settings() {
                 <p className="text-sm text-gray-600">Play sound on successful scan</p>
               </div>
               <Switch
-                checked={settings.soundFeedback}
+                checked={preferences.soundFeedback}
                 onCheckedChange={(checked) => handleSettingChange("soundFeedback", checked)}
                 data-testid="switch-sound"
               />
@@ -370,7 +356,7 @@ export default function Settings() {
                 <p className="text-sm text-gray-600">Vibrate device on scan (mobile only)</p>
               </div>
               <Switch
-                checked={settings.vibrationFeedback}
+                checked={preferences.vibrationFeedback}
                 onCheckedChange={(checked) => handleSettingChange("vibrationFeedback", checked)}
                 data-testid="switch-vibration"
               />
@@ -379,7 +365,7 @@ export default function Settings() {
             <div>
               <Label className="text-base font-medium text-gray-900">Scanner Type</Label>
               <Select
-                value={settings.scannerType}
+                value={preferences.scannerType}
                 onValueChange={(value) => handleSettingChange("scannerType", value)}
               >
                 <SelectTrigger className="mt-2" data-testid="select-scanner-type">
@@ -422,7 +408,7 @@ export default function Settings() {
                 <Label className="text-base font-medium text-gray-900">Target Scans Per Hour</Label>
                 <Input
                   type="number"
-                  value={settings.targetScansPerHour}
+                  value={preferences.targetScansPerHour}
                   onChange={(e) => handleSettingChange("targetScansPerHour", parseInt(e.target.value))}
                   min="1"
                   max="500"
@@ -438,7 +424,7 @@ export default function Settings() {
                   <p className="text-sm text-gray-600">Automatically save progress every 5 minutes</p>
                 </div>
                 <Switch
-                  checked={settings.autoSaveSessions}
+                  checked={preferences.autoSaveSessions}
                   onCheckedChange={(checked) => handleSettingChange("autoSaveSessions", checked)}
                   data-testid="switch-auto-save"
                 />
@@ -450,7 +436,7 @@ export default function Settings() {
                   <p className="text-sm text-gray-600">Display performance metrics during scanning</p>
                 </div>
                 <Switch
-                  checked={settings.showRealtimeStats}
+                  checked={preferences.showRealtimeStats}
                   onCheckedChange={(checked) => handleSettingChange("showRealtimeStats", checked)}
                   data-testid="switch-realtime-stats"
                 />

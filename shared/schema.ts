@@ -67,6 +67,23 @@ export const scanEvents = pgTable("scan_events", {
   timeSincePrevious: integer("time_since_previous"), // milliseconds
 });
 
+export const userPreferences = pgTable("user_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  preferences: jsonb("preferences").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+export const roleDefaults = pgTable("role_defaults", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  role: text("role").notNull().unique(), // 'manager', 'supervisor', 'worker'
+  defaultPreferences: jsonb("default_preferences").notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
 export const jobAssignments = pgTable("job_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
@@ -78,11 +95,27 @@ export const jobAssignments = pgTable("job_assignments", {
 });
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   createdJobs: many(jobs, { relationName: "creator" }),
   scanSessions: many(scanSessions),
   jobAssignments: many(jobAssignments, { relationName: "assignee" }),
   assignmentsGiven: many(jobAssignments, { relationName: "assigner" }),
+  preferences: one(userPreferences),
+  createdRoleDefaults: many(roleDefaults),
+}));
+
+export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+export const roleDefaultsRelations = relations(roleDefaults, ({ one }) => ({
+  creator: one(users, {
+    fields: [roleDefaults.createdBy],
+    references: [users.id],
+  }),
 }));
 
 export const jobsRelations = relations(jobs, ({ one, many }) => ({
@@ -172,6 +205,30 @@ export const insertJobAssignmentSchema = createInsertSchema(jobAssignments).omit
   assignedAt: true,
 });
 
+// User preferences schemas
+export const userPreferencesSchema = z.object({
+  maxBoxesPerRow: z.number().min(4).max(16),
+  autoClearInput: z.boolean(),
+  soundFeedback: z.boolean(),
+  vibrationFeedback: z.boolean(),
+  scannerType: z.enum(["camera", "usb", "bluetooth"]),
+  targetScansPerHour: z.number().min(10).max(200),
+  autoSaveSessions: z.boolean(),
+  showRealtimeStats: z.boolean(),
+});
+
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRoleDefaultsSchema = createInsertSchema(roleDefaults).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Login schema
 export const loginSchema = z.object({
   staffId: z.string().min(1, "Staff ID is required"),
@@ -222,6 +279,11 @@ export type ScanEvent = typeof scanEvents.$inferSelect;
 export type InsertScanEvent = z.infer<typeof insertScanEventSchema>;
 export type JobAssignment = typeof jobAssignments.$inferSelect;
 export type InsertJobAssignment = z.infer<typeof insertJobAssignmentSchema>;
+export type UserPreferences = typeof userPreferences.$inferSelect;
+export type RoleDefaults = typeof roleDefaults.$inferSelect;
+export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type InsertRoleDefaults = z.infer<typeof insertRoleDefaultsSchema>;
+export type UserPreferencesData = z.infer<typeof userPreferencesSchema>;
 export type Login = z.infer<typeof loginSchema>;
 export type CsvRow = z.infer<typeof csvRowSchema>;
 export type Theme = z.infer<typeof themeSchema>;
