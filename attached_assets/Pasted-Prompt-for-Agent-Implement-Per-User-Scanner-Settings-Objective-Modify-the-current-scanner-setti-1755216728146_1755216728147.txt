@@ -1,0 +1,50 @@
+Prompt for Agent: Implement Per-User Scanner Settings
+
+Objective: Modify the current scanner settings system to store and retrieve settings per individual user instead of globally in localStorage.
+
+Current Problem: Scanner settings (auto-clear input, sound feedback, vibration, scanner type, etc.) are currently stored in browser localStorage without any user association. This means all users on the same device share the same settings, and users lose their settings when switching devices.
+
+Required Changes:
+
+Server-Side Storage:
+
+Add a new database table or extend the existing users table to store user preferences
+Create API endpoints to save/retrieve user-specific scanner settings
+Include fields for: autoClearInput, soundFeedback, vibrationFeedback, scannerType, maxBoxesPerRow, targetScansPerHour, autoSaveSessions, showRealtimeStats
+Client-Side Updates:
+
+Modify the useUserPreferences hook to fetch settings from the server for the authenticated user
+Update preference changes to save to the server instead of only localStorage
+Maintain localStorage as a fallback for offline usage
+Load user-specific settings on login and clear them on logout
+Database Schema (if using new table):
+
+CREATE TABLE user_preferences (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR NOT NULL REFERENCES users(id),
+  preferences JSONB NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+API Endpoints Needed:
+
+GET /api/users/me/preferences - Get current user's preferences
+PUT /api/users/me/preferences - Update current user's preferences
+Role-Based Defaults: Consider implementing different default settings based on user role (manager, supervisor, worker).
+
+Migration Strategy: For existing users, use current localStorage values as initial server-side preferences if they exist.
+
+Key Files to Modify:
+
+server/storage.ts - Add database methods for user preferences
+server/routes.ts - Add API endpoints for preferences
+client/src/hooks/use-user-preferences.tsx - Modify to use server storage
+shared/schema.ts - Add preference schemas and types if needed
+Success Criteria:
+
+Each user has their own scanner settings that persist across devices
+Settings are associated with the authenticated user account
+Settings sync in real-time when changed
+Fallback to reasonable defaults for new users
+Existing localStorage settings are migrated appropriately
+The implementation should maintain backward compatibility and provide a smooth user experience during the transition.
