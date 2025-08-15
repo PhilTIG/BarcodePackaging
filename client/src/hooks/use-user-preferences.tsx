@@ -13,6 +13,7 @@ interface UserPreferences {
   showRealtimeStats: boolean;
   mobileModePreference: boolean;
   singleBoxMode: boolean;
+  theme: string;
 }
 
 interface UserPreferencesContextType {
@@ -34,6 +35,7 @@ const defaultPreferences: UserPreferences = {
   showRealtimeStats: true,
   mobileModePreference: false,
   singleBoxMode: false,
+  theme: "blue",
 };
 
 export function UserPreferencesProvider({ children }: { children: ReactNode }) {
@@ -60,6 +62,18 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     },
     retry: 1, // Limit retries to prevent infinite loops
   });
+
+  // Apply theme to document body when preferences change
+  useEffect(() => {
+    const applyTheme = (theme: string) => {
+      // Remove all theme classes
+      document.body.classList.remove('theme-blue', 'theme-green', 'theme-orange', 'theme-teal', 'theme-red', 'theme-dark');
+      // Add the selected theme class
+      document.body.classList.add(`theme-${theme}`);
+    };
+
+    applyTheme(preferences.theme);
+  }, [preferences.theme]);
 
   // Initialize preferences from server or localStorage fallback
   useEffect(() => {
@@ -98,9 +112,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     // Update localStorage immediately for responsiveness
     localStorage.setItem('userPreferences', JSON.stringify(newPreferences));
     
-    // Temporarily disabled server sync to debug auth issues
+    // Re-enable server sync for theme updates
     console.log('Preference update:', key, value);
-    // updatePreferencesMutation.mutate(newPreferences);
+    updatePreferencesMutation.mutate(newPreferences);
   };
 
   return (

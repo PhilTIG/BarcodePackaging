@@ -311,6 +311,18 @@
   border: 2px solid hsl(220, 13%, 91%) !important;
 }
 
+/* Ensure primary buttons use theme colors properly */
+button[data-variant="default"]:not([data-variant="outline"]):not([data-variant="ghost"]):not([data-variant="secondary"]):not([data-variant="destructive"]),
+.bg-primary {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+button[data-variant="default"]:hover:not([data-variant="outline"]):not([data-variant="ghost"]):not([data-variant="secondary"]):not([data-variant="destructive"]) {
+  opacity: 0.9;
+}
+
   /* Print styles */
   @media print {
     body {

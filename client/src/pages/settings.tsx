@@ -167,6 +167,7 @@ export default function Settings() {
   });
 
   const handleThemeChange = (newTheme: string) => {
+    updatePreference("theme", newTheme);
     toast({
       title: "Theme updated",
       description: `Switched to ${newTheme} theme`,
@@ -426,8 +427,8 @@ export default function Settings() {
                   <div
                     key={themeOption.name}
                     className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      false // theme === themeOption.name
-                        ? "border-primary-500 bg-primary-50"
+                      preferences.theme === themeOption.name
+                        ? "border-primary bg-primary/10"
                         : "border-gray-200 bg-white hover:border-gray-300"
                     }`}
                     onClick={() => handleThemeChange(themeOption.name)}
@@ -435,12 +436,12 @@ export default function Settings() {
                   >
                     <div className="flex items-center space-x-2 mb-3">
                       <div
-                        className="w-4 h-4 rounded-full"
+                        className="w-4 h-4 rounded-full border"
                         style={{ backgroundColor: themeOption.colors[0] }}
                       ></div>
                       <span className="font-medium text-gray-900">{themeOption.label}</span>
-                      {false /* theme === themeOption.name */ && (
-                        <div className="text-primary-500 ml-auto">✓</div>
+                      {preferences.theme === themeOption.name && (
+                        <div className="text-primary ml-auto font-bold">✓</div>
                       )}
                     </div>
                     <div className="space-y-2">
