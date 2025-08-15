@@ -183,29 +183,15 @@ export default function WorkerScanner() {
         score: calculateScore(prev.totalScans + 1, Date.now() - new Date(activeSession?.startTime || "").getTime()),
       }));
 
-      // Update currentBoxIndex to stay on scanned item's customer box (for single box mode)
-      if (preferences.singleBoxMode && data.scanEvent?.customerName) {
-        const products = (jobData as any)?.products || [];
-        const customers = Array.from(new Set(products.map((p: any) => p.customerName))).sort();
-        const newBoxIndex = customers.indexOf(data.scanEvent.customerName);
-        if (newBoxIndex !== -1) {
-          setCurrentBoxIndex(newBoxIndex);
-        }
-      }
+      // Box switching will be handled after data invalidation with delay
 
       // Set visual feedback for successful scan
       if (data.scanEvent?.boxNumber && data.scanEvent?.customerName && data.scanEvent?.productName) {
-        // Calculate progress for scan result display
-        const products = (jobData as any)?.products || [];
-        const customerProducts = products.filter((p: any) => p.customerName === data.scanEvent.customerName);
-        const totalItems = customerProducts.reduce((sum: number, p: any) => sum + p.qty, 0);
-        const scannedItems = customerProducts.reduce((sum: number, p: any) => sum + (p.scannedQty || 0), 0);
-
         setScanResult({
           boxNumber: data.scanEvent.boxNumber,
           customerName: data.scanEvent.customerName,
           productName: data.scanEvent.productName,
-          progress: `${scannedItems}/${totalItems} items` // Use current scanned count
+          progress: `Scan successful` // Simple message, progress will be calculated from fresh data
         });
 
         // Update last scanned box for highlighting
@@ -224,8 +210,19 @@ export default function WorkerScanner() {
         barcodeInputRef.current.focus();
       }
 
-      // Invalidate job data to get updated progress
+      // Invalidate job data to get updated progress and then switch boxes after a small delay
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+      
+      // Delay box switching to ensure fresh data is loaded for mobile mode
+      if (preferences.singleBoxMode && data.scanEvent?.customerName) {
+        setTimeout(() => {
+          const customers = getUniqueCustomers();
+          const newBoxIndex = customers.indexOf(data.scanEvent.customerName);
+          if (newBoxIndex !== -1 && newBoxIndex !== currentBoxIndex) {
+            setCurrentBoxIndex(newBoxIndex);
+          }
+        }, 100); // Small delay to ensure data is fresh
+      }
     },
     onError: (error: Error) => {
       toast({

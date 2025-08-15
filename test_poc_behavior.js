@@ -181,3 +181,39 @@ console.log('Scan 3: Should go to customer 1154738 (Box 3) - first of 2');
 console.log('Scan 4: Should go to customer 1154738 (Box 3) - second of 2, box complete');
 console.log('Scan 5: Should go to customer 1154809 (Box 4)');
 console.log('Scan 6: Should ERROR - all customers fulfilled');
+
+console.log('\n=== Mobile Box Switching Test ===');
+console.log('This tests how mobile interface should switch between boxes:');
+
+// Test current mobile scenario
+const mobileTestData = [
+  { barcode: '5', productName: 'Ladies Jane Stretch Pant - Black - 22', qty: 2, customerName: '1155659' },
+  { barcode: '43', productName: 'Ladies Tunic - Green Print - 22', qty: 2, customerName: '1155658' },
+];
+
+const mobilePoc = new POCSimulator(mobileTestData);
+console.log('\nMobile scenario initial boxes:');
+Object.entries(mobilePoc.sessionData.boxes).forEach(([boxNum, boxData]) => {
+  console.log(`Box ${boxNum}: ${boxData.customerName} (${boxData.scannedCount}/${boxData.expectedTotal})`);
+});
+
+console.log('\nMobile Scanning Tests:');
+console.log('User currently viewing Box 2 (Customer 1155659) expecting barcode 5');
+console.log('User scans barcode "43" - should go to Customer 1155658 (Box 1)');
+
+let currentMobileBox = 2; // User is viewing customer 1155659 initially
+const scan1 = mobilePoc.processScan('43');
+console.log('Scan result:', scan1);
+
+if (scan1.success) {
+  console.log(`Mobile should switch from Box ${currentMobileBox} to Box ${scan1.boxNumber}`);
+  console.log(`Box ${scan1.boxNumber} progress: ${scan1.boxProgress.scannedCount}/${scan1.boxProgress.expectedTotal}`);
+  currentMobileBox = scan1.boxNumber;
+}
+
+console.log('\nNow scanning barcode "43" again:');
+const scan2 = mobilePoc.processScan('43');
+console.log('Scan result:', scan2);
+if (scan2.success) {
+  console.log(`Box ${scan2.boxNumber} progress: ${scan2.boxProgress.scannedCount}/${scan2.boxProgress.expectedTotal} - ${scan2.boxProgress.isComplete ? 'COMPLETE' : 'incomplete'}`);
+}
