@@ -330,6 +330,26 @@
   }
 }
 
+/* Button theme integration */
+.theme-blue button[class*="bg-primary"],
+.theme-green button[class*="bg-primary"],
+.theme-orange button[class*="bg-primary"],
+.theme-teal button[class*="bg-primary"],
+.theme-red button[class*="bg-primary"],
+.theme-dark button[class*="bg-primary"] {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+.theme-blue button[class*="bg-primary"]:hover,
+.theme-green button[class*="bg-primary"]:hover,
+.theme-orange button[class*="bg-primary"]:hover,
+.theme-teal button[class*="bg-primary"]:hover,
+.theme-red button[class*="bg-primary"]:hover,
+.theme-dark button[class*="bg-primary"]:hover {
+  background-color: hsl(var(--primary) / 0.9) !important;
+}
+
 /* Dialog overrides to ensure proper visibility */
 [data-radix-popper-content-wrapper] {
   z-index: 110 !important;
