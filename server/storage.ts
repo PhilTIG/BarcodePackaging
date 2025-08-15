@@ -672,13 +672,30 @@ export class DatabaseStorage implements IStorage {
             eq(products.jobId, session.jobId),
             eq(products.barCode, insertEvent.barCode)
           ))
-          .limit(1);
+          .orderBy(products.customerName); // Ensure consistent ordering
 
         if (jobProducts.length > 0) {
-          const productInfo = jobProducts[0];
-          productName = productInfo.productName;
-          customerName = productInfo.customerName;
-          targetBox = productInfo.boxNumber;
+          // POC Logic: Find the first customer who still needs this barcode
+          let targetProduct = null;
+          for (const product of jobProducts) {
+            if ((product.scannedQty || 0) < product.qty) {
+              targetProduct = product;
+              break;
+            }
+          }
+          
+          if (targetProduct) {
+            productName = targetProduct.productName;
+            customerName = targetProduct.customerName;
+            targetBox = targetProduct.boxNumber;
+          } else if (insertEvent.eventType === 'scan') {
+            // All customers for this barcode are complete - mark as error
+            console.log(`All quantities fulfilled for barcode ${insertEvent.barCode} - marking as error`);
+            insertEvent.eventType = 'error';
+            productName = jobProducts[0].productName; // Use first product for error display
+            customerName = null;
+            targetBox = null;
+          }
         } else if (insertEvent.eventType === 'scan') {
           console.log(`Product not found for barcode ${insertEvent.barCode} - marking as error`);
           insertEvent.eventType = 'error';
