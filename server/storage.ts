@@ -1113,6 +1113,47 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return result.length > 0;
   }
+
+  // Delete all job data while preserving users and their settings
+  async deleteAllJobData(): Promise<{ deletedJobs: number; message: string }> {
+    try {
+      // Get count of jobs before deletion
+      const jobCount = await this.db.select().from(jobs);
+      
+      // Delete in correct order due to foreign key constraints
+      // 1. Delete scan events first (references scan sessions)
+      await this.db.delete(scanEvents);
+      
+      // 2. Delete session snapshots (references scan sessions)
+      await this.db.delete(sessionSnapshots);
+      
+      // 3. Delete scan sessions (references jobs and users)
+      await this.db.delete(scanSessions);
+      
+      // 4. Delete worker box assignments (references jobs and users)
+      await this.db.delete(workerBoxAssignments);
+      
+      // 5. Delete job assignments (references jobs and users)
+      await this.db.delete(jobAssignments);
+      
+      // 6. Delete products (references jobs)
+      await this.db.delete(products);
+      
+      // 7. Delete job archives
+      await this.db.delete(jobArchives);
+      
+      // 8. Finally delete jobs (parent table)
+      await this.db.delete(jobs);
+      
+      return {
+        deletedJobs: jobCount.length,
+        message: `Successfully deleted ${jobCount.length} jobs and all associated data. User accounts and settings preserved.`
+      };
+    } catch (error) {
+      console.error('Error deleting all job data:', error);
+      throw new Error('Failed to delete job data: ' + (error as Error).message);
+    }
+  }
 }
 
 export const storage = new DatabaseStorage(db);

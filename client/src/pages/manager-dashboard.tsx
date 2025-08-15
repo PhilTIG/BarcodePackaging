@@ -18,7 +18,7 @@ import { useErrorContext } from "@/lib/error-context";
 import { ErrorDialog } from "@/components/ui/error-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette } from "lucide-react";
+import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPattern } from "../../../lib/worker-allocation";
 
@@ -106,10 +106,10 @@ export default function ManagerDashboard() {
     onError: (error: any) => {
       console.error('Upload error:', error);
       setCurrentError(error);
-      
+
       const errorDetails = getErrorDetails(error);
       const formattedMessage = formatError(error, "Please check your CSV format and try again");
-      
+
       // If there are more than 3 errors and detailed mode is enabled, show "More..." option
       if (errorDetails.length > 3) {
         toast({
@@ -155,11 +155,11 @@ export default function ManagerDashboard() {
       const jobResponse = await apiRequest("GET", `/api/jobs/${data.jobId}`);
       const jobData = await jobResponse.json();
       const currentAssignments = jobData.job?.assignments || [];
-      
+
       // Automatically assign allocation pattern based on worker order
       const workerIndex = currentAssignments.length;
       const allocationPattern = assignWorkerPattern(workerIndex);
-      
+
       const response = await apiRequest("POST", `/api/jobs/${data.jobId}/assign`, {
         userId: data.userId,
         assignedColor: data.assignedColor,
@@ -349,6 +349,73 @@ export default function ManagerDashboard() {
     return null;
   }
 
+  // Handler for deleting all job data
+  const handleDeleteAllJobs = async () => {
+    const confirmDelete = window.confirm(
+      "⚠️ WARNING: This will permanently delete ALL job data including:\n\n" +
+      "• All jobs and their products\n" +
+      "• All scan sessions and events\n" +
+      "• All job assignments\n" +
+      "• All progress data\n\n" +
+      "User accounts and settings will be preserved.\n\n" +
+      "This action cannot be undone. Are you sure you want to continue?"
+    );
+
+    if (!confirmDelete) return;
+
+    const finalConfirm = window.confirm(
+      "🚨 FINAL CONFIRMATION\n\n" +
+      "You are about to DELETE ALL JOB DATA.\n\n" +
+      "Type 'DELETE' in the next prompt to confirm."
+    );
+
+    if (!finalConfirm) return;
+
+    const typeConfirm = window.prompt(
+      "Type 'DELETE' (in capital letters) to confirm deletion of all job data:"
+    );
+
+    if (typeConfirm !== "DELETE") {
+      toast({
+        title: "Cancelled",
+        description: "Job data deletion cancelled",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/jobs/all', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user?.id}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete all job data');
+      }
+
+      const result = await response.json();
+
+      // Refresh all data
+      queryClient.invalidateQueries({ queryKey: ['/api/jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+
+      toast({
+        title: "Success",
+        description: result.message,
+        duration: 5000,
+      });
+    } catch (error) {
+      console.error('Error deleting all job data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete all job data",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -498,7 +565,7 @@ export default function ManagerDashboard() {
                           <ChevronDown className="h-4 w-4 text-blue-600 transition-transform duration-200 data-[state=open]:rotate-180" />
                         </div>
                       </CollapsibleTrigger>
-                      
+
                       <CollapsibleContent className="mt-2">
                         <p className="text-blue-800 text-sm mb-3">Your CSV file must contain these exact column headers:</p>
                         <div className="bg-white border border-blue-200 rounded text-xs p-2 font-mono mb-3">
@@ -554,7 +621,7 @@ export default function ManagerDashboard() {
                 {(jobsData as any)?.jobs?.map((job: any) => {
                   const progressPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
                   const isCompleted = progressPercentage === 100;
-                  
+
                   return (
                     <div 
                       key={job.id} 
@@ -643,7 +710,7 @@ export default function ManagerDashboard() {
                                 'middle_up': '↑ Mid+',
                                 'middle_down': '↓ Mid-'
                               };
-                              
+
                               return (
                                 <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1 group">
                                   <div 
@@ -771,7 +838,7 @@ export default function ManagerDashboard() {
               Select a worker and choose their color. Each worker will be automatically assigned a box allocation pattern based on assignment order.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             {/* Worker Selection */}
             <div>
@@ -834,14 +901,14 @@ export default function ManagerDashboard() {
                     const currentAssignments = currentJob?.assignments || [];
                     const workerIndex = currentAssignments.length;
                     const pattern = assignWorkerPattern(workerIndex);
-                    
+
                     const patternDescriptions = {
                       'ascending': 'Ascending: Boxes 1, 2, 3, 4... (Worker 1)',
                       'descending': 'Descending: Boxes 100, 99, 98, 97... (Worker 2)', 
                       'middle_up': 'Middle Up: Boxes 50, 51, 52, 53... (Worker 3)',
                       'middle_down': 'Middle Down: Boxes 49, 48, 47, 46... (Worker 4)'
                     };
-                    
+
                     return (
                       <div className="flex items-center space-x-2 text-sm text-gray-700">
                         <div 

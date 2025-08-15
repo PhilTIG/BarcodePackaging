@@ -873,6 +873,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete all job data (Manager only) - Emergency cleanup endpoint
+  app.delete('/api/jobs/all', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await storage.deleteAllJobData();
+      
+      // Broadcast system-wide notification that all jobs have been cleared
+      connectedClients.forEach((client) => {
+        if (client.ws.readyState === WebSocket.OPEN) {
+          try {
+            client.ws.send(JSON.stringify({
+              type: 'all_jobs_deleted',
+              data: { message: result.message }
+            }));
+          } catch (error) {
+            console.error('Failed to broadcast job deletion:', error);
+          }
+        }
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error deleting all job data:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to delete all job data'
+      });
+    }
+  });
+
   // User management routes (Manager only)
   app.get('/api/users', requireAuth, requireRole(['manager']), async (req, res) => {
     try {
