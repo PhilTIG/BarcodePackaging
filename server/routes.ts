@@ -952,5 +952,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Job Types API routes (Manager only)
+  app.get('/api/job-types', requireAuth, async (req, res) => {
+    try {
+      const jobTypes = await storage.getJobTypes();
+      res.json({ jobTypes });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch job types' });
+    }
+  });
+
+  app.post('/api/job-types', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, benchmarkItemsPerHour, requireGroupField } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: 'Job type name is required' });
+      }
+
+      const jobTypeData = {
+        name,
+        benchmarkItemsPerHour: benchmarkItemsPerHour || 71,
+        requireGroupField: requireGroupField || false,
+        createdBy: req.user!.id
+      };
+
+      const jobType = await storage.createJobType(jobTypeData);
+      res.json({ jobType });
+    } catch (error: any) {
+      if (error.message?.includes('unique')) {
+        return res.status(400).json({ message: 'Job type name already exists' });
+      }
+      res.status(500).json({ message: 'Failed to create job type' });
+    }
+  });
+
+  app.put('/api/job-types/:id', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, benchmarkItemsPerHour, requireGroupField } = req.body;
+      const jobTypeId = req.params.id;
+
+      if (!name) {
+        return res.status(400).json({ message: 'Job type name is required' });
+      }
+
+      const updateData = {
+        name,
+        benchmarkItemsPerHour: benchmarkItemsPerHour || 71,
+        requireGroupField: requireGroupField || false
+      };
+
+      const jobType = await storage.updateJobType(jobTypeId, updateData);
+      if (!jobType) {
+        return res.status(404).json({ message: 'Job type not found' });
+      }
+
+      res.json({ jobType });
+    } catch (error: any) {
+      if (error.message?.includes('unique')) {
+        return res.status(400).json({ message: 'Job type name already exists' });
+      }
+      res.status(500).json({ message: 'Failed to update job type' });
+    }
+  });
+
+  app.delete('/api/job-types/:id', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobTypeId = req.params.id;
+
+      const deleted = await storage.deleteJobType(jobTypeId);
+      if (!deleted) {
+        return res.status(404).json({ message: 'Job type not found' });
+      }
+
+      res.json({ message: 'Job type deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete job type' });
+    }
+  });
+
   return httpServer;
 }

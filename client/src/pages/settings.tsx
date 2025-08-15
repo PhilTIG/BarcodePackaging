@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useErrorContext } from "@/lib/error-context";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Trash2, Plus, Edit3, Users, Settings as SettingsIcon, Palette } from "lucide-react";
+import { ArrowLeft, Trash2, Plus, Edit3, Users, Settings as SettingsIcon, Palette, Package } from "lucide-react";
 import { z } from "zod";
 
 const AVAILABLE_THEMES = [
@@ -38,7 +38,14 @@ const userFormSchema = z.object({
   pin: z.string().min(4, "PIN must be at least 4 characters"),
 });
 
+const jobTypeFormSchema = z.object({
+  name: z.string().min(1, "Job type name is required"),
+  benchmarkItemsPerHour: z.number().min(1, "Benchmark must be at least 1 item per hour").default(71),
+  requireGroupField: z.boolean().default(false),
+});
+
 type UserFormData = z.infer<typeof userFormSchema>;
+type JobTypeFormData = z.infer<typeof jobTypeFormSchema>;
 
 export default function Settings() {
   const [, setLocation] = useLocation();
@@ -47,9 +54,11 @@ export default function Settings() {
   const { detailedErrorMessages, setDetailedErrorMessages } = useErrorContext();
   // Re-enabled user preferences provider
   const { preferences, updatePreference, isLoading: preferencesLoading } = useUserPreferences();
-  const [activeTab, setActiveTab] = useState<"general" | "users">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "users" | "job-types">("general");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [isJobTypeDialogOpen, setIsJobTypeDialogOpen] = useState(false);
+  const [editingJobType, setEditingJobType] = useState<any>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -68,10 +77,25 @@ export default function Settings() {
     },
   });
 
+  const jobTypeForm = useForm<JobTypeFormData>({
+    resolver: zodResolver(jobTypeFormSchema),
+    defaultValues: {
+      name: "",
+      benchmarkItemsPerHour: 71,
+      requireGroupField: false,
+    },
+  });
+
   // Fetch users for management
   const { data: usersData, isLoading: usersLoading } = useQuery({
     queryKey: ["/api/users"],
     enabled: !!user && user.role === "manager",
+  });
+
+  // Fetch job types
+  const { data: jobTypesData, isLoading: jobTypesLoading } = useQuery({
+    queryKey: ["/api/job-types"],
+    enabled: !!user,
   });
 
   // User management mutations
@@ -199,6 +223,105 @@ export default function Settings() {
     setIsCreateDialogOpen(false);
   };
 
+  // Job Type management mutations
+  const createJobTypeMutation = useMutation({
+    mutationFn: async (data: JobTypeFormData) => {
+      const response = await apiRequest("POST", "/api/job-types", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/job-types"] });
+      jobTypeForm.reset();
+      setIsJobTypeDialogOpen(false);
+      toast({
+        title: "Job type created successfully",
+        description: "New job type has been added to the system",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create job type",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateJobTypeMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: JobTypeFormData }) => {
+      const response = await apiRequest("PUT", `/api/job-types/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/job-types"] });
+      jobTypeForm.reset();
+      setEditingJobType(null);
+      setIsJobTypeDialogOpen(false);
+      toast({
+        title: "Job type updated successfully",
+        description: "Job type information has been updated",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update job type",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteJobTypeMutation = useMutation({
+    mutationFn: async (jobTypeId: string) => {
+      const response = await apiRequest("DELETE", `/api/job-types/${jobTypeId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/job-types"] });
+      toast({
+        title: "Job type deleted successfully",
+        description: "Job type has been removed from the system",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete job type",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmitJobType = (data: JobTypeFormData) => {
+    if (editingJobType) {
+      updateJobTypeMutation.mutate({ id: editingJobType.id, data });
+    } else {
+      createJobTypeMutation.mutate(data);
+    }
+  };
+
+  const handleEditJobType = (jobTypeToEdit: any) => {
+    setEditingJobType(jobTypeToEdit);
+    jobTypeForm.reset({
+      name: jobTypeToEdit.name,
+      benchmarkItemsPerHour: jobTypeToEdit.benchmarkItemsPerHour,
+      requireGroupField: jobTypeToEdit.requireGroupField,
+    });
+    setIsJobTypeDialogOpen(true);
+  };
+
+  const handleDeleteJobType = (jobTypeId: string) => {
+    if (window.confirm("Are you sure you want to delete this job type? This action cannot be undone.")) {
+      deleteJobTypeMutation.mutate(jobTypeId);
+    }
+  };
+
+  const resetJobTypeForm = () => {
+    jobTypeForm.reset();
+    setEditingJobType(null);
+    setIsJobTypeDialogOpen(false);
+  };
+
   if (isLoading) {
     return null; // Or a loading spinner
   }
@@ -256,18 +379,32 @@ export default function Settings() {
               General
             </button>
             {user.role === "manager" && (
-              <button
-                onClick={() => setActiveTab("users")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "users"
-                    ? "border-primary-500 text-primary-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-                data-testid="tab-users"
-              >
-                <Users className="h-4 w-4 mr-2 inline" />
-                User Management
-              </button>
+              <>
+                <button
+                  onClick={() => setActiveTab("users")}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "users"
+                      ? "border-primary-500 text-primary-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                  data-testid="tab-users"
+                >
+                  <Users className="h-4 w-4 mr-2 inline" />
+                  User Management
+                </button>
+                <button
+                  onClick={() => setActiveTab("job-types")}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "job-types"
+                      ? "border-primary-500 text-primary-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                  data-testid="tab-job-types"
+                >
+                  <Package className="h-4 w-4 mr-2 inline" />
+                  Job Types
+                </button>
+              </>
             )}
           </nav>
         </div>
@@ -736,6 +873,197 @@ export default function Settings() {
             <CardContent className="p-8 text-center">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
               <p className="text-gray-600">User management is only available to managers.</p>
+            </CardContent>
+          </Card>
+        </>
+      )}
+      {activeTab === "job-types" && (
+        <>
+          {/* Job Types Management */}
+          <Card data-testid="job-types-settings">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center space-x-2">
+                  <Package className="h-5 w-5" />
+                  <span>Job Types Management</span>
+                </CardTitle>
+                <Dialog open={isJobTypeDialogOpen} onOpenChange={setIsJobTypeDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={resetJobTypeForm} data-testid="button-add-job-type">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Job Type
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md bg-white text-black border border-gray-200">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingJobType ? "Edit Job Type" : "Add New Job Type"}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {editingJobType 
+                          ? "Update job type settings and requirements."
+                          : "Create a new job type with benchmark targets and field requirements."
+                        }
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...jobTypeForm}>
+                      <form onSubmit={jobTypeForm.handleSubmit(onSubmitJobType)} className="space-y-4">
+                        <FormField
+                          control={jobTypeForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Job Type Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="e.g., Standard Sorting, Express Processing..." data-testid="input-job-type-name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={jobTypeForm.control}
+                          name="benchmarkItemsPerHour"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Benchmark Items Per Hour</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="number"
+                                  min="1"
+                                  placeholder="71"
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 71)}
+                                  data-testid="input-benchmark" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={jobTypeForm.control}
+                          name="requireGroupField"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base">Require Group Field</FormLabel>
+                                <div className="text-sm text-muted-foreground">
+                                  When uploading CSV files, require a "Group" column for organizing items
+                                </div>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  data-testid="switch-require-group"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="flex justify-end space-x-2 pt-4">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={resetJobTypeForm}
+                            data-testid="button-cancel-job-type"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={createJobTypeMutation.isPending || updateJobTypeMutation.isPending}
+                            data-testid="button-save-job-type"
+                          >
+                            {editingJobType 
+                              ? (updateJobTypeMutation.isPending ? "Updating..." : "Update Job Type")
+                              : (createJobTypeMutation.isPending ? "Creating..." : "Create Job Type")
+                            }
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {jobTypesLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                      <div className="h-8 bg-gray-200 rounded w-16 float-right"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {(jobTypesData as any)?.jobTypes?.map((jobType: any) => (
+                    <div 
+                      key={jobType.id} 
+                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      data-testid={`job-type-card-${jobType.id}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center space-x-3">
+                            <h3 className="font-medium text-gray-900">{jobType.name}</h3>
+                            <Badge 
+                              variant="secondary"
+                              data-testid={`badge-benchmark-${jobType.id}`}
+                            >
+                              {jobType.benchmarkItemsPerHour} items/hour
+                            </Badge>
+                            {jobType.requireGroupField && (
+                              <Badge 
+                                variant="outline"
+                                data-testid={`badge-group-required-${jobType.id}`}
+                              >
+                                Group Required
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Benchmark: {jobType.benchmarkItemsPerHour} items per hour
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Created: {new Date(jobType.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditJobType(jobType)}
+                            data-testid={`button-edit-job-type-${jobType.id}`}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteJobType(jobType.id)}
+                            data-testid={`button-delete-job-type-${jobType.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {(!(jobTypesData as any)?.jobTypes || (jobTypesData as any)?.jobTypes?.length === 0) && (
+                    <div className="text-center py-8 text-gray-500">
+                      No job types found. Add your first job type to get started.
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </>
