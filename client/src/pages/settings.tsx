@@ -410,7 +410,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="p-4 space-y-6">{activeTab === "general" ? (
+      <div className="p-4 space-y-6">{activeTab === "general" && (
         <>
           {/* Color Theme Section */}
           <Card data-testid="theme-settings">
@@ -665,18 +665,8 @@ export default function Settings() {
           </Card>
         )}
         </>
-      ) : (
-        <>
-          {/* Fallback for non-managers who somehow get to users tab */}
-          <Card>
-            <CardContent className="p-8 text-center">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
-              <p className="text-gray-600">User management is only available to managers.</p>
-            </CardContent>
-          </Card>
-        </>
       )}
-      {activeTab === "job-types" && (
+      {activeTab === "job-types" && user.role === "manager" && (
         <>
           {/* Job Types Management */}
           <Card data-testid="job-types-settings">
