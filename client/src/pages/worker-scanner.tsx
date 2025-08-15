@@ -286,10 +286,10 @@ export default function WorkerScanner() {
 
   // Auto-start session when entering a job
   useEffect(() => {
-    if (jobId && user && !activeSession && !session) {
+    if (jobId && user && !activeSession && !sessionData) {
       autoCreateSessionMutation.mutate();
     }
-  }, [jobId, user, activeSession, session]);
+  }, [jobId, user, activeSession, sessionData]);
 
   // Mobile mode helper functions
   const getUniqueCustomers = () => {
@@ -299,10 +299,10 @@ export default function WorkerScanner() {
     return customers.sort();
   };
 
-  const getCurrentCustomer = () => {
-    if (!preferences.singleBoxMode) return undefined;
+  const getCurrentCustomer = (): string => {
+    if (!preferences.singleBoxMode) return "No Customer Selected";
     const customers = getUniqueCustomers();
-    return customers[currentBoxIndex] || customers[0];
+    return customers[currentBoxIndex] || customers[0] || "No Customer Selected";
   };
 
   const getTotalBoxes = () => {
@@ -645,7 +645,7 @@ export default function WorkerScanner() {
             {!session ? (
               <div className="text-center py-8">
                 <p className="text-gray-600 mb-4">
-                  {jobData?.isActive === false 
+                  {(jobData as any)?.job?.isActive === false 
                     ? "Scanning is paused by manager"
                     : "Getting session ready..."
                   }

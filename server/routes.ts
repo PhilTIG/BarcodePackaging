@@ -622,7 +622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const session = await storage.createOrGetActiveScanSession(req.user!.id, jobId);
       res.status(201).json({ session });
     } catch (error) {
-      res.status(400).json({ message: error.message || 'Failed to create or get active session' });
+      res.status(400).json({ message: (error as Error).message || 'Failed to create or get active session' });
     }
   });
 

@@ -489,30 +489,7 @@ export class DatabaseStorage implements IStorage {
     return session || undefined;
   }
 
-  async createOrGetActiveScanSession(userId: string, jobId: string): Promise<ScanSession> {
-    // First check if the job is active (scanning allowed)
-    const job = await this.getJobById(jobId);
-    if (!job || !job.isActive) {
-      throw new Error('Job is not active for scanning');
-    }
 
-    // Check for existing active session
-    const existingSession = await this.getActiveScanSession(userId);
-    
-    if (existingSession && existingSession.jobId === jobId) {
-      return existingSession;
-    }
-    
-    // Create new session
-    const sessionData = {
-      userId,
-      jobId,
-      status: 'active' as const,
-      sessionData: {}
-    };
-    
-    return await this.createScanSession(sessionData);
-  }
 
   async updateScanSessionStats(sessionId: string): Promise<void> {
     const events = await this.getScanEventsBySessionId(sessionId);
