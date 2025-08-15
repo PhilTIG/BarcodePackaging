@@ -192,14 +192,14 @@ export function MobileScannerInterface({
         {/* Very large box number display */}
         <div className="text-center mb-8">
           <div className="text-[120px] font-bold text-blue-500 leading-none" data-testid="box-number-display">
-            {scanResult ? scanResult.boxNumber : (currentBoxNumber || '-')}
+            {scanResult ? scanResult.boxNumber : (currentCustomer === 'Ready to Scan' ? '-' : (currentBoxNumber || '-'))}
           </div>
         </div>
 
         {/* Customer name */}
         <div className="text-center mb-6">
           <div className="text-2xl font-semibold text-gray-900 mb-2" data-testid="customer-name">
-            {scanResult ? scanResult.customerName : (currentCustomer || 'Ready to Scan')}
+            {scanResult ? scanResult.customerName : (currentCustomer === 'Ready to Scan' ? 'Ready to Scan' : currentCustomer)}
           </div>
           
           {scanResult && (
@@ -207,12 +207,12 @@ export function MobileScannerInterface({
               {scanResult.productName}
             </div>
           )}
-          {!scanResult && lastScanEvent && (
+          {!scanResult && lastScanEvent && currentCustomer !== 'Ready to Scan' && (
             <div className="text-lg text-gray-600" data-testid="product-name">
               {lastScanEvent.productName}
             </div>
           )}
-          {!scanResult && !lastScanEvent && (
+          {!scanResult && (currentCustomer === 'Ready to Scan' || !lastScanEvent) && (
             <div className="text-lg text-gray-500" data-testid="scan-instruction">
               Scan a barcode to begin
             </div>
@@ -229,7 +229,7 @@ export function MobileScannerInterface({
             </div>
           </div>
         )}
-        {!scanResult && currentBoxProgress.total > 0 && (
+        {!scanResult && currentBoxProgress.total > 0 && currentCustomer !== 'Ready to Scan' && (
           <div className="text-center">
             <div className="inline-flex items-center px-4 py-2 bg-green-100 border-2 border-green-300 rounded-full">
               <span className="text-lg font-medium text-green-800" data-testid="progress-indicator">

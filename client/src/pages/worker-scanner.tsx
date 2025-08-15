@@ -396,19 +396,38 @@ export default function WorkerScanner() {
   // Mobile mode helper functions
   const getUniqueCustomers = () => {
     const products = (jobData as any)?.products || [];
-    const customerSet = new Set(products.map((p: any) => p.customerName));
-    const customers = Array.from(customerSet);
-    return customers.sort();
+    // Maintain order of first appearance in CSV, don't sort alphabetically
+    const seenCustomers = new Set();
+    const customers: string[] = [];
+    
+    products.forEach((p: any) => {
+      if (!seenCustomers.has(p.customerName)) {
+        seenCustomers.add(p.customerName);
+        customers.push(p.customerName);
+      }
+    });
+    
+    return customers;
   };
 
   const getCurrentCustomer = (): string => {
-    if (!preferences.singleBoxMode) return "No Customer Selected";
+    // Don't show customer until scanning starts
+    if (!preferences.singleBoxMode || scanStats.totalScans === 0) return "Ready to Scan";
     const customers = getUniqueCustomers();
-    return (customers[currentBoxIndex] as string) || (customers[0] as string) || "No Customer Selected";
+    return (customers[currentBoxIndex] as string) || (customers[0] as string) || "Ready to Scan";
   };
 
   const getCurrentBoxProgress = () => {
+    // Don't show progress until scanning starts
+    if (scanStats.totalScans === 0) {
+      return { completed: 0, total: 0 };
+    }
+    
     const currentCustomer = getCurrentCustomer();
+    if (currentCustomer === "Ready to Scan") {
+      return { completed: 0, total: 0 };
+    }
+    
     const products = (jobData as any)?.products || [];
     const customerProducts = products.filter((p: any) => p.customerName === currentCustomer);
 
