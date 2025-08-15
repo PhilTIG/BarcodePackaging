@@ -20,7 +20,8 @@ interface CustomerBoxGridProps {
 }
 
 export function CustomerBoxGrid({ products, supervisorView = false }: CustomerBoxGridProps) {
-  const { preferences } = useUserPreferences();
+  // Temporarily use default preferences while system is being rebuilt
+  const preferences = { maxBoxesPerRow: 12 };
   
   const boxData = useMemo(() => {
     const boxes: { [key: number]: {

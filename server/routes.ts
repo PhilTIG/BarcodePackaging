@@ -658,8 +658,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User preferences routes - EMERGENCY BLOCK to stop infinite requests
-  app.all('/api/users/me/preferences*', (req, res) => {
-    res.status(410).json({ message: 'Preferences endpoints permanently disabled due to infinite loop bug' });
+  // User Preferences endpoints
+  app.get('/api/users/me/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const preferences = await storage.getUserPreferences(req.user.id);
+      
+      if (!preferences) {
+        // Create default preferences for new user
+        const defaultPrefs = {
+          userId: req.user.id,
+          maxBoxesPerRow: 12,
+          autoClearInput: true,
+          soundFeedback: true,
+          vibrationFeedback: false,
+          scannerType: "camera" as const,
+          targetScansPerHour: 71,
+          autoSaveSessions: true,
+          showRealtimeStats: true,
+          theme: "blue" as const,
+          compactMode: false,
+          showHelpTips: true,
+          enableAutoUndo: false,
+          undoTimeLimit: 30,
+          batchScanMode: false,
+        };
+        
+        const newPreferences = await storage.createUserPreferences(defaultPrefs);
+        return res.json({ preferences: newPreferences });
+      }
+      
+      res.json({ preferences });
+    } catch (error) {
+      console.error('Error fetching user preferences:', error);
+      res.status(500).json({ error: "Failed to fetch preferences" });
+    }
+  });
+
+  app.put('/api/users/me/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const updates = req.body;
+      const updatedPreferences = await storage.updateUserPreferences(req.user.id, updates);
+      
+      if (!updatedPreferences) {
+        return res.status(404).json({ error: "User preferences not found" });
+      }
+      
+      res.json({ preferences: updatedPreferences });
+    } catch (error) {
+      console.error('Error updating user preferences:', error);
+      res.status(500).json({ error: "Failed to update preferences" });
+    }
   });
 
   // User management

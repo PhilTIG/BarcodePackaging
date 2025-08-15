@@ -35,22 +35,26 @@ const defaultPreferences: UserPreferences = {
 export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
 
-  // Temporarily disable server fetch to stop 401 storm
+  // Re-enabled with proper backend implementation
   const { data: serverPreferences, isLoading } = useQuery({
     queryKey: ['/api/users/me/preferences'],
     retry: false,
-    enabled: false, // Disable this query for now
+    enabled: true, // Re-enabled now that backend is fixed
   });
 
-  // Temporarily disable mutation completely to stop 401 storm
+  // Re-enabled mutation with proper backend implementation and retry limit
   const updatePreferencesMutation = useMutation({
     mutationFn: async (newPreferences: Partial<UserPreferences>) => {
-      console.log('Mutation disabled to debug auth issues');
-      return Promise.resolve({ preferences: newPreferences });
+      return apiRequest('/api/users/me/preferences', 'PUT', newPreferences);
     },
-    onSuccess: () => {
-      console.log('Mutation success (disabled)');
+    onSuccess: (data) => {
+      if (data?.preferences) {
+        setPreferences(data.preferences);
+        localStorage.setItem('userPreferences', JSON.stringify(data.preferences));
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/users/me/preferences'] });
     },
+    retry: 1, // Limit retries to prevent infinite loops
   });
 
   // Initialize preferences from server or localStorage fallback

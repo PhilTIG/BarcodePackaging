@@ -70,7 +70,27 @@ export const scanEvents = pgTable("scan_events", {
 export const userPreferences = pgTable("user_preferences", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
-  preferences: jsonb("preferences").notNull(),
+  
+  // Scanner Settings
+  maxBoxesPerRow: integer("max_boxes_per_row").default(12),
+  autoClearInput: boolean("auto_clear_input").default(true),
+  soundFeedback: boolean("sound_feedback").default(true),
+  vibrationFeedback: boolean("vibration_feedback").default(false),
+  scannerType: text("scanner_type").default("camera"), // "camera" or "hid"
+  targetScansPerHour: integer("target_scans_per_hour").default(71),
+  autoSaveSessions: boolean("auto_save_sessions").default(true),
+  showRealtimeStats: boolean("show_realtime_stats").default(true),
+  
+  // Interface Preferences
+  theme: text("theme").default("blue"), // "blue", "green", "orange", "teal", "red", "dark"
+  compactMode: boolean("compact_mode").default(false),
+  showHelpTips: boolean("show_help_tips").default(true),
+  
+  // Performance Preferences  
+  enableAutoUndo: boolean("enable_auto_undo").default(false),
+  undoTimeLimit: integer("undo_time_limit").default(30), // seconds
+  batchScanMode: boolean("batch_scan_mode").default(false),
+  
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });
@@ -205,23 +225,41 @@ export const insertJobAssignmentSchema = createInsertSchema(jobAssignments).omit
   assignedAt: true,
 });
 
-// User preferences schemas
-export const userPreferencesSchema = z.object({
-  maxBoxesPerRow: z.number().min(4).max(16),
-  autoClearInput: z.boolean(),
-  soundFeedback: z.boolean(),
-  vibrationFeedback: z.boolean(),
-  scannerType: z.enum(["camera", "usb", "bluetooth"]),
-  targetScansPerHour: z.number().min(10).max(200),
-  autoSaveSessions: z.boolean(),
-  showRealtimeStats: z.boolean(),
-});
-
+// User Preferences Schema
 export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
+export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type SelectUserPreferences = typeof userPreferences.$inferSelect;
+
+// User Preferences Type for frontend use
+export interface UserPreferences {
+  // Scanner Settings
+  maxBoxesPerRow: number;
+  autoClearInput: boolean;
+  soundFeedback: boolean;
+  vibrationFeedback: boolean;
+  scannerType: "camera" | "hid";
+  targetScansPerHour: number;
+  autoSaveSessions: boolean;
+  showRealtimeStats: boolean;
+  
+  // Interface Preferences
+  theme: "blue" | "green" | "orange" | "teal" | "red" | "dark";
+  compactMode: boolean;
+  showHelpTips: boolean;
+  
+  // Performance Preferences
+  enableAutoUndo: boolean;
+  undoTimeLimit: number;
+  batchScanMode: boolean;
+}
+
+// Remove duplicate schemas that were already defined earlier
+
+
 
 export const insertRoleDefaultsSchema = createInsertSchema(roleDefaults).omit({
   id: true,
@@ -279,11 +317,9 @@ export type ScanEvent = typeof scanEvents.$inferSelect;
 export type InsertScanEvent = z.infer<typeof insertScanEventSchema>;
 export type JobAssignment = typeof jobAssignments.$inferSelect;
 export type InsertJobAssignment = z.infer<typeof insertJobAssignmentSchema>;
-export type UserPreferences = typeof userPreferences.$inferSelect;
+// Remove duplicates - use the interface defined above
 export type RoleDefaults = typeof roleDefaults.$inferSelect;
-export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
 export type InsertRoleDefaults = z.infer<typeof insertRoleDefaultsSchema>;
-export type UserPreferencesData = z.infer<typeof userPreferencesSchema>;
 export type Login = z.infer<typeof loginSchema>;
 export type CsvRow = z.infer<typeof csvRowSchema>;
 export type Theme = z.infer<typeof themeSchema>;

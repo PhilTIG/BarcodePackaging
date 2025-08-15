@@ -22,8 +22,7 @@ import {
   type UserPreferences,
   type InsertUserPreferences,
   type RoleDefaults,
-  type InsertRoleDefaults,
-  type UserPreferencesData
+  type InsertRoleDefaults
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
@@ -73,12 +72,9 @@ export interface IStorage {
   checkExistingAssignment(jobId: string, userId: string): Promise<JobAssignment | undefined>;
 
   // User preferences methods
-  getUserPreferences(userId: string): Promise<UserPreferencesData | undefined>;
-  createUserPreferences(userId: string, preferences: UserPreferencesData): Promise<UserPreferences>;
-  updateUserPreferences(userId: string, preferences: Partial<UserPreferencesData>): Promise<UserPreferences | undefined>;
-  getRoleDefaults(role: string): Promise<UserPreferencesData | undefined>;
-  createOrUpdateRoleDefaults(role: string, preferences: UserPreferencesData, createdBy: string): Promise<RoleDefaults>;
-  getAllRoleDefaults(): Promise<RoleDefaults[]>;
+  getUserPreferences(userId: string): Promise<UserPreferences | undefined>;
+  createUserPreferences(preferences: InsertUserPreferences): Promise<UserPreferences>;
+  updateUserPreferences(userId: string, updates: Partial<UserPreferences>): Promise<UserPreferences | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -573,42 +569,91 @@ export class DatabaseStorage implements IStorage {
   }
 
   // User preferences methods
-  async getUserPreferences(userId: string): Promise<UserPreferencesData | undefined> {
-    const [prefs] = await db
+  async getUserPreferences(userId: string): Promise<UserPreferences | undefined> {
+    const [result] = await db
       .select()
       .from(userPreferences)
       .where(eq(userPreferences.userId, userId));
     
-    return prefs ? prefs.preferences as UserPreferencesData : undefined;
+    if (!result) {
+      return undefined;
+    }
+    
+    // Return structured preferences using the interface format
+    return {
+      maxBoxesPerRow: result.maxBoxesPerRow || 12,
+      autoClearInput: result.autoClearInput || true,
+      soundFeedback: result.soundFeedback || true,
+      vibrationFeedback: result.vibrationFeedback || false,
+      scannerType: (result.scannerType as "camera" | "hid") || "camera",
+      targetScansPerHour: result.targetScansPerHour || 71,
+      autoSaveSessions: result.autoSaveSessions || true,
+      showRealtimeStats: result.showRealtimeStats || true,
+      theme: (result.theme as "blue" | "green" | "orange" | "teal" | "red" | "dark") || "blue",
+      compactMode: result.compactMode || false,
+      showHelpTips: result.showHelpTips || true,
+      enableAutoUndo: result.enableAutoUndo || false,
+      undoTimeLimit: result.undoTimeLimit || 30,
+      batchScanMode: result.batchScanMode || false,
+    };
   }
 
-  async createUserPreferences(userId: string, preferences: UserPreferencesData): Promise<UserPreferences> {
-    const [created] = await db
+  async createUserPreferences(insertPrefs: InsertUserPreferences): Promise<UserPreferences> {
+    const [result] = await db
       .insert(userPreferences)
-      .values({ userId, preferences })
+      .values(insertPrefs)
       .returning();
     
-    return created;
+    // Return structured preferences using the interface format
+    return {
+      maxBoxesPerRow: result.maxBoxesPerRow || 12,
+      autoClearInput: result.autoClearInput || true,
+      soundFeedback: result.soundFeedback || true,
+      vibrationFeedback: result.vibrationFeedback || false,
+      scannerType: (result.scannerType as "camera" | "hid") || "camera",
+      targetScansPerHour: result.targetScansPerHour || 71,
+      autoSaveSessions: result.autoSaveSessions || true,
+      showRealtimeStats: result.showRealtimeStats || true,
+      theme: (result.theme as "blue" | "green" | "orange" | "teal" | "red" | "dark") || "blue",
+      compactMode: result.compactMode || false,
+      showHelpTips: result.showHelpTips || true,
+      enableAutoUndo: result.enableAutoUndo || false,
+      undoTimeLimit: result.undoTimeLimit || 30,
+      batchScanMode: result.batchScanMode || false,
+    };
   }
 
-  async updateUserPreferences(userId: string, prefsData: Partial<UserPreferencesData>): Promise<UserPreferences | undefined> {
-    // Get existing preferences first
-    const existing = await this.getUserPreferences(userId);
-    if (!existing) return undefined;
-
-    // Merge with new preferences
-    const updatedPreferences = { ...existing, ...prefsData };
-
-    const [updated] = await db
+  async updateUserPreferences(userId: string, updates: Partial<UserPreferences>): Promise<UserPreferences | undefined> {
+    const [result] = await db
       .update(userPreferences)
       .set({ 
-        preferences: updatedPreferences,
-        updatedAt: sql`now()`
+        ...updates,
+        updatedAt: sql`now()` 
       })
       .where(eq(userPreferences.userId, userId))
       .returning();
     
-    return updated || undefined;
+    if (!result) {
+      return undefined;
+    }
+    
+    // Return structured preferences using the interface format
+    return {
+      maxBoxesPerRow: result.maxBoxesPerRow || 12,
+      autoClearInput: result.autoClearInput || true,
+      soundFeedback: result.soundFeedback || true,
+      vibrationFeedback: result.vibrationFeedback || false,
+      scannerType: (result.scannerType as "camera" | "hid") || "camera",
+      targetScansPerHour: result.targetScansPerHour || 71,
+      autoSaveSessions: result.autoSaveSessions || true,
+      showRealtimeStats: result.showRealtimeStats || true,
+      theme: (result.theme as "blue" | "green" | "orange" | "teal" | "red" | "dark") || "blue",
+      compactMode: result.compactMode || false,
+      showHelpTips: result.showHelpTips || true,
+      enableAutoUndo: result.enableAutoUndo || false,
+      undoTimeLimit: result.undoTimeLimit || 30,
+      batchScanMode: result.batchScanMode || false,
+    };
   }
 
   async getRoleDefaults(role: string): Promise<UserPreferencesData | undefined> {
