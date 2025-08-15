@@ -174,36 +174,44 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
 
             <div className="mb-3 pr-16">
               <h3 className={`font-medium text-sm truncate ${highlighting.textColor}`} data-testid={`customer-name-${box.boxNumber}`}>
-                {box.customerName === "Unassigned" ? "Unassigned" : `Customer: ${box.customerName}`}
+                {box.customerName === "Unassigned" ? "Unassigned" : box.customerName}
               </h3>
               {supervisorView && box.assignedWorker && (
                 <p className={`text-xs ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`}>Worker: {box.assignedWorker}</p>
               )}
             </div>
 
-            <div className="space-y-2 pr-16">
-              <div className={`text-lg font-bold ${highlighting.textColor}`} data-testid={`quantity-${box.boxNumber}`}>
+            <div className="pr-16 flex-1 flex flex-col">
+              <div className={`text-lg font-bold ${highlighting.textColor} mb-2`} data-testid={`quantity-${box.boxNumber}`}>
                 {box.scannedQty}/{box.totalQty}
               </div>
               
-              <Progress 
-                value={completionPercentage} 
-                className="h-2" 
-                data-testid={`progress-${box.boxNumber}`}
-              />
+              {/* Percentage text positioned at box number level */}
+              <div className="absolute top-1/2 left-3 transform -translate-y-1/2">
+                {box.isComplete ? (
+                  <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
+                    100% Complete
+                  </div>
+                ) : (
+                  <p className={`text-xs ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
+                    {completionPercentage}% Complete
+                  </p>
+                )}
+              </div>
               
-              <p className={`text-xs ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
-                {completionPercentage}% Complete
-              </p>
+              {/* Progress bar at bottom with light grey background for unfilled portion */}
+              <div className="mt-auto">
+                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-green-500 transition-all duration-300"
+                    style={{ width: `${completionPercentage}%` }}
+                  ></div>
+                </div>
+              </div>
             </div>
 
             {/* Status badges - Removed "Scanning" and "Pending" badges per requirements */}
             <div className="mt-2">
-              {box.isComplete && (
-                <Badge variant="default" className="text-xs bg-red-500 text-white">
-                  100% Complete
-                </Badge>
-              )}
               {!box.isComplete && box.totalQty === 0 && (
                 <Badge variant="outline" className="text-xs">
                   Empty
