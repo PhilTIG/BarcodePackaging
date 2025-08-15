@@ -1,0 +1,42 @@
+1. 
+* It should be a responsive design with a switch to force into mobile mode (Mobile toggle called "Single Box"). This will show the user just the single box information of where they need to place the scanned item.
+* When the box count gets higher (over 60 boxes) then just show the box number and %. When a scan occurs the box should show the full colour of the Worker colour (showing contrasting coloured text). This should stay persistent until the next scan occurs. If a Supervisor or Manager is Monitoring a job then they should see the same live output on their screen. Figure out a compatible technology we can use to achieve this.
+* Mobile preference should be stored per user.
+
+2.
+* Should be Realtime. If 2 workers are on the one job then do not use local data method... it has to be live or not at all. Use similar logic to the PoC (proof of concept).
+* If the same bar is scanned it just means it is the same product but should be allocated to a different box. In the case of multiple workers we need to split them so the order they take with the boxes is different. In the case of 2 workers then one will be allocating the same barcode items to Ascending boxes and the other worker will be allocating to Descending boxes. If more than 2 workers then evenly allocate to boxes in the middle. One Assending from the middle and the other descending from the middle. We should limit the system to only have up to 4 workers on the same job.
+* Use the logic suggested above to handle multiple workers otherwise Fifo in Ascending order.
+* Yes you can cache that
+
+3.
+* Just undo on individual scans
+* Not sure. Give best compatible technology solutions to achieve this.
+* Each worker handles their own items. There should be no effect on other workers. The Manager and Supervisor when monitoring will see that the undo item has reduced a box count at that point in time.
+* Export as JSON file at this stage.
+
+4. 
+* if animation is too slow then we will turn off when box number is too high. This can be a Manager Global Setting that can be adjusted if needed.
+* State Sync -What ever is fastest and more accurate
+* Visual Hierarchy - work out best technology... We will be getting up to 4 scans every 10 -20 seconds I am sure the system can handle this.
+* Mobile Optimisation - Refer to PoC code.
+
+5. 
+* Calculated Frequency - Realtime
+* Benchmark - We need to have a Job Type. We can attach a benchmark to the Job Type to handle the different environment
+* Rolling windows for scoring should be used.
+* Gamification - show a emoticon at end of session. Set some different levels and give some encouraging comments if not so good. Top person of the day should get some fireworks on the screen and congratulations you were the top worker of the day :)
+
+
+
+Additional for the PRD.
+
+Jobs
+* Need to be able to delete non started Jobs
+* Need to be able to archive completed jobs (have an archive area with a search function)
+* We need to add a Job Type to the "Jobs"
+	* Job Types can be added in the Global Settings area by the Manager.
+	* Job Types can have the Benchmark of items per hour changed to assist in Metrics
+	* Job Type can have a different definition of fields. For example a Job type can make the Group Field "Required"
+
+Please add all these findings to the NEW PRD file and save in the Reference directory. Also produce a full task list that we will check of as we complete. Place this task list MD file in the reference directory as well. Once this is all done then we will proceed with the development.
