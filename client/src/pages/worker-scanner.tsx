@@ -676,6 +676,29 @@ export default function WorkerScanner() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Error Overlay for Desktop View - Same as Mobile */}
+      {scanError && (
+        <div className="fixed inset-0 bg-red-500 bg-opacity-95 z-50 flex items-center justify-center">
+          <div className="text-center text-white p-8">
+            <div className="text-6xl mb-4">⚠️</div>
+            <div className="text-3xl font-bold mb-4">Scan Error</div>
+            <div className="text-xl mb-6 whitespace-pre-line">{scanError}</div>
+            <Button
+              onClick={() => {
+                // Error will be cleared automatically by the parent component
+                if (barcodeInputRef.current) {
+                  barcodeInputRef.current.focus();
+                }
+              }}
+              className="bg-white text-red-500 hover:bg-gray-100"
+              data-testid="button-error-dismiss"
+            >
+              Continue Scanning
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-4 py-4">
