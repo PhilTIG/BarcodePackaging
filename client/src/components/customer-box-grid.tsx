@@ -144,8 +144,8 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
 
             data-testid={`box-${box.boxNumber}`}
           >
-            {/* Box Number Badge - Center Right, 2x Size */}
-            <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
+            {/* Box Number Badge and Percentage Text - Right Side */}
+            <div className="absolute top-4 right-2 flex flex-col items-center">
               <div 
                 className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
                   box.lastWorkerColor ? '' : 'bg-primary'
@@ -155,6 +155,19 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
                 } : undefined}
               >
                 {box.boxNumber}
+              </div>
+              
+              {/* Percentage text positioned below box number */}
+              <div className="mt-2">
+                {box.isComplete ? (
+                  <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
+                    100% Complete
+                  </div>
+                ) : (
+                  <p className={`text-xs ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
+                    {completionPercentage}% Complete
+                  </p>
+                )}
               </div>
             </div>
 
@@ -184,19 +197,6 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
             <div className="pr-16 flex-1 flex flex-col">
               <div className={`text-lg font-bold ${highlighting.textColor} mb-2`} data-testid={`quantity-${box.boxNumber}`}>
                 {box.scannedQty}/{box.totalQty}
-              </div>
-              
-              {/* Percentage text positioned at box number level */}
-              <div className="absolute top-1/2 left-3 transform -translate-y-1/2">
-                {box.isComplete ? (
-                  <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
-                    100% Complete
-                  </div>
-                ) : (
-                  <p className={`text-xs ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
-                    {completionPercentage}% Complete
-                  </p>
-                )}
               </div>
               
               {/* Progress bar at bottom with light grey background for unfilled portion */}
