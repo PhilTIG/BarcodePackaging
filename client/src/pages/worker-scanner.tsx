@@ -148,7 +148,26 @@ export default function WorkerScanner() {
     onSuccess: (data) => {
       setLastScanEvent(data.scanEvent);
 
-      // Send WebSocket update
+      // Check if backend marked this as an error scan
+      if (data.scanEvent.eventType === 'error') {
+        // Handle error scans from backend
+        if (data.scanEvent.productName) {
+          setScanError(`Unexpected stock scanned: ${data.scanEvent.productName}\nAll quantities for this product have been fulfilled`);
+        } else {
+          setScanError('Unexpected stock scanned: unknown stock');
+        }
+        setTimeout(() => setScanError(null), 3000);
+        showScanFeedback(false);
+        
+        // Clear input and focus
+        if (barcodeInputRef.current) {
+          barcodeInputRef.current.value = "";
+          barcodeInputRef.current.focus();
+        }
+        return;
+      }
+
+      // Send WebSocket update for successful scans
       sendMessage({
         type: "scan_event",
         data: data.scanEvent,
@@ -156,7 +175,7 @@ export default function WorkerScanner() {
         sessionId: activeSession?.id || '',
       });
 
-      // Update stats
+      // Update stats for successful scans only
       setScanStats(prev => ({
         ...prev,
         totalScans: prev.totalScans + 1,
@@ -174,16 +193,39 @@ export default function WorkerScanner() {
         }
       }
 
+      // Set visual feedback for successful scan
+      if (data.scanEvent?.boxNumber && data.scanEvent?.customerName && data.scanEvent?.productName) {
+        // Calculate progress for scan result display
+        const products = (jobData as any)?.products || [];
+        const customerProducts = products.filter((p: any) => p.customerName === data.scanEvent.customerName);
+        const totalItems = customerProducts.reduce((sum: number, p: any) => sum + p.qty, 0);
+        const scannedItems = customerProducts.reduce((sum: number, p: any) => sum + (p.scannedQty || 0), 0);
+
+        setScanResult({
+          boxNumber: data.scanEvent.boxNumber,
+          customerName: data.scanEvent.customerName,
+          productName: data.scanEvent.productName,
+          progress: `${scannedItems}/${totalItems} items` // Use current scanned count
+        });
+
+        // Update last scanned box for highlighting
+        setLastScannedBoxNumber(data.scanEvent.boxNumber);
+
+        // Clear scan result after 2 seconds
+        setTimeout(() => setScanResult(null), 2000);
+      }
+
       // Flash success feedback
       showScanFeedback(true);
 
-      // Clear input
+      // Clear input and focus
       if (barcodeInputRef.current) {
         barcodeInputRef.current.value = "";
         barcodeInputRef.current.focus();
       }
 
-      // No toast notification in mobile mode - visual feedback only
+      // Invalidate job data to get updated progress
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
     },
     onError: (error: Error) => {
       toast({
@@ -278,72 +320,14 @@ export default function WorkerScanner() {
     }
   };
 
-  // POC-style barcode processing logic
-  const processBarcodeScanning = (barcode: string, products: any[]) => {
-    // Clear previous scan results and errors
-    setScanError(null);
-    setScanResult(null);
-
-    // Group products by barcode to match POC logic
-    const barcodeItems = products.filter(p => p.barCode === barcode);
-
-    if (barcodeItems.length === 0) {
-      setScanError('Unexpected stock scanned: unknown stock');
-      setTimeout(() => setScanError(null), 3000);
-      return null;
-    }
-
-    // Find next customer to receive this barcode (POC logic)
-    let targetItem = null;
-    for (let item of barcodeItems) {
-      if ((item.scannedQty || 0) < item.qty) {
-        targetItem = item;
-        break;
-      }
-    }
-
-    if (!targetItem) {
-      const productName = barcodeItems[0].productName;
-      setScanError(`Unexpected stock scanned: ${productName}\nAll quantities for this product have been fulfilled`);
-      setTimeout(() => setScanError(null), 3000);
-      return null;
-    }
-
-    // Calculate box number and progress
-    const customers = getUniqueCustomers();
-    const boxNumber = customers.indexOf(targetItem.customerName) + 1;
-
-    // Update last scanned box for POC-style highlighting
-    setLastScannedBoxNumber(boxNumber);
-
-    // Calculate progress for this customer's box
-    const customerProducts = products.filter(p => p.customerName === targetItem.customerName);
-    const totalItems = customerProducts.reduce((sum, p) => sum + p.qty, 0);
-    const scannedItems = customerProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
-
-    // Set scan result to display immediately
-    setScanResult({
-      boxNumber,
-      customerName: targetItem.customerName,
-      productName: targetItem.productName,
-      progress: `${scannedItems + 1}/${totalItems} items`
-    });
-
-    // Update currentBoxIndex to stay on the scanned item's customer box
-    const customerList = getUniqueCustomers();
-    const newBoxIndex = customerList.indexOf(targetItem.customerName);
-    if (newBoxIndex !== -1) {
-      setCurrentBoxIndex(newBoxIndex);
-    }
-
-    // Clear scan result after 2 seconds to return to normal view
-    setTimeout(() => setScanResult(null), 2000);
-
-    return targetItem;
-  };
+  // REMOVED: POC-style frontend processing - now backend handles all allocation logic
 
   const handleBarcodeSubmit = (barcode: string) => {
     if (!barcode.trim()) return;
+
+    // Clear previous scan results and errors
+    setScanError(null);
+    setScanResult(null);
 
     // Auto-create session if none exists
     if (!activeSession) {
@@ -353,15 +337,7 @@ export default function WorkerScanner() {
       return;
     }
 
-    // Get current products for POC-style processing
-    const products = (jobData as any)?.products || [];
-    const targetItem = processBarcodeScanning(barcode.trim(), products);
-
-    if (!targetItem) {
-      // Error already set by processBarcodeScanning
-      return;
-    }
-
+    // Let backend handle all allocation logic - no frontend processing
     scanMutation.mutate(barcode.trim());
   };
 
