@@ -463,6 +463,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update job active status for scanning control
+  app.patch('/api/jobs/:id/active', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const { isActive } = req.body;
+      const job = await storage.updateJobActiveStatus(req.params.id, isActive);
+      
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Broadcast scanning status change to all connected clients
+      broadcastToJob(job.id, {
+        type: 'job_scanning_update',
+        data: { jobId: job.id, isActive }
+      });
+
+      res.json({ job });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update job scanning status' });
+    }
+  });
+
+  app.patch('/api/jobs/:id/active', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const { isActive } = req.body;
+      const job = await storage.updateJobActiveStatus(req.params.id, isActive);
+      
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Broadcast job active status change to all connected clients
+      broadcastToJob(job.id, {
+        type: 'job_active_update',
+        data: { jobId: job.id, isActive }
+      });
+
+      res.json({ job });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update job active status' });
+    }
+  });
+
   // Job assignments
   app.post('/api/jobs/:id/assignments', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
     try {
@@ -570,6 +613,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ session });
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch active session' });
+    }
+  });
+
+  app.post('/api/scan-sessions/auto', requireAuth, requireRole(['worker']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId } = req.body;
+      const session = await storage.createOrGetActiveScanSession(req.user!.id, jobId);
+      res.status(201).json({ session });
+    } catch (error) {
+      res.status(400).json({ message: error.message || 'Failed to create or get active session' });
     }
   });
 

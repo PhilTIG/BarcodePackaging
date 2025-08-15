@@ -201,6 +201,35 @@ export default function ManagerDashboard() {
     unassignWorkerMutation.mutate({ jobId, userId });
   };
 
+  // Toggle job active status mutation for scanning control
+  const toggleJobActiveMutation = useMutation({
+    mutationFn: async ({ jobId, isActive }: { jobId: string; isActive: boolean }) => {
+      const response = await apiRequest("PATCH", `/api/jobs/${jobId}/active`, {
+        isActive,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Scanning control updated",
+        description: "Job scanning status has been updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle job active toggle
+  const handleJobActiveToggle = (jobId: string, isActive: boolean) => {
+    toggleJobActiveMutation.mutate({ jobId, isActive });
+  };
+
   // Handle assignment form submission
   const handleAssignWorker = () => {
     if (!selectedJobId || !assignForm.userId) {
@@ -514,6 +543,11 @@ export default function ManagerDashboard() {
                           >
                             {job.status === "completed" ? "Completed" : job.status === "active" ? "In Progress" : "Pending"}
                           </Badge>
+                          <Badge
+                            variant={job.isActive ? "default" : "outline"}
+                          >
+                            {job.isActive ? "Scanning Active" : "Scanning Paused"}
+                          </Badge>
                         </div>
                       </div>
 
@@ -594,6 +628,15 @@ export default function ManagerDashboard() {
                         <Button variant="outline" size="sm" data-testid={`button-export-${job.id}`}>
                           <Download className="mr-1 h-4 w-4" />
                           Export
+                        </Button>
+                        <Button 
+                          variant={job.isActive ? "destructive" : "default"}
+                          size="sm" 
+                          onClick={() => handleJobActiveToggle(job.id, !job.isActive)}
+                          disabled={job.status === "completed"}
+                          data-testid={`button-toggle-scanning-${job.id}`}
+                        >
+                          {job.isActive ? "Pause Scanning" : "Start Scanning"}
                         </Button>
                       </div>
                     </div>

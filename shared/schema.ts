@@ -18,6 +18,7 @@ export const jobs = pgTable("jobs", {
   name: text("name").notNull(),
   description: text("description"),
   status: text("status").notNull().default('pending'), // 'pending', 'active', 'completed', 'paused'
+  isActive: boolean("is_active").default(false), // NEW: Controls if workers can scan this job
   totalProducts: integer("total_products").notNull(),
   totalCustomers: integer("total_customers").notNull(),
   completedItems: integer("completed_items").default(0),

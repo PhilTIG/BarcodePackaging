@@ -54,6 +54,7 @@ export interface IStorage {
   getJobById(id: string): Promise<Job | undefined>;
   getAllJobs(): Promise<Job[]>;
   updateJobStatus(id: string, status: string): Promise<Job | undefined>;
+  updateJobActiveStatus(id: string, isActive: boolean): Promise<Job | undefined>;
   getJobProgress(id: string): Promise<any>;
   getJobs(): Promise<{ jobs: any[] }>;
 
@@ -66,6 +67,7 @@ export interface IStorage {
   createScanSession(session: InsertScanSession): Promise<ScanSession>;
   getScanSessionById(id: string): Promise<ScanSession | undefined>;
   getActiveScanSession(userId: string): Promise<ScanSession | undefined>;
+  createOrGetActiveScanSession(userId: string, jobId: string): Promise<ScanSession>;
   getScanSessionsByJobId(jobId: string): Promise<ScanSession[]>;
   updateScanSessionStatus(id: string, status: string): Promise<ScanSession | undefined>;
   updateScanSessionStats(sessionId: string): Promise<void>;
@@ -191,6 +193,15 @@ export class DatabaseStorage implements IStorage {
     return job || undefined;
   }
 
+  async updateJobActiveStatus(id: string, isActive: boolean): Promise<Job | undefined> {
+    const [job] = await db
+      .update(jobs)
+      .set({ isActive })
+      .where(eq(jobs.id, id))
+      .returning();
+    return job || undefined;
+  }
+
   async getJobProgress(id: string): Promise<any> {
     try {
       // Get job with products
@@ -252,14 +263,14 @@ export class DatabaseStorage implements IStorage {
 
   async getJobs(): Promise<{ jobs: any[] }> {
     try {
-      const jobs = await this.db.select().from(jobsTable).orderBy(desc(jobsTable.createdAt));
+      const allJobs = await this.getAllJobs();
 
-      const jobsWithStats = await Promise.all(jobs.map(async (job) => {
-        const products = await this.getJobProducts(job.id);
-        const assignments = await this.getJobAssignments(job.id);
+      const jobsWithStats = await Promise.all(allJobs.map(async (job) => {
+        const products = await this.getProductsByJobId(job.id);
+        const assignments = await this.getJobAssignmentsWithUsers(job.id);
 
         const totalProducts = products.length;
-        const completedItems = products.filter(p => (p.scannedQty || 0) >= p.qty).length;
+        const completedItems = products.filter((p: any) => (p.scannedQty || 0) >= p.qty).length;
 
         // Calculate box completion using the same logic as getJobProgress
         const boxCompletion = this.calculateBoxCompletion(products);
@@ -268,9 +279,9 @@ export class DatabaseStorage implements IStorage {
           ...job,
           totalProducts,
           completedItems,
-          totalCustomers: new Set(products.map(p => p.customerName)).size,
+          totalCustomers: new Set(products.map((p: any) => p.customerName)).size,
           completedBoxes: boxCompletion.completedBoxes,
-          assignments: assignments.map(a => ({
+          assignments: assignments.map((a: any) => ({
             id: a.id,
             assignedColor: a.assignedColor,
             assignee: {
@@ -416,6 +427,37 @@ export class DatabaseStorage implements IStorage {
     return session || undefined;
   }
 
+  async createOrGetActiveScanSession(userId: string, jobId: string): Promise<ScanSession> {
+    // First check if there's already an active session for this user and job
+    const existingSession = await this.getActiveScanSession(userId);
+    
+    if (existingSession && existingSession.jobId === jobId) {
+      return existingSession;
+    }
+    
+    // Check if the job is active for scanning
+    const job = await this.getJobById(jobId);
+    if (!job) {
+      throw new Error('Job not found');
+    }
+    
+    if (!job.isActive) {
+      throw new Error('Scanning is currently paused for this job. Please contact your manager.');
+    }
+    
+    // Close any existing active sessions for this user
+    if (existingSession) {
+      await this.updateScanSessionStatus(existingSession.id, 'completed');
+    }
+    
+    // Create new session
+    return await this.createScanSession({
+      userId,
+      jobId,
+      sessionData: {}
+    });
+  }
+
   async getScanSessionsByJobId(jobId: string): Promise<ScanSession[]> {
     return await db.select().from(scanSessions).where(eq(scanSessions.jobId, jobId));
   }
@@ -433,6 +475,31 @@ export class DatabaseStorage implements IStorage {
       .where(eq(scanSessions.id, id))
       .returning();
     return session || undefined;
+  }
+
+  async createOrGetActiveScanSession(userId: string, jobId: string): Promise<ScanSession> {
+    // First check if the job is active (scanning allowed)
+    const job = await this.getJobById(jobId);
+    if (!job || !job.isActive) {
+      throw new Error('Job is not active for scanning');
+    }
+
+    // Check for existing active session
+    const existingSession = await this.getActiveScanSession(userId);
+    
+    if (existingSession && existingSession.jobId === jobId) {
+      return existingSession;
+    }
+    
+    // Create new session
+    const sessionData = {
+      userId,
+      jobId,
+      status: 'active' as const,
+      sessionData: {}
+    };
+    
+    return await this.createScanSession(sessionData);
   }
 
   async updateScanSessionStats(sessionId: string): Promise<void> {
@@ -776,16 +843,16 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getRoleDefaults(role: string): Promise<UserPreferencesData | undefined> {
+  async getRoleDefaults(role: string): Promise<any | undefined> {
     const [defaults] = await db
       .select()
       .from(roleDefaults)
       .where(eq(roleDefaults.role, role));
 
-    return defaults ? defaults.defaultPreferences as UserPreferencesData : undefined;
+    return defaults ? defaults.defaultPreferences as any : undefined;
   }
 
-  async createOrUpdateRoleDefaults(role: string, preferences: UserPreferencesData, createdBy: string): Promise<RoleDefaults> {
+  async createOrUpdateRoleDefaults(role: string, preferences: any, createdBy: string): Promise<RoleDefaults> {
     // Try to update existing first
     const [updated] = await db
       .update(roleDefaults)

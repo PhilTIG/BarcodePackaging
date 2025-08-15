@@ -6,6 +6,12 @@ This is a comprehensive warehouse sorting application designed to streamline the
 
 ## Recent Changes (January 2025)
 
+**Critical Session Management Issue Identified (January 15, 2025):**
+- **Session Control Problem**: Workers currently must manually create sessions, leading to "No active session" errors
+- **Missing Job Control**: Managers have no way to start/pause jobs for scanning operations
+- **Session Architecture Flaw**: Sessions are worker-initiated rather than job-controlled
+- **Required Fix**: Implement job-level scanning control where managers activate jobs and workers get automatic sessions
+
 **Phase 1 Database Schema Enhancement Completed (January 15, 2025):**
 - **Database Schema Extension**: Successfully added 4 new tables to support advanced features
   - `job_types`: Custom job types with benchmark configurations and field requirements

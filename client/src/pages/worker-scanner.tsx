@@ -101,19 +101,25 @@ export default function WorkerScanner() {
   }, [user, assignmentsData, jobId, setLocation]);
 
   // Create scan session mutation
-  const createSessionMutation = useMutation({
+  const autoCreateSessionMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/scan-sessions", {
+      const response = await apiRequest("POST", "/api/scan-sessions/auto", {
         jobId,
-        sessionData: {},
       });
       return response.json();
     },
     onSuccess: (data) => {
       setActiveSession(data.session);
       toast({
-        title: "Session started",
-        description: "Ready to scan barcodes",
+        title: "Session ready",
+        description: "You can now scan barcodes",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Cannot start scanning",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
@@ -259,6 +265,17 @@ export default function WorkerScanner() {
 
   const handleBarcodeSubmit = (barcode: string) => {
     if (!barcode.trim()) return;
+    
+    // Auto-create session if none exists
+    if (!activeSession) {
+      autoCreateSessionMutation.mutate();
+      toast({
+        title: "Creating session",
+        description: "Please try scanning again",
+      });
+      return;
+    }
+    
     scanMutation.mutate(barcode.trim());
   };
 
@@ -269,11 +286,12 @@ export default function WorkerScanner() {
     }
   };
 
-  const startSession = () => {
-    if (jobId) {
-      createSessionMutation.mutate();
+  // Auto-start session when entering a job
+  useEffect(() => {
+    if (jobId && user && !activeSession && !session) {
+      autoCreateSessionMutation.mutate();
     }
-  };
+  }, [jobId, user, activeSession, session]);
 
   // Mobile mode helper functions
   const getUniqueCustomers = () => {
@@ -603,14 +621,15 @@ export default function WorkerScanner() {
           <CardContent>
             {!session ? (
               <div className="text-center py-8">
-                <p className="text-gray-600 mb-4">Start a scanning session to begin</p>
-                <Button
-                  onClick={startSession}
-                  disabled={createSessionMutation.isPending}
-                  data-testid="button-start-session"
-                >
-                  {createSessionMutation.isPending ? "Starting..." : "Start Session"}
-                </Button>
+                <p className="text-gray-600 mb-4">
+                  {jobData?.isActive === false 
+                    ? "Scanning is paused by manager"
+                    : "Getting session ready..."
+                  }
+                </p>
+                {autoCreateSessionMutation.isPending && (
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
