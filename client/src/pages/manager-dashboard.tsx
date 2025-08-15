@@ -458,11 +458,11 @@ export default function ManagerDashboard() {
                 />
 
                 <div className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <div className="bg-primary-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CloudUpload className="text-primary-600 text-2xl" />
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <div className="bg-primary-50 w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <CloudUpload className="text-primary-600 text-sm" />
                     </div>
-                    <p className="text-gray-600 mb-4">Drop CSV file here or click to browse</p>
+                    <p className="text-gray-600 text-sm mb-2">Drop CSV file here or click to browse</p>
                     <input
                       type="file"
                       accept=".csv"
@@ -476,13 +476,14 @@ export default function ManagerDashboard() {
                     />
                     <Button
                       type="button"
+                      size="sm"
                       onClick={() => document.getElementById("csv-upload")?.click()}
                       data-testid="button-select-file"
                     >
                       {selectedFile ? selectedFile.name : "Select File"}
                     </Button>
                     {selectedFile && (
-                      <p className="text-sm text-green-600 mt-2">
+                      <p className="text-xs text-green-600 mt-1">
                         ✓ {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
                       </p>
                     )}
@@ -520,6 +521,7 @@ export default function ManagerDashboard() {
                 <Button
                   type="submit"
                   disabled={uploadMutation.isPending}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
                   data-testid="button-upload"
                 >
                   {uploadMutation.isPending ? "Uploading..." : "Create Job"}
