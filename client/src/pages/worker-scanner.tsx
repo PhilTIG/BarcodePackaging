@@ -359,10 +359,16 @@ export default function WorkerScanner() {
     scanMutation.mutate(barcode.trim());
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
+      e.preventDefault();
       const input = e.target as HTMLInputElement;
-      handleBarcodeSubmit(input.value);
+      const barcode = input.value;
+      handleBarcodeSubmit(barcode);
+      // Clear input after successful submission
+      if (barcode.trim()) {
+        input.value = "";
+      }
     }
   };
 
@@ -637,26 +643,6 @@ export default function WorkerScanner() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              {/* Mobile Mode Toggle for Desktop */}
-              {!isMobileMode && window.innerWidth > 768 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Direct mobile mode toggle
-                    preferences.mobileModePreference = true;
-                    toast({
-                      title: "Mobile Mode",
-                      description: "Go to Settings to enable mobile mode permanently",
-                    });
-                    setLocation("/settings");
-                  }}
-                  data-testid="button-mobile-mode"
-                >
-                  📱 Enable Mobile
-                </Button>
-              )}
-              
               {/* Show job switching button if worker has multiple assignments */}
               {(assignmentsData as any)?.assignments && (assignmentsData as any).assignments.length > 1 && (
                 <Button
@@ -765,7 +751,7 @@ export default function WorkerScanner() {
                     ref={barcodeInputRef}
                     placeholder="Scan or type barcode here..."
                     className="text-lg font-mono h-12"
-                    onKeyPress={handleKeyPress}
+                    onKeyDown={handleKeyDown}
                     data-testid="input-barcode"
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
