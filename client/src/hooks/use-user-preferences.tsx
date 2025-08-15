@@ -35,27 +35,21 @@ const defaultPreferences: UserPreferences = {
 export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
 
-  // Fetch user preferences from server
+  // Temporarily disable server fetch to stop 401 storm
   const { data: serverPreferences, isLoading } = useQuery({
     queryKey: ['/api/users/me/preferences'],
     retry: false,
+    enabled: false, // Disable this query for now
   });
 
-  // Mutation to update preferences on server
+  // Temporarily disable mutation completely to stop 401 storm
   const updatePreferencesMutation = useMutation({
     mutationFn: async (newPreferences: Partial<UserPreferences>) => {
-      const response = await apiRequest('PUT', '/api/users/me/preferences', {
-        preferences: newPreferences
-      });
-      return response.json();
+      console.log('Mutation disabled to debug auth issues');
+      return Promise.resolve({ preferences: newPreferences });
     },
-    onSuccess: (data) => {
-      if (data?.preferences) {
-        setPreferences(data.preferences);
-        // Also sync to localStorage as fallback
-        localStorage.setItem('userPreferences', JSON.stringify(data.preferences));
-      }
-      queryClient.invalidateQueries({ queryKey: ['/api/users/me/preferences'] });
+    onSuccess: () => {
+      console.log('Mutation success (disabled)');
     },
   });
 
@@ -65,8 +59,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
       setPreferences(serverPreferences.preferences);
       // Sync to localStorage for offline fallback
       localStorage.setItem('userPreferences', JSON.stringify(serverPreferences.preferences));
-    } else if (!isLoading) {
-      // Fallback to localStorage if server request fails
+    } else if (!isLoading && !serverPreferences) {
+      // Only use localStorage fallback if server data failed to load
       const stored = localStorage.getItem('userPreferences');
       if (stored) {
         try {
@@ -74,14 +68,17 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
           const mergedPrefs = { ...defaultPreferences, ...parsed };
           setPreferences(mergedPrefs);
           
-          // Attempt to migrate localStorage preferences to server
-          updatePreferencesMutation.mutate(mergedPrefs);
+          // TODO: localStorage migration can be added later when auth is stable
+          // For now, just use localStorage as fallback without server sync
         } catch (error) {
           console.error('Failed to parse stored preferences:', error);
+          setPreferences(defaultPreferences);
         }
+      } else {
+        setPreferences(defaultPreferences);
       }
     }
-  }, [serverPreferences, isLoading, updatePreferencesMutation]);
+  }, [serverPreferences, isLoading]);
 
   const updatePreference = <K extends keyof UserPreferences>(
     key: K,
@@ -93,8 +90,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     // Update localStorage immediately for responsiveness
     localStorage.setItem('userPreferences', JSON.stringify(newPreferences));
     
-    // Update server
-    updatePreferencesMutation.mutate(newPreferences);
+    // Temporarily disabled server sync to debug auth issues
+    console.log('Preference update:', key, value);
+    // updatePreferencesMutation.mutate(newPreferences);
   };
 
   return (
