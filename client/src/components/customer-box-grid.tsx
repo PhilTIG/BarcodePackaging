@@ -28,9 +28,9 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
   // Use actual user preferences for box layout
   const { preferences } = useUserPreferences();
   
-  // POC-style box highlighting system
+  // POC-style box highlighting system - PERSISTENT green until next scan
   const { updateBoxHighlighting, clearHighlighting, getBoxHighlight } = useBoxHighlighting({
-    autoResetDelay: 2000 // Clear green highlights after 2 seconds
+    autoResetDelay: 0 // DISABLED: Green highlighting now persists until next scan
   });
   
   const boxData = useMemo(() => {
@@ -173,11 +173,11 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
             )}
 
             <div className="mb-3 pr-16">
-              <h3 className="font-medium text-gray-900 text-sm truncate" data-testid={`customer-name-${box.boxNumber}`}>
+              <h3 className={`font-medium text-sm truncate ${highlighting.textColor}`} data-testid={`customer-name-${box.boxNumber}`}>
                 {box.customerName === "Unassigned" ? "Unassigned" : `Customer: ${box.customerName}`}
               </h3>
               {supervisorView && box.assignedWorker && (
-                <p className="text-xs text-gray-600">Worker: {box.assignedWorker}</p>
+                <p className={`text-xs ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`}>Worker: {box.assignedWorker}</p>
               )}
             </div>
 
@@ -192,7 +192,7 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
                 data-testid={`progress-${box.boxNumber}`}
               />
               
-              <p className="text-xs text-gray-600" data-testid={`percentage-${box.boxNumber}`}>
+              <p className={`text-xs ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
                 {completionPercentage}% Complete
               </p>
             </div>

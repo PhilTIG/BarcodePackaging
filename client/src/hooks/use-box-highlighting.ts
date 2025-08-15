@@ -34,7 +34,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
       const newHighlighting = {
         lastScannedBoxNumber: boxNumber,
         workerColors: new Map(prev.workerColors),
-        justScannedBoxes: new Set([boxNumber]), // Only one box highlighted at a time
+        justScannedBoxes: new Set([boxNumber]), // Only one box highlighted at a time - PERSISTENT until next scan
       };
 
       // Track worker color for this box
@@ -45,16 +45,9 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
       return newHighlighting;
     });
 
-    // Auto-clear green highlighting after delay
-    if (autoResetDelay > 0) {
-      setTimeout(() => {
-        setHighlighting(prev => ({
-          ...prev,
-          justScannedBoxes: new Set(), // Clear green highlights
-        }));
-      }, autoResetDelay);
-    }
-  }, [autoResetDelay]);
+    // REMOVED AUTO-CLEAR: Green highlighting now persists until next scan
+    // The green color will only be cleared when a new scan occurs (above line creates new Set with only current box)
+  }, []);
 
   // Clear all highlighting
   const clearHighlighting = useCallback(() => {
@@ -81,10 +74,10 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
     // Priority: GREEN (just-scanned) > Grey-Red (complete) > Worker Color > Grey (empty)
     if (isJustScanned) {
       return {
-        backgroundColor: 'bg-green-50',
-        borderColor: 'border-green-300',
-        textColor: 'text-green-700',
-        badgeColor: 'bg-green-500',
+        backgroundColor: 'bg-green-500', // CHANGED: Completely green background instead of light green
+        borderColor: 'border-green-600',
+        textColor: 'text-white', // White text for contrast against green background
+        badgeColor: 'bg-green-700', // Darker green for badge
       };
     }
     
