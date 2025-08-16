@@ -1357,30 +1357,22 @@ export class DatabaseStorage implements IStorage {
       return;
     }
 
-    // Group products by customer and assign sequential box numbers
-    const customerBoxMap = new Map<string, number>();
-    let nextBoxNumber = 1;
-
-    // First pass: assign box numbers to customers in order of appearance
-    existingProducts.forEach(product => {
-      if (!customerBoxMap.has(product.customerName)) {
-        customerBoxMap.set(product.customerName, nextBoxNumber++);
-      }
-    });
-
-    // Create box requirements from products
-    const boxRequirements: InsertBoxRequirement[] = existingProducts.map(product => ({
-      jobId: product.jobId,
-      boxNumber: customerBoxMap.get(product.customerName)!,
-      customerName: product.customerName,
-      barCode: product.barCode,
-      productName: product.productName,
-      requiredQty: product.qty,
-      scannedQty: product.scannedQty || 0,
-      isComplete: (product.scannedQty || 0) >= product.qty,
-      lastWorkerUserId: product.lastWorkerUserId,
-      lastWorkerColor: product.lastWorkerColor
-    }));
+    // Create box requirements from products, preserving original CSV box assignments
+    // Use the existing boxNumber from the products table (which follows CSV order)
+    const boxRequirements: InsertBoxRequirement[] = existingProducts
+      .filter(product => product.boxNumber !== null) // Skip any products without box assignments
+      .map(product => ({
+        jobId: product.jobId,
+        boxNumber: product.boxNumber!, // Use existing box assignment from CSV
+        customerName: product.customerName,
+        barCode: product.barCode,
+        productName: product.productName,
+        requiredQty: product.qty,
+        scannedQty: product.scannedQty || 0,
+        isComplete: (product.scannedQty || 0) >= product.qty,
+        lastWorkerUserId: product.lastWorkerUserId,
+        lastWorkerColor: product.lastWorkerColor
+      }));
 
     // Insert box requirements
     await this.createBoxRequirements(boxRequirements);
