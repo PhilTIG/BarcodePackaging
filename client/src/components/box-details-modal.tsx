@@ -141,7 +141,7 @@ export function BoxDetailsModal({
         <Card data-testid="box-summary-card">
           <CardHeader>
             <CardTitle className="flex justify-between items-start">
-              <h3 className="font-semibold text-lg" data-testid="customer-name-display">
+              <h3 className="text-lg font-semibold leading-none tracking-tight" data-testid="customer-name-display">
                 {customerName}
               </h3>
               <div 
