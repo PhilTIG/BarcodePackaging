@@ -140,7 +140,7 @@ export function BoxDetailsModal({
         {/* Box Summary with Box Number in top-right */}
         <Card data-testid="box-summary-card">
           <CardHeader>
-            <CardTitle className="flex justify-between items-start">
+            <CardTitle className="flex justify-between items-end">
               <h3 className="text-2xl font-semibold leading-none tracking-tight" data-testid="customer-name-display">
                 {customerName}
               </h3>
