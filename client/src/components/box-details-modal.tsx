@@ -136,18 +136,14 @@ export function BoxDetailsModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" data-testid="box-details-modal">
-        <DialogHeader>
-          <DialogTitle>Box {boxNumber} Details - {customerName}</DialogTitle>
-          <DialogDescription>
-            Detailed view of box contents, product progress, and worker contributions
-          </DialogDescription>
-        </DialogHeader>
         
         {/* Box Summary with Box Number in top-right */}
         <Card data-testid="box-summary-card">
           <CardHeader>
             <CardTitle className="flex justify-between items-start">
-              <span>Box Summary</span>
+              <h3 className="font-semibold text-lg" data-testid="customer-name-display">
+                {customerName}
+              </h3>
               <div 
                 className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white border-4 border-white shadow-lg"
                 style={{ backgroundColor: lastWorkerColor || '#6366f1' }}
@@ -158,12 +154,6 @@ export function BoxDetailsModal({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-lg" data-testid="customer-name-display">
-                {customerName}
-              </h3>
-              <p className="text-sm text-muted-foreground">Customer Destination</p>
-            </div>
             
             <div className="space-y-2">
               <div className="flex justify-between items-center">
