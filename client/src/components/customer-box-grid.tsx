@@ -204,7 +204,9 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
               {/* Centered progress bar */}
               <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-green-500 transition-all duration-300"
+                  className={`h-full transition-all duration-300 ${
+                    isLastScanned ? 'bg-red-500' : 'bg-green-500'
+                  }`}
                   style={{ width: `${completionPercentage}%` }}
                 ></div>
               </div>
