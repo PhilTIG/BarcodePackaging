@@ -124,54 +124,48 @@ export function BoxDetailsModal({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Side - Box Summary */}
-          <Card data-testid="box-summary-card" className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Box Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-lg" data-testid="customer-name-display">
-                  {customerName}
-                </h3>
-                <p className="text-sm text-muted-foreground">Customer Destination</p>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Overall Progress</span>
-                  <span className="text-sm font-bold" data-testid="overall-progress-text">
-                    {scannedQty}/{totalQty} ({completionPercentage}%)
-                  </span>
-                </div>
-                <Progress value={completionPercentage} className="h-3" data-testid="overall-progress-bar" />
-              </div>
-
-              {isComplete && (
-                <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-md">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                    Box Complete
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Right Side - Large Box Number */}
-          <Card data-testid="box-number-card">
-            <CardContent className="flex items-center justify-center h-full p-8">
+        {/* Box Summary with Box Number in top-right */}
+        <Card data-testid="box-summary-card">
+          <CardHeader>
+            <CardTitle className="flex justify-between items-start">
+              <span>Box Summary</span>
               <div 
-                className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold text-white border-4 border-white shadow-lg"
+                className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white border-4 border-white shadow-lg"
                 style={{ backgroundColor: lastWorkerColor || '#6366f1' }}
                 data-testid="large-box-number"
               >
                 {boxNumber}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-lg" data-testid="customer-name-display">
+                {customerName}
+              </h3>
+              <p className="text-sm text-muted-foreground">Customer Destination</p>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Overall Progress</span>
+                <span className="text-sm font-bold" data-testid="overall-progress-text">
+                  {scannedQty}/{totalQty} ({completionPercentage}%)
+                </span>
+              </div>
+              <Progress value={completionPercentage} className="h-3" data-testid="overall-progress-bar" />
+            </div>
+
+            {isComplete && (
+              <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-md">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                  Box Complete
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Product Details - Full Width */}
         <Card data-testid="product-details-card">
