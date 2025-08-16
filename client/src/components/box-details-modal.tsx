@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, XCircle, Users } from 'lucide-react';
@@ -30,12 +30,6 @@ interface BoxRequirement {
   lastWorkerColor?: string;
 }
 
-interface WorkerInfo {
-  userId: string;
-  color: string;
-  count: number;
-}
-
 export function BoxDetailsModal({
   isOpen,
   onClose,
@@ -47,21 +41,18 @@ export function BoxDetailsModal({
   isComplete,
   lastWorkerColor
 }: BoxDetailsModalProps) {
-  // Fetch box requirements for this specific box
-  const { data: boxRequirementsData, isLoading } = useQuery({
-    queryKey: ['/api/jobs', jobId, 'box-requirements', boxNumber],
-    queryFn: async () => {
-      const response = await fetch(`/api/jobs/${jobId}/box-requirements`);
-      if (!response.ok) throw new Error('Failed to fetch box requirements');
-      const data = await response.json();
-      return data.boxRequirements.filter((req: BoxRequirement) => req.boxNumber === boxNumber);
-    },
+  // Fetch box requirements for this specific box using the default query function
+  const { data: boxRequirementsResponse, isLoading } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/box-requirements`],
     enabled: isOpen && boxNumber !== null
   });
 
   if (!isOpen || boxNumber === null) return null;
 
-  const boxRequirements: BoxRequirement[] = boxRequirementsData || [];
+  // Filter box requirements for this specific box number
+  const boxRequirementsData = boxRequirementsResponse as { boxRequirements: BoxRequirement[] } | undefined;
+  const allBoxRequirements: BoxRequirement[] = boxRequirementsData?.boxRequirements || [];
+  const boxRequirements = allBoxRequirements.filter((req: BoxRequirement) => req.boxNumber === boxNumber);
   
   // Calculate overall completion percentage
   const completionPercentage = totalQty > 0 ? Math.round((scannedQty / totalQty) * 100) : 0;
@@ -125,24 +116,19 @@ export function BoxDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="box-details-modal">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" data-testid="box-details-modal">
         <DialogHeader>
           <DialogTitle>Box {boxNumber} Details - {customerName}</DialogTitle>
+          <DialogDescription>
+            Detailed view of box contents, product progress, and worker contributions
+          </DialogDescription>
         </DialogHeader>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Side - Box Summary */}
-          <Card data-testid="box-summary-card">
+          <Card data-testid="box-summary-card" className="lg:col-span-2">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                Box Summary
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-white"
-                  style={{ backgroundColor: lastWorkerColor || '#6366f1' }}
-                >
-                  {boxNumber}
-                </div>
-              </CardTitle>
+              <CardTitle>Box Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -173,58 +159,73 @@ export function BoxDetailsModal({
             </CardContent>
           </Card>
 
-          {/* Right Side - Product Details */}
-          <Card data-testid="product-details-card">
-            <CardHeader>
-              <CardTitle>Product Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="text-center py-4">Loading product details...</div>
-              ) : (
-                <div className="space-y-4">
-                  {Object.values(productGroups).map((product, index) => {
-                    const productCompletion = product.totalRequired > 0 
-                      ? Math.round((product.totalScanned / product.totalRequired) * 100) 
-                      : 0;
-                    
-                    return (
-                      <div key={`${product.barCode}-${index}`} className="border rounded-lg p-3 space-y-2" data-testid={`product-item-${index}`}>
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-sm truncate flex-1" data-testid={`product-name-${index}`}>
-                            {product.productName}
-                          </h4>
-                          <div className="flex items-center gap-2">
-                            {product.totalScanned >= product.totalRequired ? (
-                              <CheckCircle className="w-4 h-4 text-green-600" data-testid={`product-status-complete-${index}`} />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-red-500" data-testid={`product-status-incomplete-${index}`} />
-                            )}
-                            <span className="text-sm font-bold" data-testid={`product-quantity-${index}`}>
-                              {product.totalScanned}/{product.totalRequired}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span>Progress</span>
-                            <span>{productCompletion}%</span>
-                          </div>
-                          <Progress value={productCompletion} className="h-2" data-testid={`product-progress-${index}`} />
-                        </div>
-
-                        <div className="text-xs text-muted-foreground">
-                          Barcode: {product.barCode}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+          {/* Right Side - Large Box Number */}
+          <Card data-testid="box-number-card">
+            <CardContent className="flex items-center justify-center h-full p-8">
+              <div 
+                className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold text-white border-4 border-white shadow-lg"
+                style={{ backgroundColor: lastWorkerColor || '#6366f1' }}
+                data-testid="large-box-number"
+              >
+                {boxNumber}
+              </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Product Details - Full Width */}
+        <Card data-testid="product-details-card">
+          <CardHeader>
+            <CardTitle>Product Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-4">Loading product details...</div>
+            ) : boxRequirements.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">No product data available for this box</div>
+            ) : (
+              <div className="space-y-4">
+                {Object.values(productGroups).map((product, index) => {
+                  const productCompletion = product.totalRequired > 0 
+                    ? Math.round((product.totalScanned / product.totalRequired) * 100) 
+                    : 0;
+                  
+                  return (
+                    <div key={`${product.barCode}-${index}`} className="border rounded-lg p-3 space-y-2" data-testid={`product-item-${index}`}>
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm truncate flex-1" data-testid={`product-name-${index}`}>
+                          {product.productName}
+                        </h4>
+                        <div className="flex items-center gap-2">
+                          {product.totalScanned >= product.totalRequired ? (
+                            <CheckCircle className="w-4 h-4 text-green-600" data-testid={`product-status-complete-${index}`} />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-red-500" data-testid={`product-status-incomplete-${index}`} />
+                          )}
+                          <span className="text-sm font-bold" data-testid={`product-quantity-${index}`}>
+                            {product.totalScanned}/{product.totalRequired}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span>Progress</span>
+                          <span>{productCompletion}%</span>
+                        </div>
+                        <Progress value={productCompletion} className="h-2" data-testid={`product-progress-${index}`} />
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        Barcode: {product.barCode}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Bottom Section - Workers */}
         {allWorkers.size > 0 && (
