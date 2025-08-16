@@ -30,6 +30,14 @@ interface BoxRequirement {
   lastWorkerColor?: string;
 }
 
+interface Worker {
+  id: string;
+  staffId: string;
+  name: string;
+  role: string;
+  isActive: boolean;
+}
+
 export function BoxDetailsModal({
   isOpen,
   onClose,
@@ -47,12 +55,23 @@ export function BoxDetailsModal({
     enabled: isOpen && boxNumber !== null
   });
 
+  // Fetch workers to get their names
+  const { data: workersResponse } = useQuery({
+    queryKey: ['/api/users/workers'],
+    enabled: isOpen && boxNumber !== null
+  });
+
   if (!isOpen || boxNumber === null) return null;
 
   // Filter box requirements for this specific box number
   const boxRequirementsData = boxRequirementsResponse as { boxRequirements: BoxRequirement[] } | undefined;
   const allBoxRequirements: BoxRequirement[] = boxRequirementsData?.boxRequirements || [];
   const boxRequirements = allBoxRequirements.filter((req: BoxRequirement) => req.boxNumber === boxNumber);
+  
+  // Get workers data for name mapping
+  const workersData = workersResponse as { workers: Worker[] } | undefined;
+  const workers: Worker[] = workersData?.workers || [];
+  const workerMap = new Map(workers.map(worker => [worker.id, worker]));
   
   // Calculate overall completion percentage
   const completionPercentage = totalQty > 0 ? Math.round((scannedQty / totalQty) * 100) : 0;
@@ -232,17 +251,22 @@ export function BoxDetailsModal({
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {Array.from(allWorkers.entries()).map(([userId, worker]) => (
-                  <Badge 
-                    key={userId}
-                    variant="secondary"
-                    className="text-white border-2 border-white"
-                    style={{ backgroundColor: worker.color }}
-                    data-testid={`worker-badge-${userId}`}
-                  >
-                    Worker {userId.slice(-4)} ({worker.totalContribution} items)
-                  </Badge>
-                ))}
+                {Array.from(allWorkers.entries()).map(([userId, worker]) => {
+                  const workerInfo = workerMap.get(userId);
+                  const displayName = workerInfo ? workerInfo.name : `Worker ${userId.slice(-4)}`;
+                  
+                  return (
+                    <Badge 
+                      key={userId}
+                      variant="secondary"
+                      className="text-white border-2 border-white"
+                      style={{ backgroundColor: worker.color }}
+                      data-testid={`worker-badge-${userId}`}
+                    >
+                      {displayName} ({worker.totalContribution} items)
+                    </Badge>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
