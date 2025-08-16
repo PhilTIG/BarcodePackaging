@@ -1,9 +1,10 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Lock } from "lucide-react";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useBoxHighlighting } from "@/hooks/use-box-highlighting";
+import { BoxDetailsModal } from "./box-details-modal";
 
 interface Product {
   id: string;
@@ -24,7 +25,16 @@ interface CustomerBoxGridProps {
   onBoxScanUpdate?: (boxNumber: number, workerId?: string, workerColor?: string) => void;
 }
 
-export function CustomerBoxGrid({ products, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate }: CustomerBoxGridProps) {
+export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate }: CustomerBoxGridProps) {
+  // State for box details modal
+  const [selectedBox, setSelectedBox] = useState<{
+    boxNumber: number;
+    customerName: string;
+    totalQty: number;
+    scannedQty: number;
+    isComplete: boolean;
+    lastWorkerColor?: string;
+  } | null>(null);
   // Use actual user preferences for box layout
   const { preferences } = useUserPreferences();
   
@@ -132,10 +142,23 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
         const highlighting = getBoxHighlight(box.boxNumber, box.isComplete);
         
         const boxClasses = [
-          "border rounded-lg p-3 relative transition-all duration-200",
+          "border rounded-lg p-3 relative transition-all duration-200 cursor-pointer hover:shadow-lg",
           highlighting.backgroundColor,
           highlighting.borderColor
         ].join(" ");
+
+        const handleBoxClick = () => {
+          if (supervisorView) {
+            setSelectedBox({
+              boxNumber: box.boxNumber,
+              customerName: box.customerName,
+              totalQty: box.totalQty,
+              scannedQty: box.scannedQty,
+              isComplete: box.isComplete,
+              lastWorkerColor: box.lastWorkerColor
+            });
+          }
+        };
 
         return (
           <div
@@ -143,6 +166,7 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
             className={boxClasses}
             style={{ minHeight: '150px' }}
             data-testid={`box-${box.boxNumber}`}
+            onClick={handleBoxClick}
           >
             {/* Lock icon for 100% completed boxes */}
             {box.isComplete && (
@@ -216,6 +240,19 @@ export function CustomerBoxGrid({ products, supervisorView = false, lastScannedB
           </div>
         );
       })}
+      
+      {/* Box Details Modal */}
+      <BoxDetailsModal
+        isOpen={selectedBox !== null}
+        onClose={() => setSelectedBox(null)}
+        boxNumber={selectedBox?.boxNumber || null}
+        jobId={jobId}
+        customerName={selectedBox?.customerName || ''}
+        totalQty={selectedBox?.totalQty || 0}
+        scannedQty={selectedBox?.scannedQty || 0}
+        isComplete={selectedBox?.isComplete || false}
+        lastWorkerColor={selectedBox?.lastWorkerColor}
+      />
     </div>
   );
 }
