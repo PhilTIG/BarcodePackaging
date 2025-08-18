@@ -1013,13 +1013,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not authenticated" });
       }
 
-      console.log(`Updating preferences for user: ${req.user.id}`, req.body);
+      console.log(`[Preferences API] Updating preferences for user: ${req.user.id} (${req.user.name})`);
+      console.log(`[Preferences API] Request body:`, req.body);
+      
       const updates = req.body;
+      
+      // Validate that updates is an object
+      if (!updates || typeof updates !== 'object') {
+        console.error(`[Preferences API] Invalid request body format for user: ${req.user.id}`);
+        return res.status(400).json({ error: "Invalid preferences data format" });
+      }
       
       // First ensure user has preferences record
       let preferences = await storage.getUserPreferences(req.user.id);
       if (!preferences) {
-        console.log(`Creating preferences record for user: ${req.user.id}`);
+        console.log(`[Preferences API] Creating default preferences record for user: ${req.user.id}`);
         const defaultPrefs = {
           userId: req.user.id,
           maxBoxesPerRow: 12,
@@ -1039,21 +1047,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mobileModePreference: false,
           singleBoxMode: false,
         };
-        preferences = await storage.createUserPreferences(defaultPrefs);
+        
+        try {
+          preferences = await storage.createUserPreferences(defaultPrefs);
+          console.log(`[Preferences API] Created default preferences for user: ${req.user.id}`);
+        } catch (createError) {
+          console.error(`[Preferences API] Failed to create default preferences for user: ${req.user.id}`, createError);
+          return res.status(500).json({ error: "Failed to create user preferences" });
+        }
       }
       
-      const updatedPreferences = await storage.updateUserPreferences(req.user.id, updates);
+      console.log(`[Preferences API] Existing preferences for user ${req.user.id}:`, preferences);
       
-      if (!updatedPreferences) {
-        console.error(`Failed to update preferences for user: ${req.user.id}`);
-        return res.status(500).json({ error: "Failed to update preferences" });
+      try {
+        const updatedPreferences = await storage.updateUserPreferences(req.user.id, updates);
+        
+        if (!updatedPreferences) {
+          console.error(`[Preferences API] Storage returned null for user: ${req.user.id}`);
+          return res.status(500).json({ error: "Failed to update preferences in database" });
+        }
+        
+        console.log(`[Preferences API] Successfully updated preferences for user: ${req.user.id}`);
+        console.log(`[Preferences API] Updated preferences:`, updatedPreferences);
+        
+        res.json({ preferences: updatedPreferences });
+      } catch (updateError) {
+        console.error(`[Preferences API] Database update error for user: ${req.user.id}`, updateError);
+        return res.status(500).json({ error: "Database error while updating preferences" });
       }
       
-      console.log(`Successfully updated preferences for user: ${req.user.id}`);
-      res.json({ preferences: updatedPreferences });
     } catch (error) {
-      console.error('Error updating user preferences:', error);
-      res.status(500).json({ error: "Failed to update preferences" });
+      console.error('[Preferences API] Unexpected error updating user preferences:', error);
+      res.status(500).json({ 
+        error: "Internal server error",
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+      });
     }
   });
 

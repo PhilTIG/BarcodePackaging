@@ -7,41 +7,49 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(url: string, method: string = 'GET', data?: any) {
-  const token = localStorage.getItem('auth_token');
+export async function apiRequest(
+  endpoint: string,
+  method: string = "GET",
+  body?: any
+): Promise<Response> {
+  const token = localStorage.getItem("auth_token");
 
-  // Log authentication state for debugging
-  if (url.includes('/preferences') && !token) {
-    console.warn('No auth token found for preferences request');
-  }
+  console.log(`[API Request] ${method} ${endpoint}`, body ? { body } : '');
 
   const config: RequestInit = {
     method,
     headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+      "Content-Type": "application/json",
     },
   };
 
-  if (data && method !== 'GET') {
-    config.body = JSON.stringify(data);
+  if (token) {
+    (config.headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  } else {
+    console.warn(`[API Request] No auth token found for ${method} ${endpoint}`);
   }
 
-  const response = await fetch(url, config);
+  if (body && (method === "POST" || method === "PUT" || method === "PATCH")) {
+    config.body = JSON.stringify(body);
+  }
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+  try {
+    const response = await fetch(endpoint, config);
 
-    // Special handling for authentication errors
-    if (response.status === 401) {
-      console.error('Authentication failed for:', url);
-      // Don't clear token here as it might be used for other requests
+    console.log(`[API Request] ${method} ${endpoint} -> ${response.status} ${response.statusText}`);
+
+    // For debugging, log response for preferences endpoints
+    if (endpoint.includes('preferences')) {
+      const responseClone = response.clone();
+      const responseText = await responseClone.text();
+      console.log(`[API Request] Preferences response:`, responseText);
     }
 
-    throw new Error(errorData.message || `HTTP ${response.status}`);
+    return response;
+  } catch (error) {
+    console.error(`[API Request] Network error for ${method} ${endpoint}:`, error);
+    throw error;
   }
-
-  return response;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

@@ -53,15 +53,25 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Mutation with proper error handling
+  // Mutation with proper error handling and user feedback
   const updatePreferencesMutation = useMutation({
     mutationFn: async (newPreferences: Partial<UserPreferences>) => {
       if (!user) {
-        throw new Error('User not authenticated');
+        throw new Error('User not authenticated - please log in again');
       }
-      return apiRequest('/api/users/me/preferences', 'PUT', newPreferences);
+      
+      console.log('Updating preferences:', newPreferences);
+      const response = await apiRequest('/api/users/me/preferences', 'PUT', newPreferences);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Failed to save preferences');
+      }
+      
+      return data;
     },
     onSuccess: (data: any) => {
+      console.log('Preferences saved successfully:', data);
       if (data?.preferences) {
         setPreferences(data.preferences);
         localStorage.setItem('userPreferences', JSON.stringify(data.preferences));
@@ -70,9 +80,38 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     },
     onError: (error: any) => {
       console.error('Failed to update preferences:', error);
-      // Don't throw error, just log it to prevent UI breaks
+      
+      // Show user-friendly error message
+      if (typeof window !== 'undefined') {
+        const errorMessage = error.message || 'Failed to save settings. Please try again.';
+        
+        // Create a temporary toast-like notification
+        const errorDiv = document.createElement('div');
+        errorDiv.textContent = errorMessage;
+        errorDiv.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #ef4444;
+          color: white;
+          padding: 12px 16px;
+          border-radius: 6px;
+          z-index: 9999;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        `;
+        document.body.appendChild(errorDiv);
+        
+        setTimeout(() => {
+          if (document.body.contains(errorDiv)) {
+            document.body.removeChild(errorDiv);
+          }
+        }, 5000);
+      }
     },
-    retry: 1, // Limit retries to prevent infinite loops
+    retry: (failureCount, error: any) => {
+      // Only retry network errors, not authentication errors
+      return failureCount < 2 && !error.message?.includes('authenticated');
+    },
   });
 
   // Apply theme to document body when preferences change
@@ -146,10 +185,37 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     
     // Only sync to server if user is authenticated
     if (user) {
-      console.log('Preference update:', key, value);
+      console.log(`Updating preference ${key}:`, value);
+      console.log('Current user:', user.id, user.name);
+      console.log('Full preferences being sent:', newPreferences);
+      
       updatePreferencesMutation.mutate(newPreferences);
     } else {
       console.warn('User not authenticated, preferences saved locally only');
+      
+      // Show warning to user
+      if (typeof window !== 'undefined') {
+        const warningDiv = document.createElement('div');
+        warningDiv.textContent = 'Settings saved locally only - please log in to sync across devices';
+        warningDiv.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #f59e0b;
+          color: white;
+          padding: 12px 16px;
+          border-radius: 6px;
+          z-index: 9999;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        `;
+        document.body.appendChild(warningDiv);
+        
+        setTimeout(() => {
+          if (document.body.contains(warningDiv)) {
+            document.body.removeChild(warningDiv);
+          }
+        }, 3000);
+      }
     }
   };
 
