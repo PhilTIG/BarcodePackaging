@@ -10,7 +10,7 @@ import {
   roleDefaults,
   jobTypes,
   workerBoxAssignments,
-  sessionSnapshots,
+  // PHASE 4: sessionSnapshots removed
   jobArchives,
   type User, 
   type InsertUser,
@@ -34,8 +34,7 @@ import {
   type InsertJobType,
   type WorkerBoxAssignment,
   type InsertWorkerBoxAssignment,
-  type SessionSnapshot,
-  type InsertSessionSnapshot,
+  // PHASE 4: SessionSnapshot types removed
   type JobArchive,
   type InsertJobArchive
 } from "@shared/schema";
@@ -117,11 +116,7 @@ export interface IStorage {
   getWorkerBoxAssignmentsByWorker(workerId: string, jobId: string): Promise<WorkerBoxAssignment[]>;
   deleteWorkerBoxAssignments(jobId: string, workerId: string): Promise<boolean>;
 
-  // Session snapshot methods
-  createSessionSnapshot(snapshot: InsertSessionSnapshot): Promise<SessionSnapshot>;
-  getSessionSnapshots(sessionId: string): Promise<SessionSnapshot[]>;
-  getLatestSessionSnapshot(sessionId: string): Promise<SessionSnapshot | undefined>;
-  deleteSessionSnapshot(id: string): Promise<boolean>;
+  // PHASE 4: Session snapshot methods removed (unused dead code)
 
   // Job archive methods
   createJobArchive(archive: InsertJobArchive): Promise<JobArchive>;
@@ -1495,40 +1490,7 @@ export class DatabaseStorage implements IStorage {
     console.log(`Migration completed: Created ${boxRequirements.length} box requirements and ${workerAssignments.length} worker assignments`);
   }
 
-  // Session snapshot methods
-  async createSessionSnapshot(snapshot: InsertSessionSnapshot): Promise<SessionSnapshot> {
-    const [result] = await this.db
-      .insert(sessionSnapshots)
-      .values(snapshot)
-      .returning();
-    return result;
-  }
-
-  async getSessionSnapshots(sessionId: string): Promise<SessionSnapshot[]> {
-    return await this.db
-      .select()
-      .from(sessionSnapshots)
-      .where(eq(sessionSnapshots.sessionId, sessionId))
-      .orderBy(sessionSnapshots.createdAt);
-  }
-
-  async getLatestSessionSnapshot(sessionId: string): Promise<SessionSnapshot | undefined> {
-    const [result] = await this.db
-      .select()
-      .from(sessionSnapshots)
-      .where(eq(sessionSnapshots.sessionId, sessionId))
-      .orderBy(sql`created_at DESC`)
-      .limit(1);
-    return result || undefined;
-  }
-
-  async deleteSessionSnapshot(id: string): Promise<boolean> {
-    const result = await this.db
-      .delete(sessionSnapshots)
-      .where(eq(sessionSnapshots.id, id))
-      .returning();
-    return result.length > 0;
-  }
+  // PHASE 4: Session snapshot methods removed (unused dead code)
 
   // Job archive methods
   async createJobArchive(archive: InsertJobArchive): Promise<JobArchive> {
@@ -1572,8 +1534,7 @@ export class DatabaseStorage implements IStorage {
       // 1. Delete scan events first (references scan sessions)
       await this.db.delete(scanEvents);
 
-      // 2. Delete session snapshots (references scan sessions)
-      await this.db.delete(sessionSnapshots);
+      // PHASE 4: session snapshots deletion removed (table no longer exists)
 
       // 3. Delete scan sessions (references jobs and users)
       await this.db.delete(scanSessions);

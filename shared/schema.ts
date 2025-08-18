@@ -91,9 +91,8 @@ export const scanEvents = pgTable("scan_events", {
   scanTime: timestamp("scan_time").default(sql`now()`),
   timeSincePrevious: integer("time_since_previous"), // milliseconds
   
-  // Worker assignment tracking (UPDATED)
-  workerAssignmentType: text("worker_assignment_type"), // 'ascending', 'descending', 'middle_up', 'middle_down'
-  workerColor: text("worker_color"), // NEW: Track worker color for this scan
+  // Worker assignment tracking (PHASE 4: Cleaned up unused fields)
+  workerColor: text("worker_color"), // Track worker color for this scan
 });
 
 export const jobTypes = pgTable("job_types", {
@@ -114,13 +113,7 @@ export const workerBoxAssignments = pgTable("worker_box_assignments", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
-export const sessionSnapshots = pgTable("session_snapshots", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  sessionId: varchar("session_id").notNull().references(() => scanSessions.id, { onDelete: 'cascade' }),
-  snapshotData: jsonb("snapshot_data").notNull(),
-  snapshotType: text("snapshot_type").notNull(), // 'auto', 'manual', 'pre_undo'
-  createdAt: timestamp("created_at").default(sql`now()`),
-});
+// PHASE 4: Removed sessionSnapshots table (unused dead code)
 
 export const jobArchives = pgTable("job_archives", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -215,12 +208,7 @@ export const workerBoxAssignmentsRelations = relations(workerBoxAssignments, ({ 
   }),
 }));
 
-export const sessionSnapshotsRelations = relations(sessionSnapshots, ({ one }) => ({
-  session: one(scanSessions, {
-    fields: [sessionSnapshots.sessionId],
-    references: [scanSessions.id],
-  }),
-}));
+// PHASE 4: Removed sessionSnapshotsRelations (table removed)
 
 export const jobArchivesRelations = relations(jobArchives, ({ one }) => ({
   archivedBy: one(users, {
@@ -288,7 +276,7 @@ export const scanSessionsRelations = relations(scanSessions, ({ one, many }) => 
     references: [users.id],
   }),
   scanEvents: many(scanEvents),
-  snapshots: many(sessionSnapshots),
+  // PHASE 4: snapshots: many(sessionSnapshots) removed
 }));
 
 export const scanEventsRelations = relations(scanEvents, ({ one }) => ({
@@ -363,10 +351,7 @@ export const insertWorkerBoxAssignmentSchema = createInsertSchema(workerBoxAssig
   createdAt: true,
 });
 
-export const insertSessionSnapshotSchema = createInsertSchema(sessionSnapshots).omit({
-  id: true,
-  createdAt: true,
-});
+// PHASE 4: Removed insertSessionSnapshotSchema (table removed)
 
 export const insertJobArchiveSchema = createInsertSchema(jobArchives).omit({
   id: true,
@@ -477,8 +462,7 @@ export type JobType = typeof jobTypes.$inferSelect;
 export type InsertJobType = z.infer<typeof insertJobTypeSchema>;
 export type WorkerBoxAssignment = typeof workerBoxAssignments.$inferSelect;
 export type InsertWorkerBoxAssignment = z.infer<typeof insertWorkerBoxAssignmentSchema>;
-export type SessionSnapshot = typeof sessionSnapshots.$inferSelect;
-export type InsertSessionSnapshot = z.infer<typeof insertSessionSnapshotSchema>;
+// PHASE 4: Removed SessionSnapshot types (table removed)
 export type JobArchive = typeof jobArchives.$inferSelect;
 export type InsertJobArchive = z.infer<typeof insertJobArchiveSchema>;
 export type BoxRequirement = typeof boxRequirements.$inferSelect;
