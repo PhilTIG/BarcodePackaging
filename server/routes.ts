@@ -949,6 +949,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Job-specific worker performance endpoint
+  app.get('/api/jobs/:jobId/worker-performance/:userId', requireAuth, async (req, res) => {
+    try {
+      const { jobId, userId } = req.params;
+      const performance = await storage.getJobWorkerPerformance(jobId, userId);
+      res.json({ performance });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch job worker performance' });
+    }
+  });
+
   app.get('/api/jobs/:id/progress', requireAuth, async (req, res) => {
     try {
       const progressData = await storage.getJobProgress(req.params.id);

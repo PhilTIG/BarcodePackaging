@@ -71,6 +71,13 @@ export default function WorkerScanner() {
     enabled: !!user,
   });
 
+  // Fetch job-specific worker performance
+  const { data: jobPerformanceData } = useQuery({
+    queryKey: ["/api/jobs", jobId, "worker-performance", user?.id],
+    enabled: !!jobId && !!user?.id,
+    refetchInterval: 5000, // Update every 5 seconds for real-time updates
+  });
+
   // Connect to WebSocket
   const { sendMessage, isConnected } = useWebSocket(jobId);
 
@@ -179,13 +186,8 @@ export default function WorkerScanner() {
         sessionId: activeSession?.id || '',
       });
 
-      // Update stats for successful scans only
-      setScanStats(prev => ({
-        ...prev,
-        totalScans: prev.totalScans + 1,
-        scansPerHour: calculateScansPerHour(prev.totalScans + 1, activeSession?.startTime?.toString() || Date.now().toString()),
-        score: calculateScore(prev.totalScans + 1, Date.now() - new Date(activeSession?.startTime || "").getTime()),
-      }));
+      // Job performance will be updated via the query refetch
+      // Local stats are no longer needed as we use real job performance data
 
       // Box switching will be handled after data invalidation with delay
 
@@ -214,8 +216,9 @@ export default function WorkerScanner() {
         barcodeInputRef.current.focus();
       }
 
-      // Invalidate job data to get updated progress and then switch boxes after a small delay
+      // Invalidate job data and performance to get updated progress and then switch boxes after a small delay
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "worker-performance", user?.id] });
       
       // Delay box switching to ensure fresh data is loaded for mobile mode
       if (preferences.singleBoxMode && data.scanEvent?.customerName) {
@@ -255,12 +258,8 @@ export default function WorkerScanner() {
         description: "Scan history updated",
       });
 
-      // Update stats
-      setScanStats(prev => ({
-        ...prev,
-        totalScans: Math.max(0, prev.totalScans - data.undoneEvents.length),
-      }));
-
+      // Invalidate job performance query to get updated stats
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "worker-performance", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
     },
   });
@@ -390,14 +389,14 @@ export default function WorkerScanner() {
 
   const getCurrentCustomer = (): string => {
     // Don't show customer until scanning starts
-    if (!preferences.singleBoxMode || scanStats.totalScans === 0) return "Ready to Scan";
+    if (!preferences.singleBoxMode || (jobPerformanceData?.performance?.totalScans || 0) === 0) return "Ready to Scan";
     const customers = getUniqueCustomers();
     return (customers[currentBoxIndex] as string) || (customers[0] as string) || "Ready to Scan";
   };
 
   const getCurrentBoxProgress = () => {
     // Don't show progress until scanning starts
-    if (scanStats.totalScans === 0) {
+    if ((jobPerformanceData?.performance?.totalScans || 0) === 0) {
       return { completed: 0, total: 0 };
     }
     
@@ -640,12 +639,17 @@ export default function WorkerScanner() {
         totalBoxes={getTotalBoxes()}
         completedBoxes={getCompletedBoxes()}
         currentBoxProgress={getCurrentBoxProgress()}
-        scanStats={scanStats}
+        scanStats={{
+          totalScans: jobPerformanceData?.performance?.totalScans || 0,
+          scansPerHour: jobPerformanceData?.performance?.scansPerHour || 0,
+          accuracy: jobPerformanceData?.performance?.accuracy || 100,
+          score: jobPerformanceData?.performance?.score || 0,
+        }}
         lastScanEvent={lastScanEvent}
         onScan={handleBarcodeSubmit}
         onUndo={() => undoMutation.mutate(1)}
         onSwitchSession={() => setLocation('/scanner')}
-        isUndoAvailable={scanStats.totalScans > 0}
+        isUndoAvailable={(jobPerformanceData?.performance?.totalScans || 0) > 0}
         isConnected={isConnected}
         scanError={scanError}
         scanResult={scanResult}
@@ -742,34 +746,34 @@ export default function WorkerScanner() {
 
         {/* Top Three Panels - Responsive Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Session Performance Panel */}
+          {/* Job Performance Panel */}
           <Card data-testid="performance-dashboard" className="order-1 lg:order-1">
             <CardHeader>
-              <CardTitle>Session Performance</CardTitle>
+              <CardTitle>Job Performance</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <div className="text-xl font-bold text-primary-600" data-testid="stat-items-scanned">
-                    {scanStats.totalScans}
+                    {jobPerformanceData?.performance?.totalScans || 0}
                   </div>
                   <p className="text-xs text-gray-600">Items Scanned</p>
                 </div>
                 <div className="text-center">
                   <div className="text-xl font-bold text-primary-600" data-testid="stat-scans-per-hour">
-                    {scanStats.scansPerHour}
+                    {jobPerformanceData?.performance?.scansPerHour || 0}
                   </div>
                   <p className="text-xs text-gray-600">Scans/Hour</p>
                 </div>
                 <div className="text-center">
                   <div className="text-xl font-bold text-success-600" data-testid="stat-accuracy">
-                    {scanStats.accuracy}%
+                    {jobPerformanceData?.performance?.accuracy || 100}%
                   </div>
                   <p className="text-xs text-gray-600">Accuracy</p>
                 </div>
                 <div className="text-center">
                   <div className="text-xl font-bold text-primary-600" data-testid="stat-score">
-                    {scanStats.score.toFixed(1)}
+                    {jobPerformanceData?.performance?.score?.toFixed(1) || '0.0'}
                   </div>
                   <p className="text-xs text-gray-600">Score (1-10)</p>
                 </div>

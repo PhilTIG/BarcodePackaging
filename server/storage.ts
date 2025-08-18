@@ -925,6 +925,117 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  async getJobWorkerPerformance(jobId: string, userId: string): Promise<any> {
+    // Get all scan events for this worker on this job
+    const allEvents = await this.db
+      .select()
+      .from(scanEvents)
+      .innerJoin(scanSessions, eq(scanEvents.sessionId, scanSessions.id))
+      .where(
+        and(
+          eq(scanSessions.jobId, jobId),
+          eq(scanSessions.userId, userId)
+        )
+      )
+      .orderBy(scanEvents.scanTime);
+
+    if (allEvents.length === 0) {
+      return {
+        totalScans: 0,
+        scansPerHour: 0,
+        accuracy: 100,
+        score: 0,
+        activeScanningTime: 0,
+        errorCount: 0,
+        undoCount: 0
+      };
+    }
+
+    const successfulScans = allEvents.filter(e => e.scan_events.eventType === 'scan');
+    const errorEvents = allEvents.filter(e => e.scan_events.eventType === 'error');
+    const undoEvents = allEvents.filter(e => e.scan_events.eventType === 'undo');
+
+    // Calculate active scanning time (excluding breaks > 30 seconds)
+    let activeScanningTime = 0;
+    let lastScanTime = new Date(allEvents[0].scan_events.scanTime).getTime();
+    
+    for (let i = 1; i < allEvents.length; i++) {
+      const currentScanTime = new Date(allEvents[i].scan_events.scanTime).getTime();
+      const timeDiff = currentScanTime - lastScanTime;
+      
+      // Only count time gaps <= 30 seconds as active scanning
+      if (timeDiff <= 30000) {
+        activeScanningTime += timeDiff;
+      }
+      lastScanTime = currentScanTime;
+    }
+
+    // Convert to hours for scans per hour calculation
+    const activeScanningHours = activeScanningTime / (1000 * 60 * 60);
+    const scansPerHour = activeScanningHours > 0 ? Math.round(successfulScans.length / activeScanningHours) : 0;
+
+    // Calculate accuracy: successful scans / total scan attempts
+    const totalAttempts = successfulScans.length + errorEvents.length;
+    const accuracy = totalAttempts > 0 ? Math.round((successfulScans.length / totalAttempts) * 100) : 100;
+
+    // Calculate score based on speed + accuracy
+    let speedScore = 0;
+    if (scansPerHour >= 360) speedScore = 10;
+    else if (scansPerHour >= 180) speedScore = 8 + (scansPerHour - 180) / 180 * 2;
+    else if (scansPerHour >= 71) speedScore = 6 + (scansPerHour - 71) / 109 * 2;
+    else if (scansPerHour >= 36) speedScore = 4 + (scansPerHour - 36) / 35 * 2;
+    else if (scansPerHour >= 18) speedScore = 2 + (scansPerHour - 18) / 18 * 2;
+    else speedScore = 1;
+
+    // Combine speed and accuracy for final score
+    const accuracyMultiplier = accuracy / 100;
+    let score = speedScore * accuracyMultiplier;
+    
+    // Apply penalties for undos
+    score = Math.max(1, score - (undoEvents.length * 0.05));
+    score = Math.min(10, Math.round(score * 10) / 10);
+
+    return {
+      totalScans: successfulScans.length,
+      scansPerHour,
+      accuracy,
+      score,
+      activeScanningTime: Math.round(activeScanningTime / 1000), // Convert to seconds
+      errorCount: errorEvents.length,
+      undoCount: undoEvents.length
+    };
+  }
+
+    // Calculate score based on industry standards
+    let score = 0;
+    if (scansPerHour >= 360) score = 10;
+    else if (scansPerHour >= 180) score = 8 + (scansPerHour - 180) / 180 * 2;
+    else if (scansPerHour >= 71) score = 6 + (scansPerHour - 71) / 109 * 2;
+    else if (scansPerHour >= 36) score = 4 + (scansPerHour - 36) / 35 * 2;
+    else if (scansPerHour >= 18) score = 2 + (scansPerHour - 18) / 18 * 2;
+    else score = 1;
+
+    // Apply penalties
+    score = Math.max(1, score - (errorEvents.length * 0.1) - (undoEvents.length * 0.05));
+    score = Math.min(10, Math.round(score * 10) / 10);
+
+    const averageTimePerScan = scanEvents.length > 0
+      ? sessionDuration / scanEvents.length / 1000 // Convert to seconds
+      : 0;
+
+    return {
+      sessionId,
+      totalScans: scanEvents.length,
+      scansPerHour,
+      accuracy,
+      score,
+      sessionDuration: Math.round(sessionDuration / 1000), // Convert to seconds
+      averageTimePerScan: Math.round(averageTimePerScan),
+      errorCount: errorEvents.length,
+      undoCount: undoEvents.length,
+    };
+  }
+
   async createJobAssignment(insertAssignment: InsertJobAssignment): Promise<JobAssignment> {
     const [assignment] = await this.db
       .insert(jobAssignments)
