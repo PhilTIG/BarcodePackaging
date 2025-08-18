@@ -7,35 +7,41 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const token = localStorage.getItem("token");
-  const headers: Record<string, string> = {};
-  
-  // Auto-detect FormData and handle appropriately
-  const isFormData = data instanceof FormData;
-  
-  if (data && !isFormData) {
-    headers["Content-Type"] = "application/json";
-  }
-  // For FormData, don't set Content-Type - browser will set it with boundary
-  
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+export async function apiRequest(url: string, method: string = 'GET', data?: any) {
+  const token = localStorage.getItem('auth_token');
+
+  // Log authentication state for debugging
+  if (url.includes('/preferences') && !token) {
+    console.warn('No auth token found for preferences request');
   }
 
-  const res = await fetch(url, {
+  const config: RequestInit = {
     method,
-    headers,
-    body: data ? (isFormData ? data : JSON.stringify(data)) : undefined,
-    credentials: "include",
-  });
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    },
+  };
 
-  await throwIfResNotOk(res);
-  return res;
+  if (data && method !== 'GET') {
+    config.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(url, config);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+
+    // Special handling for authentication errors
+    if (response.status === 401) {
+      console.error('Authentication failed for:', url);
+      // Don't clear token here as it might be used for other requests
+    }
+
+    throw new Error(errorData.message || `HTTP ${response.status}`);
+  }
+
+  return response;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -46,7 +52,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const token = localStorage.getItem("token");
     const headers: Record<string, string> = {};
-    
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
