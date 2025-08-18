@@ -57,7 +57,7 @@ export function BoxDetailsModal({
 
   // Fetch workers to get their names
   const { data: workersResponse } = useQuery({
-    queryKey: ['/api/users/workers'],
+    queryKey: ['/api/users', { role: 'worker' }],
     enabled: isOpen && boxNumber !== null
   });
 

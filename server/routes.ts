@@ -1011,16 +1011,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User management
+  // User management - consolidated endpoint with optional role filtering
   app.get('/api/users', requireAuth, requireRole(['manager']), async (req, res) => {
     try {
-      const users = await storage.getAllUsers();
-      res.json({ users });
+      const { role } = req.query;
+      
+      if (role && typeof role === 'string') {
+        // Filter by role if specified
+        const users = await storage.getUsersByRole(role);
+        // For backward compatibility, return workers array if filtering for workers
+        if (role === 'worker') {
+          res.json({ workers: users });
+        } else {
+          res.json({ users });
+        }
+      } else {
+        // Return all users
+        const users = await storage.getAllUsers();
+        res.json({ users });
+      }
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch users' });
     }
   });
 
+  // DEPRECATED: Use /api/users?role=worker instead
   app.get('/api/users/workers', requireAuth, requireRole(['manager']), async (req, res) => {
     try {
       const workers = await storage.getUsersByRole('worker');
@@ -1032,15 +1047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   
 
-  // User management routes (Manager only)
-  app.get('/api/users', requireAuth, requireRole(['manager']), async (req, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      res.json({ users });
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch users' });
-    }
-  });
+  // REMOVED: Duplicate /api/users endpoint - consolidated with the one above
 
   app.post('/api/users', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
     try {

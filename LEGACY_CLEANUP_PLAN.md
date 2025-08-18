@@ -39,8 +39,10 @@ REDUNDANCY: Every job_assignment creates a worker_box_assignment
 
 ### PHASE 1: API Endpoint Consolidation (COMPLETED)
 ✅ Removed duplicate `/api/jobs/:id/active` endpoint
-🔲 Consolidate `/api/auth/me` endpoints
-🔲 Consider removing `/api/users/workers` in favor of filtered `/api/users?role=worker`
+✅ Consolidated `/api/users` endpoint with role filtering
+✅ Updated all client-side code to use `/api/users?role=worker`
+✅ Marked `/api/users/workers` as deprecated (kept for backward compatibility)
+🔲 Remove duplicate `/api/auth/me` endpoints (if any exist)
 
 ### PHASE 2: Products Table Migration (HIGH PRIORITY)
 **Goal**: Eliminate dual scanning system
