@@ -14,10 +14,11 @@ export interface BoxHighlighting {
 
 interface UseBoxHighlightingOptions {
   autoResetDelay?: number; // Not used anymore - worker colors persist until replaced
+  workerMode?: boolean; // If true, only shows highlighting for the last scanned box
 }
 
 export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
-  // autoResetDelay is no longer used - worker colors persist until replaced
+  const { workerMode = false } = options;
   
   const [highlighting, setHighlighting] = useState<BoxHighlighting>({
     lastScannedBoxNumber: null,
@@ -35,28 +36,46 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
   ) => {
     setHighlighting(prev => {
       const newActiveWorkerBoxes = new Map(prev.activeWorkerBoxes);
-      const newWorkerColors = new Map(prev.workerColors);
-      const newWorkerStaffIds = new Map(prev.workerStaffIds);
+      const newWorkerColors = new Map();
+      const newWorkerStaffIds = new Map();
 
-      // If this worker was previously highlighting another box, remove that highlighting
-      if (workerId) {
-        const previousBox = prev.activeWorkerBoxes.get(workerId);
-        if (previousBox && previousBox !== boxNumber) {
-          // Clear previous box's worker highlighting (keep other data)
-          newWorkerColors.delete(previousBox);
-          newWorkerStaffIds.delete(previousBox);
+      if (workerMode) {
+        // Worker Mode: Only highlight the current scan, clear all others
+        if (workerColor) {
+          newWorkerColors.set(boxNumber, workerColor);
         }
+        if (workerStaffId) {
+          newWorkerStaffIds.set(boxNumber, workerStaffId);
+        }
+      } else {
+        // Manager/Supervisor Mode: Keep all worker highlighting, replace only for same worker
+        newWorkerColors.clear();
+        newWorkerStaffIds.clear();
         
-        // Set current box as this worker's active box
-        newActiveWorkerBoxes.set(workerId, boxNumber);
-      }
+        // Copy existing data
+        prev.workerColors.forEach((color, box) => newWorkerColors.set(box, color));
+        prev.workerStaffIds.forEach((staffId, box) => newWorkerStaffIds.set(box, staffId));
 
-      // Store worker color and staffId for this box (this IS the new "just scanned" state)
-      if (workerColor) {
-        newWorkerColors.set(boxNumber, workerColor);
-      }
-      if (workerStaffId) {
-        newWorkerStaffIds.set(boxNumber, workerStaffId);
+        // If this worker was previously highlighting another box, remove that highlighting
+        if (workerId) {
+          const previousBox = prev.activeWorkerBoxes.get(workerId);
+          if (previousBox && previousBox !== boxNumber) {
+            // Clear previous box's worker highlighting (keep other data)
+            newWorkerColors.delete(previousBox);
+            newWorkerStaffIds.delete(previousBox);
+          }
+          
+          // Set current box as this worker's active box
+          newActiveWorkerBoxes.set(workerId, boxNumber);
+        }
+
+        // Store worker color and staffId for this box
+        if (workerColor) {
+          newWorkerColors.set(boxNumber, workerColor);
+        }
+        if (workerStaffId) {
+          newWorkerStaffIds.set(boxNumber, workerStaffId);
+        }
       }
 
       const newHighlighting = {
@@ -66,7 +85,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
         workerStaffIds: newWorkerStaffIds,
       };
       
-      console.log(`[useBoxHighlighting] Updated worker highlighting for box ${boxNumber}:`, {
+      console.log(`[useBoxHighlighting] Updated highlighting for box ${boxNumber} (${workerMode ? 'Worker' : 'Manager'} mode):`, {
         workerId, 
         workerColor, 
         workerStaffId,
@@ -75,7 +94,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
       
       return newHighlighting;
     });
-  }, []);
+  }, [workerMode]);
 
   // Clear all highlighting
   const clearHighlighting = useCallback(() => {

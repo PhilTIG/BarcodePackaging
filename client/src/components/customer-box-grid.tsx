@@ -40,8 +40,10 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
   // Use actual user preferences for box layout
   const { preferences } = useUserPreferences();
   
-  // Worker box highlighting system - 50% transparent worker colors persist until replaced
-  const { updateBoxHighlighting, clearHighlighting, getBoxHighlight } = useBoxHighlighting();
+  // Worker box highlighting system - behavior depends on supervisorView
+  const { updateBoxHighlighting, clearHighlighting, getBoxHighlight } = useBoxHighlighting({
+    workerMode: !supervisorView // Workers only see their last scan, supervisors see all workers
+  });
 
   // WebSocket handler for supervisor view real-time highlighting
   const handleWebSocketUpdate = (boxNumber: number, workerId: string, workerColor?: string, workerStaffId?: string) => {
