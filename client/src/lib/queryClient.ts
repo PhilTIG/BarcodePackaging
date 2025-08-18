@@ -50,7 +50,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("auth_token");
     const headers: Record<string, string> = {};
 
     if (token) {
@@ -63,6 +63,8 @@ export const getQueryFn: <T>(options: {
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      // Clear invalid token
+      localStorage.removeItem("auth_token");
       return null;
     }
 

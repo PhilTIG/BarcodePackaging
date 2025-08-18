@@ -26,11 +26,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check for existing session on app load
   const { data: userData, isLoading } = useQuery({
     queryKey: ["/api/auth/me"],
-    enabled: !!localStorage.getItem("token") && !isInitialized,
+    enabled: !!localStorage.getItem("auth_token") && !isInitialized,
     retry: false,
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/auth/me");
-      return response.json();
+      try {
+        const response = await apiRequest("/api/auth/me");
+        return response.json();
+      } catch (error) {
+        console.warn('Auth check failed:', error);
+        // Clear invalid token
+        localStorage.removeItem("auth_token");
+        throw error;
+      }
     },
   });
 
@@ -45,13 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (token: string, user: User) => {
     setIsLoggingIn(true);
-    localStorage.setItem("token", token);
+    localStorage.setItem("auth_token", token);
     setUser(user);
     setIsLoggingIn(false);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("auth_token");
     setUser(null);
   };
 
