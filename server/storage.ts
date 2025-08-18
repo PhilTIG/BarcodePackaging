@@ -366,8 +366,7 @@ export class DatabaseStorage implements IStorage {
             scannedQty: 0,
             boxNumber: req.boxNumber,
             isComplete: true,
-            lastWorkerColor: req.lastWorkerColor,
-            lastWorkerStaffId: req.lastWorkerStaffId
+            lastWorkerColor: req.lastWorkerColor
           });
         }
         const product = productMap.get(key);
@@ -376,7 +375,6 @@ export class DatabaseStorage implements IStorage {
         product.isComplete = product.isComplete && req.isComplete;
         // Keep the most recent worker info
         if (req.lastWorkerColor) product.lastWorkerColor = req.lastWorkerColor;
-        if (req.lastWorkerStaffId) product.lastWorkerStaffId = req.lastWorkerStaffId;
       });
       const jobProducts = Array.from(productMap.values());
 
@@ -879,8 +877,8 @@ export class DatabaseStorage implements IStorage {
 
     const events = await this.getScanEventsBySessionId(sessionId);
     const scanEvents = events.filter(e => e.eventType === 'scan');
-    const errorEvents = events.filter(e => e.eventType === 'error');
-    const undoEvents = events.filter(e => e.eventType === 'undo');
+    const errorEvents = events.filter((e: ScanEvent) => e.eventType === 'error');
+    const undoEvents = events.filter((e: ScanEvent) => e.eventType === 'undo');
 
     const sessionDuration = session.endTime 
       ? new Date(session.endTime).getTime() - new Date(session.startTime!).getTime()
@@ -949,9 +947,9 @@ export class DatabaseStorage implements IStorage {
       };
     }
 
-    const successfulScans = allEvents.filter(e => e.scan_events.eventType === 'scan');
-    const errorEvents = allEvents.filter(e => e.scan_events.eventType === 'error');
-    const undoEvents = allEvents.filter(e => e.scan_events.eventType === 'undo');
+    const successfulScans = allEvents.filter((e: any) => e.scan_events.eventType === 'scan');
+    const errorEvents = allEvents.filter((e: any) => e.scan_events.eventType === 'error');
+    const undoEvents = allEvents.filter((e: any) => e.scan_events.eventType === 'undo');
 
     // Calculate active scanning time (excluding breaks > 30 seconds)
     let activeScanningTime = 0;
@@ -1010,20 +1008,9 @@ export class DatabaseStorage implements IStorage {
       .values(insertAssignment)
       .returning();
 
-    // CRITICAL FIX: Automatically create corresponding worker_box_assignment
-    // This is required for the scanning logic to work properly
-    try {
-      await this.createWorkerBoxAssignment({
-        jobId: insertAssignment.jobId,
-        workerId: insertAssignment.userId,
-        assignmentType: insertAssignment.allocationPattern || 'ascending',
-        boxNumber: null, // No specific box assignment, just the pattern
-      });
-      console.log(`[createJobAssignment] Created worker_box_assignment for user ${insertAssignment.userId}`);
-    } catch (error) {
-      console.error(`[createJobAssignment] Failed to create worker_box_assignment:`, error);
-      // Don't throw - the job assignment was successful, this is just supplementary
-    }
+    // PHASE 3 MODERNIZATION: No longer auto-create worker_box_assignments
+    // worker_box_assignments are now created on-demand when workers start scanning
+    console.log(`[createJobAssignment] Job assignment created for user ${insertAssignment.userId} with pattern ${insertAssignment.allocationPattern}`);
 
     return assignment;
   }
@@ -1086,6 +1073,9 @@ export class DatabaseStorage implements IStorage {
         eq(jobAssignments.isActive, true)
       ))
       .returning();
+
+    // PHASE 3: Also clean up any remaining worker_box_assignments (optional cleanup)
+    await this.deleteWorkerBoxAssignments(jobId, userId);
 
     return result.length > 0;
   }
@@ -1332,14 +1322,23 @@ export class DatabaseStorage implements IStorage {
    * Logic: Find lowest numbered box that has this item in requirement list AND still needs more of this item
    */
   async findNextTargetBox(barCode: string, jobId: string, workerId: string): Promise<number | null> {
-    // Get worker assignment pattern
-    const workerAssignments = await this.getWorkerBoxAssignmentsByWorker(workerId, jobId);
-    if (workerAssignments.length === 0) {
-      console.log(`No worker assignments found for worker ${workerId}`);
+    // PHASE 3: Get worker assignment pattern from job_assignments (primary source)
+    const jobAssignment = await this.db
+      .select()
+      .from(jobAssignments)
+      .where(and(
+        eq(jobAssignments.jobId, jobId),
+        eq(jobAssignments.userId, workerId),
+        eq(jobAssignments.isActive, true)
+      ))
+      .limit(1);
+
+    if (jobAssignment.length === 0) {
+      console.log(`No job assignment found for worker ${workerId}`);
       return null;
     }
 
-    const workerPattern = workerAssignments[0].assignmentType as 'ascending' | 'descending' | 'middle_up' | 'middle_down';
+    const workerPattern = jobAssignment[0].allocationPattern as 'ascending' | 'descending' | 'middle_up' | 'middle_down';
 
     // Get all box requirements for this item that still need more items
     const availableBoxes = await this.db

@@ -16,7 +16,7 @@ The client is a React-based Single Page Application (SPA) utilizing TypeScript. 
 
 ### Backend Architecture
 
-The backend is a RESTful API built with Express.js and TypeScript. It includes an API layer for HTTP requests, a WebSocket server for real-time communication, and Multer for CSV file uploads with streaming parsing. Authentication is session-based, using bcrypt for password hashing. A custom storage interface separates business logic from data persistence. Core architectural decisions include a focus on multi-worker allocation algorithms (ascending, descending, middle up/down patterns) and a modernized `box_requirements` system for precise customer-to-box allocation. **Legacy Cleanup Phase 2 Completed (August 2025)**: Eliminated dual scanning approach - system now operates purely on box requirements with deprecated product-based fallbacks removed.
+The backend is a RESTful API built with Express.js and TypeScript. It includes an API layer for HTTP requests, a WebSocket server for real-time communication, and Multer for CSV file uploads with streaming parsing. Authentication is session-based, using bcrypt for password hashing. A custom storage interface separates business logic from data persistence. Core architectural decisions include a focus on multi-worker allocation algorithms (ascending, descending, middle up/down patterns) and a modernized `box_requirements` system for precise customer-to-box allocation. **Legacy Cleanup Phases 2 & 3 Completed (August 2025)**: Eliminated dual scanning approach and worker assignment redundancy. System now operates purely on box requirements with job_assignments as the single source of truth for worker management, removing deprecated fallbacks.
 
 ### Data Storage Solutions
 
