@@ -950,6 +950,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Extra Items endpoints (NEW)
+  app.get('/api/jobs/:id/extra-items', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const extraItems = await storage.getExtraItemsDetails(req.params.id);
+      res.json({ extraItems });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch extra items' });
+    }
+  });
+
   // User preferences routes - EMERGENCY BLOCK to stop infinite requests
   // User Preferences endpoints
   app.get('/api/users/me/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {

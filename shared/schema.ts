@@ -87,12 +87,16 @@ export const scanEvents = pgTable("scan_events", {
   customerName: text("customer_name"),
   boxNumber: integer("box_number"),
   calculatedTargetBox: integer("calculated_target_box"), // NEW: Calculated target box based on worker allocation
-  eventType: text("event_type").notNull(), // 'scan', 'undo', 'error'
+  eventType: text("event_type").notNull(), // 'scan', 'undo', 'error', 'extra_item'
   scanTime: timestamp("scan_time").default(sql`now()`),
   timeSincePrevious: integer("time_since_previous"), // milliseconds
   
   // Worker assignment tracking (PHASE 4: Cleaned up unused fields)
   workerColor: text("worker_color"), // Track worker color for this scan
+  
+  // Extra Items tracking (NEW)
+  isExtraItem: boolean("is_extra_item").default(false), // Mark if this is an extra item not in original job
+  jobId: varchar("job_id").references(() => jobs.id), // Direct reference for extra items tracking
 });
 
 export const jobTypes = pgTable("job_types", {
@@ -330,10 +334,7 @@ export const insertScanSessionSchema = createInsertSchema(scanSessions).omit({
   lastActivityTime: true,
 });
 
-export const insertScanEventSchema = createInsertSchema(scanEvents).omit({
-  id: true,
-  scanTime: true,
-});
+// DUPLICATE REMOVED: insertScanEventSchema moved to proper location below
 
 export const insertJobAssignmentSchema = createInsertSchema(jobAssignments).omit({
   id: true,
@@ -352,6 +353,15 @@ export const insertWorkerBoxAssignmentSchema = createInsertSchema(workerBoxAssig
 });
 
 // PHASE 4: Removed insertSessionSnapshotSchema (table removed)
+
+// Extra Items schemas (NEW)
+export const insertScanEventSchema = createInsertSchema(scanEvents).omit({
+  id: true,
+  scanTime: true,
+  timeSincePrevious: true,
+});
+export type InsertScanEvent = z.infer<typeof insertScanEventSchema>;
+export type ScanEvent = typeof scanEvents.$inferSelect;
 
 export const insertJobArchiveSchema = createInsertSchema(jobArchives).omit({
   id: true,
@@ -450,8 +460,7 @@ export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type ScanSession = typeof scanSessions.$inferSelect;
 export type InsertScanSession = z.infer<typeof insertScanSessionSchema>;
-export type ScanEvent = typeof scanEvents.$inferSelect;
-export type InsertScanEvent = z.infer<typeof insertScanEventSchema>;
+// ScanEvent types already defined above
 export type JobAssignment = typeof jobAssignments.$inferSelect;
 export type InsertJobAssignment = z.infer<typeof insertJobAssignmentSchema>;
 export type RoleDefaults = typeof roleDefaults.$inferSelect;

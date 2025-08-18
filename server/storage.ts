@@ -375,6 +375,9 @@ export class DatabaseStorage implements IStorage {
 
       const sessions = await this.getScanSessionsByJobId(id);
       const assignments = await this.getJobAssignmentsWithUsers(id);
+      
+      // Get extra items count (items scanned that are not in the original job)
+      const extraItemsCount = await this.getExtraItemsCount(id);
 
       if (!job) return null;
 
@@ -414,6 +417,7 @@ export class DatabaseStorage implements IStorage {
           activeSessions: sessions.filter(s => s.status === 'active').length,
           waitingSessions: sessions.filter(s => s.status === 'paused').length,
           totalAssignedWorkers: assignments.length,
+          extraItemsCount, // NEW: Extra items count for modal display
           workers: workersData,
         },
       };
@@ -673,6 +677,7 @@ export class DatabaseStorage implements IStorage {
     const successfulScans = events.filter(e => e.eventType === 'scan').length;
     const errorScans = events.filter(e => e.eventType === 'error').length;
     const undoOperations = events.filter(e => e.eventType === 'undo').length;
+    // Note: Extra items (eventType === 'extra_item') are tracked separately and don't count in worker statistics
 
     await this.db
       .update(scanSessions)
@@ -745,9 +750,29 @@ export class DatabaseStorage implements IStorage {
             customerName = boxReq[0].customerName;
           }
         } else if (insertEvent.eventType === 'scan') {
-          console.log(`No available target box found for barcode ${insertEvent.barCode} - marking as error`);
-          // Convert to error event if no target box found
-          insertEvent.eventType = 'error';
+          // Check if this is a known product anywhere in the job (excess quantity)
+          const existingProduct = await this.db
+            .select()
+            .from(boxRequirements)
+            .where(and(
+              eq(boxRequirements.jobId, session.jobId),
+              eq(boxRequirements.barCode, insertEvent.barCode)
+            ))
+            .limit(1);
+
+          if (existingProduct.length > 0) {
+            // This is a known product but excess quantity - mark as extra item
+            console.log(`Excess quantity scanned for known product ${insertEvent.barCode} - marking as extra item`);
+            insertEvent.eventType = 'extra_item';
+            productName = existingProduct[0].productName;
+            customerName = existingProduct[0].customerName;
+          } else {
+            // Completely unknown barcode - mark as extra item with "Unknown" name
+            console.log(`Unknown barcode ${insertEvent.barCode} scanned - marking as extra item`);
+            insertEvent.eventType = 'extra_item';
+            productName = 'Unknown';
+            customerName = 'Unassigned';
+          }
         }
       } else {
         // No box requirements found - this should not happen for modern jobs
@@ -763,6 +788,8 @@ export class DatabaseStorage implements IStorage {
         calculatedTargetBox: targetBox,
         timeSincePrevious,
         workerColor,
+        isExtraItem: insertEvent.eventType === 'extra_item',
+        jobId: session.jobId, // Add direct job reference for extra items tracking
       };
 
       const [event] = await this.db
@@ -771,6 +798,7 @@ export class DatabaseStorage implements IStorage {
         .returning();
 
       // Update quantities using box requirements system (all jobs should have box requirements)
+      // Only update box requirements for normal scans, not extra items
       if (insertEvent.eventType === 'scan' && targetBox) {
         await this.updateBoxRequirementScannedQty(
           targetBox,
@@ -1488,6 +1516,67 @@ export class DatabaseStorage implements IStorage {
     }
 
     console.log(`Migration completed: Created ${boxRequirements.length} box requirements and ${workerAssignments.length} worker assignments`);
+  }
+
+  // Extra Items tracking methods (NEW)
+  async getExtraItemsCount(jobId: string): Promise<number> {
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(scanEvents)
+      .where(and(
+        eq(scanEvents.jobId, jobId),
+        eq(scanEvents.isExtraItem, true)
+      ));
+    return result[0]?.count || 0;
+  }
+
+  async getExtraItemsDetails(jobId: string): Promise<any[]> {
+    const extraItems = await this.db
+      .select({
+        barCode: scanEvents.barCode,
+        productName: scanEvents.productName,
+        scanTime: scanEvents.scanTime,
+        workerColor: scanEvents.workerColor,
+        sessionId: scanEvents.sessionId,
+      })
+      .from(scanEvents)
+      .where(and(
+        eq(scanEvents.jobId, jobId),
+        eq(scanEvents.isExtraItem, true)
+      ))
+      .orderBy(desc(scanEvents.scanTime));
+
+    // Get worker info and group by barcode
+    const itemsWithWorkers = await Promise.all(
+      extraItems.map(async (item: any) => {
+        const session = await this.getScanSessionById(item.sessionId);
+        const worker = session ? await this.getUserById(session.userId) : null;
+        return {
+          ...item,
+          workerName: worker?.name || 'Unknown',
+          workerStaffId: worker?.staffId || 'Unknown',
+        };
+      })
+    );
+
+    // Group by barcode
+    const groupedItems = itemsWithWorkers.reduce((acc: any[], item: any) => {
+      const existing = acc.find((group: any) => group.barCode === item.barCode);
+      if (existing) {
+        existing.quantity += 1;
+        existing.scans.push(item);
+      } else {
+        acc.push({
+          barCode: item.barCode,
+          productName: item.productName,
+          quantity: 1,
+          scans: [item],
+        });
+      }
+      return acc;
+    }, [] as any[]);
+
+    return groupedItems;
   }
 
   // PHASE 4: Session snapshot methods removed (unused dead code)

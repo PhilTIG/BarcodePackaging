@@ -19,6 +19,7 @@ import { ErrorDialog } from "@/components/ui/error-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2 } from "lucide-react";
+import { ExtraItemsModal } from "@/components/extra-items-modal";
 import { z } from "zod";
 import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPattern } from "../../../lib/worker-allocation";
 
@@ -46,6 +47,8 @@ export default function ManagerDashboard() {
   const [currentError, setCurrentError] = useState<any>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
+  const [extraItemsJobId, setExtraItemsJobId] = useState<string | null>(null);
 
   // Assignment form state
   const [assignForm, setAssignForm] = useState({
@@ -733,6 +736,18 @@ export default function ManagerDashboard() {
                           <Users className="mr-1 h-4 w-4" />
                           Assign Workers
                         </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            setExtraItemsJobId(job.id);
+                            setIsExtraItemsModalOpen(true);
+                          }}
+                          data-testid={`button-extra-items-${job.id}`}
+                        >
+                          <Package className="mr-1 h-4 w-4" />
+                          Extra Items
+                        </Button>
                         <Button variant="outline" size="sm" data-testid={`button-export-${job.id}`}>
                           <Download className="mr-1 h-4 w-4" />
                           Export
@@ -928,6 +943,18 @@ export default function ManagerDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Extra Items Modal */}
+      {extraItemsJobId && (
+        <ExtraItemsModal 
+          isOpen={isExtraItemsModalOpen}
+          onClose={() => {
+            setIsExtraItemsModalOpen(false);
+            setExtraItemsJobId(null);
+          }}
+          jobId={extraItemsJobId}
+        />
+      )}
     </div>
   );
 }
