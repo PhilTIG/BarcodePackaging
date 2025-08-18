@@ -598,26 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/jobs/:id/active', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
-    try {
-      const { isActive } = req.body;
-      const job = await storage.updateJobActiveStatus(req.params.id, isActive);
-      
-      if (!job) {
-        return res.status(404).json({ message: 'Job not found' });
-      }
-
-      // Broadcast job active status change to all connected clients
-      broadcastToJob(job.id, {
-        type: 'job_active_update',
-        data: { jobId: job.id, isActive }
-      });
-
-      res.json({ job });
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to update job active status' });
-    }
-  });
+  // REMOVED: Duplicate endpoint - functionality consolidated into the first /active endpoint above
 
   // Delete all job data (Manager only) - Emergency cleanup endpoint - MOVED UP TO AVOID CONFLICTS
   app.delete('/api/jobs/all-data', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
