@@ -103,6 +103,7 @@ export function BarcodeScanner({ onScan, enabled = true }: BarcodeScannerProps) 
             size="sm"
             onClick={toggleCamera}
             data-testid="button-toggle-camera"
+            className="hidden"
           >
             {isScanning ? (
               <>
@@ -152,7 +153,7 @@ export function BarcodeScanner({ onScan, enabled = true }: BarcodeScannerProps) 
         )}
 
         {!isScanning && hasPermission !== false && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-6 text-gray-500 h-20 flex items-center justify-center">
             Click "Start Camera" to begin scanning barcodes
           </div>
         )}

@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { calculateScore } from "@/lib/scoring";
-import { Settings, LogOut, Package, Undo, RotateCcw, Save, Check } from "lucide-react";
+import { Settings, LogOut, Package, Undo, RotateCcw, Save, Check, Camera } from "lucide-react";
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { BarcodeScanner } from "@/components/barcode-scanner";
 import { MobileScannerInterface } from "@/components/mobile-scanner-interface";
@@ -797,17 +797,32 @@ export default function WorkerScanner() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="relative">
-                    <Input
-                      ref={barcodeInputRef}
-                      placeholder="Scan or type barcode here..."
-                      className="text-lg font-mono h-12"
-                      onKeyDown={handleKeyDown}
-                      data-testid="input-barcode"
-                    />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <Package className="text-gray-400 text-xl" />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        ref={barcodeInputRef}
+                        placeholder="Scan or type barcode here..."
+                        className="text-lg font-mono h-12"
+                        onKeyDown={handleKeyDown}
+                        data-testid="input-barcode"
+                      />
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // This will be handled by the BarcodeScanner component
+                        const scannerElement = document.querySelector('[data-testid="button-toggle-camera"]') as HTMLButtonElement;
+                        if (scannerElement) {
+                          scannerElement.click();
+                        }
+                      }}
+                      className="h-12 px-4"
+                      data-testid="button-start-camera-inline"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Start Camera
+                    </Button>
                   </div>
 
                   {/* Camera scanner only on larger screens */}
