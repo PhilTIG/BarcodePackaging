@@ -869,61 +869,80 @@ export default function WorkerScanner() {
             </CardHeader>
             <CardContent>
               {lastScanEvent ? (
-                <div className="flex flex-col items-center space-y-4">
-                  {/* Full-size Box Tile matching CustomerBoxGrid */}
-                  <div 
-                    className="border rounded-lg p-3 relative bg-green-100 border-green-300 transition-all duration-200 w-full max-w-48"
-                    style={{ minHeight: '150px' }}
-                  >
-                    {/* Green indicator for just-scanned */}
-                    <div className="absolute top-1 left-1">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    </div>
-
-                    {/* Customer name spanning full width with proper spacing */}
-                    <div className="mb-4 pr-2">
-                      <h3 className="font-medium text-sm truncate text-gray-900" title={lastScanEvent.customerName}>
-                        {lastScanEvent.customerName}
-                      </h3>
-                    </div>
-
-                    {/* Box Number Badge - Top Right with spacing from customer name */}
-                    <div className="absolute top-10 right-2">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg bg-primary text-white">
-                        {lastScanEvent.boxNumber}
-                      </div>
-                    </div>
-
-                    {/* Quantity fraction - Left side at same height as box number */}
-                    <div className="absolute top-12 left-2">
-                      <div className="text-lg font-bold text-gray-900">
-                        1/1
-                      </div>
-                    </div>
-
-                    {/* Centered percentage text and progress bar at bottom */}
-                    <div className="absolute bottom-3 left-0 right-0 flex flex-col items-center">
-                      <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium mb-1">
-                        100%
-                      </div>
-                      
-                      {/* Centered progress bar */}
-                      <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-green-500 transition-all duration-300"
-                          style={{ width: '100%' }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Product details below the box tile */}
-                  <div className="text-center">
+                <div className="flex items-center space-x-4">
+                  {/* Text area on the left */}
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-gray-900 text-sm mb-1">{lastScanEvent.productName}</h3>
                     <p className="text-xs text-gray-600 mb-1">Barcode: {lastScanEvent.barCode}</p>
                     <p className="text-xs text-success-600 font-medium">
                       Just scanned into Box {lastScanEvent.boxNumber}
                     </p>
+                  </div>
+                  
+                  {/* Box tile on the right - exact CustomerBoxGrid styling */}
+                  <div className="flex-shrink-0">
+                    {(() => {
+                      // Calculate actual box progress from products data
+                      const boxProducts = products.filter((p: any) => p.boxNumber === lastScanEvent.boxNumber);
+                      const totalQty = boxProducts.reduce((sum: number, p: any) => sum + p.qty, 0);
+                      const scannedQty = boxProducts.reduce((sum: number, p: any) => sum + (p.scannedQty || 0), 0);
+                      const completionPercentage = totalQty > 0 ? Math.round((scannedQty / totalQty) * 100) : 0;
+                      const isComplete = totalQty > 0 && scannedQty === totalQty;
+                      
+                      return (
+                        <div 
+                          className="border rounded-lg p-3 relative bg-green-100 border-green-300 transition-all duration-200 cursor-pointer hover:shadow-lg"
+                          style={{ minHeight: '150px', width: '192px' }}
+                        >
+                          {/* Green indicator for just-scanned */}
+                          <div className="absolute top-1 left-1">
+                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          </div>
+
+                          {/* Customer name spanning full width with proper spacing */}
+                          <div className="mb-4 pr-2">
+                            <h3 className="font-medium text-sm truncate text-gray-900" title={lastScanEvent.customerName}>
+                              {lastScanEvent.customerName}
+                            </h3>
+                          </div>
+
+                          {/* Box Number Badge - Top Right with spacing from customer name */}
+                          <div className="absolute top-10 right-2">
+                            <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg bg-primary text-white">
+                              {lastScanEvent.boxNumber}
+                            </div>
+                          </div>
+
+                          {/* Quantity fraction - Left side at same height as box number */}
+                          <div className="absolute top-12 left-2">
+                            <div className="text-lg font-bold text-gray-900">
+                              {scannedQty}/{totalQty}
+                            </div>
+                          </div>
+
+                          {/* Centered percentage text and progress bar at bottom */}
+                          <div className="absolute bottom-3 left-0 right-0 flex flex-col items-center">
+                            {isComplete ? (
+                              <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium mb-1">
+                                100%
+                              </div>
+                            ) : (
+                              <p className="text-xs text-center mb-1 text-gray-600">
+                                {completionPercentage}%
+                              </p>
+                            )}
+                            
+                            {/* Centered progress bar */}
+                            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-green-500 transition-all duration-300"
+                                style={{ width: `${completionPercentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ) : (
