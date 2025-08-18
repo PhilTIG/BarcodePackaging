@@ -685,7 +685,10 @@ export class DatabaseStorage implements IStorage {
       let productName = null;
       let customerName = null;
       let targetBox = null;
-      let workerColor = insertEvent.workerColor || 'blue'; // Default color
+      
+      // Get worker's assigned color from job assignments
+      const workerAssignment = await this.checkExistingAssignment(session.jobId, session.userId);
+      let workerColor = workerAssignment?.assignedColor || insertEvent.workerColor || 'blue'; // Use assigned color, fallback to provided or default
 
       if (hasBoxRequirements.length > 0) {
         // NEW SYSTEM: Use box requirements logic

@@ -852,13 +852,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Auto-update job status based on scan progress
       await storage.updateJobStatusBasedOnProgress(eventData.jobId);
       
+      // Get worker's assigned color from job assignments
+      const workerAssignment = await storage.checkExistingAssignment(eventData.jobId, req.user!.id);
+      
       // Broadcast scan event to supervisors and managers
       broadcastToJob(eventData.jobId, {
         type: 'scan_event',
         data: {
           ...scanEvent,
           userId: req.user!.id,
-          userName: req.user!.name
+          userName: req.user!.name,
+          workerStaffId: req.user!.staffId,
+          workerColor: workerAssignment?.assignedColor || scanEvent.workerColor || 'blue'
         }
       });
 
