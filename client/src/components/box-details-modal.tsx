@@ -95,10 +95,12 @@ export function BoxDetailsModal({
     acc[key].isComplete = acc[key].isComplete && req.isComplete;
     
     // Track workers who scanned this product
-    if (req.lastWorkerUserId && req.lastWorkerColor) {
+    // Note: lastWorkerUserId only shows the most recent worker for this specific product
+    // But we still want to show their contribution
+    if (req.lastWorkerUserId && req.lastWorkerColor && req.scannedQty > 0) {
       const existing = acc[key].workers.get(req.lastWorkerUserId);
       if (existing) {
-        existing.count += req.scannedQty;
+        existing.count = Math.max(existing.count, req.scannedQty);
       } else {
         acc[key].workers.set(req.lastWorkerUserId, {
           color: req.lastWorkerColor,
@@ -118,20 +120,31 @@ export function BoxDetailsModal({
   }>);
 
   // Get all unique workers who contributed to this box
+  // Aggregate worker contributions across ALL products in this box
   const allWorkers = new Map<string, { color: string; totalContribution: number }>();
-  Object.values(productGroups).forEach(group => {
-    group.workers.forEach((worker, userId) => {
-      const existing = allWorkers.get(userId);
+  
+  // Iterate through each box requirement to find all workers who scanned any product in this box
+  boxRequirements.forEach(req => {
+    if (req.lastWorkerUserId && req.lastWorkerColor && req.scannedQty > 0) {
+      const existing = allWorkers.get(req.lastWorkerUserId);
       if (existing) {
-        existing.totalContribution += worker.count;
+        // Add this worker's contribution to their total
+        existing.totalContribution += req.scannedQty;
       } else {
-        allWorkers.set(userId, {
-          color: worker.color,
-          totalContribution: worker.count
+        // First time seeing this worker in this box
+        allWorkers.set(req.lastWorkerUserId, {
+          color: req.lastWorkerColor,
+          totalContribution: req.scannedQty
         });
       }
-    });
+    }
   });
+
+  console.log(`[BoxModal] Box ${boxNumber} workers:`, Array.from(allWorkers.entries()).map(([id, worker]) => ({
+    workerId: id.slice(-8),
+    color: worker.color, 
+    contribution: worker.totalContribution
+  })));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
