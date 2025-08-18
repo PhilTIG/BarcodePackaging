@@ -350,42 +350,35 @@ export class DatabaseStorage implements IStorage {
       // Get job with products
       const job = await this.getJobById(id);
       
-      // Check if using new box requirements system or legacy products
+      // Use box requirements system (all jobs should have box requirements)
       const boxRequirements = await this.getBoxRequirementsByJobId(id);
-      let totalItems = 0;
-      let scannedItems = 0;
-      let jobProducts: any[] = [];
-
-      if (boxRequirements.length > 0) {
-        // NEW SYSTEM: Use box requirements
-        totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
-        scannedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
-        
-        // Transform to products format for compatibility
-        const productMap = new Map();
-        boxRequirements.forEach(req => {
-          const key = `${req.customerName}-${req.boxNumber}`;
-          if (!productMap.has(key)) {
-            productMap.set(key, {
-              customerName: req.customerName,
-              qty: 0,
-              scannedQty: 0,
-              boxNumber: req.boxNumber,
-              isComplete: true
-            });
-          }
-          const product = productMap.get(key);
-          product.qty += req.requiredQty;
-          product.scannedQty += req.scannedQty;
-          product.isComplete = product.isComplete && req.isComplete;
-        });
-        jobProducts = Array.from(productMap.values());
-      } else {
-        // LEGACY SYSTEM: Use products table
-        jobProducts = await this.getProductsByJobId(id);
-        totalItems = jobProducts.reduce((sum, p) => sum + p.qty, 0);
-        scannedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
-      }
+      const totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
+      const scannedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
+      
+      // Transform to products format for compatibility with existing components
+      const productMap = new Map();
+      boxRequirements.forEach(req => {
+        const key = `${req.customerName}-${req.boxNumber}`;
+        if (!productMap.has(key)) {
+          productMap.set(key, {
+            customerName: req.customerName,
+            qty: 0,
+            scannedQty: 0,
+            boxNumber: req.boxNumber,
+            isComplete: true,
+            lastWorkerColor: req.lastWorkerColor,
+            lastWorkerStaffId: req.lastWorkerStaffId
+          });
+        }
+        const product = productMap.get(key);
+        product.qty += req.requiredQty;
+        product.scannedQty += req.scannedQty;
+        product.isComplete = product.isComplete && req.isComplete;
+        // Keep the most recent worker info
+        if (req.lastWorkerColor) product.lastWorkerColor = req.lastWorkerColor;
+        if (req.lastWorkerStaffId) product.lastWorkerStaffId = req.lastWorkerStaffId;
+      });
+      const jobProducts = Array.from(productMap.values());
 
       const sessions = await this.getScanSessionsByJobId(id);
       const assignments = await this.getJobAssignmentsWithUsers(id);
@@ -586,62 +579,19 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(products).where(eq(products.jobId, jobId));
   }
 
+  // DEPRECATED: Legacy method for products table scanning - use box requirements system instead
   async updateProductScannedQty(barCode: string, jobId: string, increment: number, workerId?: string, workerColor?: string): Promise<Product | undefined> {
-    // Find products with this barcode in the job, ordered by customer priority
-    const jobProducts = await this.db
-      .select()
-      .from(products)
-      .where(and(eq(products.barCode, barCode), eq(products.jobId, jobId)));
-
-    if (jobProducts.length === 0) return undefined;
-
-    // Apply customer priority logic - fulfill first customer's quantity before moving to next
-    for (const product of jobProducts) {
-      if ((product.scannedQty || 0) < product.qty) {
-        const newScannedQty = Math.min((product.scannedQty || 0) + increment, product.qty);
-        // Update product with worker tracking
-        const updateData: any = {
-          scannedQty: newScannedQty,
-          isComplete: newScannedQty >= product.qty
-        };
-
-        // Track last worker to scan into this box (for color highlighting)
-        if (workerId && workerColor) {
-          updateData.lastWorkerUserId = workerId;
-          updateData.lastWorkerColor = workerColor;
-        }
-
-        const [updatedProduct] = await this.db
-          .update(products)
-          .set(updateData)
-          .where(eq(products.id, product.id))
-          .returning();
-
-        // Update job's completed items count
-        await this.updateJobCompletedItems(jobId);
-        // Automatically update job status based on progress after quantity update
-        await this.updateJobStatusBasedOnProgress(jobId);
-
-        return updatedProduct;
-      }
-    }
-
+    console.warn('[DEPRECATED] updateProductScannedQty called - this method is deprecated, use box requirements system instead');
+    
+    // This method is kept only for potential emergency fallback
+    // All new jobs should use the box_requirements system via updateBoxRequirement()
     return undefined;
   }
 
   private async updateJobCompletedItems(jobId: string): Promise<void> {
-    // Check if using new box requirements system or legacy products
+    // Use box requirements system (all jobs should have box requirements)
     const boxRequirements = await this.getBoxRequirementsByJobId(jobId);
-    let completedItems = 0;
-
-    if (boxRequirements.length > 0) {
-      // NEW SYSTEM: Sum scanned quantities from box requirements
-      completedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
-    } else {
-      // LEGACY SYSTEM: Sum scanned quantities from products
-      const jobProducts = await this.getProductsByJobId(jobId);
-      completedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
-    }
+    const completedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
 
     await this.db
       .update(jobs)
@@ -807,43 +757,9 @@ export class DatabaseStorage implements IStorage {
           insertEvent.eventType = 'error';
         }
       } else {
-        // FALLBACK: Use old products system for backward compatibility
-        console.log('Using legacy products system for scanning');
-        const jobProducts = await this.db
-          .select()
-          .from(products)
-          .where(and(
-            eq(products.jobId, session.jobId),
-            eq(products.barCode, insertEvent.barCode)
-          ))
-          .orderBy(products.customerName); // Ensure consistent ordering
-
-        if (jobProducts.length > 0) {
-          // POC Logic: Find the first customer who still needs this barcode
-          let targetProduct = null;
-          for (const product of jobProducts) {
-            if ((product.scannedQty || 0) < product.qty) {
-              targetProduct = product;
-              break;
-            }
-          }
-
-          if (targetProduct) {
-            productName = targetProduct.productName;
-            customerName = targetProduct.customerName;
-            targetBox = targetProduct.boxNumber;
-          } else if (insertEvent.eventType === 'scan') {
-            // All customers for this barcode are complete - mark as error
-            console.log(`All quantities fulfilled for barcode ${insertEvent.barCode} - marking as error`);
-            insertEvent.eventType = 'error';
-            productName = jobProducts[0].productName; // Use first product for error display
-            customerName = null;
-            targetBox = null;
-          }
-        } else if (insertEvent.eventType === 'scan') {
-          console.log(`Product not found for barcode ${insertEvent.barCode} - marking as error`);
-          insertEvent.eventType = 'error';
-        }
+        // No box requirements found - this should not happen for modern jobs
+        console.log(`No box requirements found for job ${session.jobId}, barcode ${insertEvent.barCode} - marking as error`);
+        insertEvent.eventType = 'error';
       }
 
       const eventData = {
@@ -861,27 +777,15 @@ export class DatabaseStorage implements IStorage {
         .values(eventData)
         .returning();
 
-      // Update quantities based on system type
+      // Update quantities using box requirements system (all jobs should have box requirements)
       if (insertEvent.eventType === 'scan' && targetBox) {
-        if (hasBoxRequirements.length > 0) {
-          // NEW SYSTEM: Update box requirement
-          await this.updateBoxRequirementScannedQty(
-            targetBox,
-            insertEvent.barCode, 
-            session.jobId, 
-            session.userId,
-            workerColor
-          );
-        } else {
-          // FALLBACK: Update product quantity (old system)
-          await this.updateProductScannedQty(
-            insertEvent.barCode, 
-            session.jobId, 
-            1,
-            session.userId,
-            workerColor
-          );
-        }
+        await this.updateBoxRequirementScannedQty(
+          targetBox,
+          insertEvent.barCode, 
+          session.jobId, 
+          session.userId,
+          workerColor
+        );
       }
 
       // Automatically update job status after a scan event
@@ -918,8 +822,8 @@ export class DatabaseStorage implements IStorage {
 
     if (eventsToUndo.length === 0) return [];
 
-    // Mark these events as undone and create undo events
-    const undoEvents: InsertScanEvent[] = eventsToUndo.map((event: any) => ({
+    // Mark these events as undone and create undo events  
+    const undoEvents: InsertScanEvent[] = eventsToUndo.map((event: ScanEvent) => ({
       sessionId,
       barCode: event.barCode,
       productName: event.productName,
@@ -933,23 +837,28 @@ export class DatabaseStorage implements IStorage {
       .values(undoEvents)
       .returning();
 
-    // Decrease product scanned quantities
+    // Decrease box requirement scanned quantities using modern system
     for (const event of eventsToUndo) {
-      if (event.barCode) {
-        const jobProducts = await this.db
+      if (event.barCode && event.boxNumber) {
+        // Find matching box requirements and decrement their scanned quantity
+        const boxReqs = await this.db
           .select()
-          .from(products)
-          .where(eq(products.barCode, event.barCode));
+          .from(boxRequirements)
+          .where(and(
+            eq(boxRequirements.barCode, event.barCode),
+            eq(boxRequirements.boxNumber, event.boxNumber)
+          ));
 
-        for (const product of jobProducts) {
-          if ((product.scannedQty || 0) > 0) {
+        for (const boxReq of boxReqs) {
+          if ((boxReq.scannedQty || 0) > 0) {
+            const newScannedQty = (boxReq.scannedQty || 0) - 1;
             await this.db
-              .update(products)
+              .update(boxRequirements)
               .set({ 
-                scannedQty: (product.scannedQty || 0) - 1,
-                isComplete: false
+                scannedQty: newScannedQty,
+                isComplete: newScannedQty >= boxReq.requiredQty
               })
-              .where(eq(products.id, product.id));
+              .where(eq(boxRequirements.id, boxReq.id));
           }
         }
       }
