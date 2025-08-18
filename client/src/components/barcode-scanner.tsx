@@ -93,6 +93,32 @@ export function BarcodeScanner({ onScan, enabled = true }: BarcodeScannerProps) 
     return null;
   }
 
+  // Only show the card when camera is actively scanning
+  if (!isScanning) {
+    return (
+      <div className="hidden">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleCamera}
+          data-testid="button-toggle-camera"
+        >
+          {isScanning ? (
+            <>
+              <CameraOff className="mr-2 h-4 w-4" />
+              Stop Camera
+            </>
+          ) : (
+            <>
+              <Camera className="mr-2 h-4 w-4" />
+              Start Camera
+            </>
+          )}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <Card className="bg-gray-50" data-testid="barcode-scanner">
       <CardContent className="p-4">
@@ -103,19 +129,9 @@ export function BarcodeScanner({ onScan, enabled = true }: BarcodeScannerProps) 
             size="sm"
             onClick={toggleCamera}
             data-testid="button-toggle-camera"
-            className="hidden"
           >
-            {isScanning ? (
-              <>
-                <CameraOff className="mr-2 h-4 w-4" />
-                Stop Camera
-              </>
-            ) : (
-              <>
-                <Camera className="mr-2 h-4 w-4" />
-                Start Camera
-              </>
-            )}
+            <CameraOff className="mr-2 h-4 w-4" />
+            Stop Camera
           </Button>
         </div>
 
@@ -125,38 +141,30 @@ export function BarcodeScanner({ onScan, enabled = true }: BarcodeScannerProps) 
           </div>
         )}
 
-        {isScanning && (
-          <div className="relative">
-            <video
-              ref={videoRef}
-              className="w-full h-48 bg-black rounded-lg object-cover"
-              playsInline
-              muted
-              data-testid="camera-video"
-            />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="border-2 border-white w-48 h-32 rounded-lg opacity-50"></div>
-            </div>
-            
-            {/* Mock scan button for demonstration */}
-            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2">
-              <Button
-                size="sm"
-                onClick={simulateScan}
-                className="bg-white text-gray-900 hover:bg-gray-100"
-                data-testid="button-mock-scan"
-              >
-                Simulate Scan
-              </Button>
-            </div>
+        <div className="relative">
+          <video
+            ref={videoRef}
+            className="w-full h-48 bg-black rounded-lg object-cover"
+            playsInline
+            muted
+            data-testid="camera-video"
+          />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="border-2 border-white w-48 h-32 rounded-lg opacity-50"></div>
           </div>
-        )}
-
-        {!isScanning && hasPermission !== false && (
-          <div className="text-center py-6 text-gray-500 h-20 flex items-center justify-center">
-            Click "Start Camera" to begin scanning barcodes
+          
+          {/* Mock scan button for demonstration */}
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2">
+            <Button
+              size="sm"
+              onClick={simulateScan}
+              className="bg-white text-gray-900 hover:bg-gray-100"
+              data-testid="button-mock-scan"
+            >
+              Simulate Scan
+            </Button>
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

@@ -817,11 +817,10 @@ export default function WorkerScanner() {
                           scannerElement.click();
                         }
                       }}
-                      className="h-12 px-4"
+                      className="h-12 px-3"
                       data-testid="button-start-camera-inline"
                     >
                       <Camera className="h-4 w-4" />
-                      Start Camera
                     </Button>
                   </div>
 
