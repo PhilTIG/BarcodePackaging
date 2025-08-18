@@ -486,7 +486,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Job not found' });
       }
       
-      const products = await storage.getProductsByJobId(job.id);
+      // Check if job uses new box requirements system
+      const boxRequirements = await storage.getBoxRequirementsByJobId(job.id);
+      let products;
+      
+      if (boxRequirements.length > 0) {
+        // Transform box requirements to product format for UI compatibility
+        const productMap = new Map();
+        
+        boxRequirements.forEach(req => {
+          const key = `${req.customerName}-${req.boxNumber}`;
+          if (!productMap.has(key)) {
+            productMap.set(key, {
+              id: `${req.customerName}-${req.boxNumber}`, // Synthetic ID for UI
+              customerName: req.customerName,
+              qty: 0,
+              scannedQty: 0,
+              boxNumber: req.boxNumber,
+              isComplete: true,
+              lastWorkerUserId: req.lastWorkerUserId,
+              lastWorkerColor: req.lastWorkerColor
+            });
+          }
+          
+          const product = productMap.get(key);
+          product.qty += req.requiredQty;
+          product.scannedQty += req.scannedQty;
+          product.isComplete = product.isComplete && req.isComplete;
+          
+          // Update worker info if this requirement has more recent worker data
+          if (req.lastWorkerUserId) {
+            product.lastWorkerUserId = req.lastWorkerUserId;
+            product.lastWorkerColor = req.lastWorkerColor;
+          }
+        });
+        
+        products = Array.from(productMap.values());
+      } else {
+        // Fallback to legacy products table
+        products = await storage.getProductsByJobId(job.id);
+      }
+      
       const sessions = await storage.getScanSessionsByJobId(job.id);
       
       res.json({ job, products, sessions });
