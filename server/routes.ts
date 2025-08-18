@@ -960,19 +960,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User Preferences endpoints with improved error handling
+  // User preferences routes - EMERGENCY BLOCK to stop infinite requests
+  // User Preferences endpoints
   app.get('/api/users/me/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.user?.id) {
-        console.error('No user ID in authenticated request');
         return res.status(401).json({ error: "User not authenticated" });
       }
 
-      console.log(`Fetching preferences for user: ${req.user.id}`);
       const preferences = await storage.getUserPreferences(req.user.id);
       
       if (!preferences) {
-        console.log(`Creating default preferences for new user: ${req.user.id}`);
         // Create default preferences for new user
         const defaultPrefs = {
           userId: req.user.id,
@@ -990,15 +988,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           enableAutoUndo: false,
           undoTimeLimit: 30,
           batchScanMode: false,
-          mobileModePreference: false,
-          singleBoxMode: false,
         };
         
         const newPreferences = await storage.createUserPreferences(defaultPrefs);
         return res.json({ preferences: newPreferences });
       }
       
-      console.log(`Returning existing preferences for user: ${req.user.id}`);
       res.json({ preferences });
     } catch (error) {
       console.error('Error fetching user preferences:', error);
@@ -1009,79 +1004,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/users/me/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.user?.id) {
-        console.error('No user ID in authenticated request for preferences update');
         return res.status(401).json({ error: "User not authenticated" });
       }
 
-      console.log(`[Preferences API] Updating preferences for user: ${req.user.id} (${req.user.name})`);
-      console.log(`[Preferences API] Request body:`, req.body);
-      
       const updates = req.body;
+      const updatedPreferences = await storage.updateUserPreferences(req.user.id, updates);
       
-      // Validate that updates is an object
-      if (!updates || typeof updates !== 'object') {
-        console.error(`[Preferences API] Invalid request body format for user: ${req.user.id}`);
-        return res.status(400).json({ error: "Invalid preferences data format" });
+      if (!updatedPreferences) {
+        return res.status(404).json({ error: "User preferences not found" });
       }
       
-      // First ensure user has preferences record
-      let preferences = await storage.getUserPreferences(req.user.id);
-      if (!preferences) {
-        console.log(`[Preferences API] Creating default preferences record for user: ${req.user.id}`);
-        const defaultPrefs = {
-          userId: req.user.id,
-          maxBoxesPerRow: 12,
-          autoClearInput: true,
-          soundFeedback: true,
-          vibrationFeedback: false,
-          scannerType: "camera" as const,
-          targetScansPerHour: 71,
-          autoSaveSessions: true,
-          showRealtimeStats: true,
-          theme: "blue" as const,
-          compactMode: false,
-          showHelpTips: true,
-          enableAutoUndo: false,
-          undoTimeLimit: 30,
-          batchScanMode: false,
-          mobileModePreference: false,
-          singleBoxMode: false,
-        };
-        
-        try {
-          preferences = await storage.createUserPreferences(defaultPrefs);
-          console.log(`[Preferences API] Created default preferences for user: ${req.user.id}`);
-        } catch (createError) {
-          console.error(`[Preferences API] Failed to create default preferences for user: ${req.user.id}`, createError);
-          return res.status(500).json({ error: "Failed to create user preferences" });
-        }
-      }
-      
-      console.log(`[Preferences API] Existing preferences for user ${req.user.id}:`, preferences);
-      
-      try {
-        const updatedPreferences = await storage.updateUserPreferences(req.user.id, updates);
-        
-        if (!updatedPreferences) {
-          console.error(`[Preferences API] Storage returned null for user: ${req.user.id}`);
-          return res.status(500).json({ error: "Failed to update preferences in database" });
-        }
-        
-        console.log(`[Preferences API] Successfully updated preferences for user: ${req.user.id}`);
-        console.log(`[Preferences API] Updated preferences:`, updatedPreferences);
-        
-        res.json({ preferences: updatedPreferences });
-      } catch (updateError) {
-        console.error(`[Preferences API] Database update error for user: ${req.user.id}`, updateError);
-        return res.status(500).json({ error: "Database error while updating preferences" });
-      }
-      
+      res.json({ preferences: updatedPreferences });
     } catch (error) {
-      console.error('[Preferences API] Unexpected error updating user preferences:', error);
-      res.status(500).json({ 
-        error: "Internal server error",
-        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
-      });
+      console.error('Error updating user preferences:', error);
+      res.status(500).json({ error: "Failed to update preferences" });
     }
   });
 

@@ -19,7 +19,7 @@ interface UseBoxHighlightingOptions {
 
 export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
   const { workerMode = false } = options;
-
+  
   const [highlighting, setHighlighting] = useState<BoxHighlighting>({
     lastScannedBoxNumber: null,
     workerColors: new Map(),
@@ -35,42 +35,64 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
     workerStaffId?: string
   ) => {
     setHighlighting(prev => {
+      const newActiveWorkerBoxes = new Map(prev.activeWorkerBoxes);
+      const newWorkerColors = new Map();
+      const newWorkerStaffIds = new Map();
+
       if (workerMode) {
-        // Worker mode: Only track their own last scanned box
-        const newState = {
-          ...prev,
-          lastScannedBoxNumber: boxNumber
-        };
-
-        console.log(`[useBoxHighlighting] Updated highlighting for box ${boxNumber} (Worker mode):`, {
-          workerColor,
-          workerStaffId,
-          highlighting: newState
-        });
-
-        return newState;
+        // Worker Mode: Only highlight the current scan, clear all others
+        if (workerColor) {
+          newWorkerColors.set(boxNumber, workerColor);
+        }
+        if (workerStaffId) {
+          newWorkerStaffIds.set(boxNumber, workerStaffId);
+        }
       } else {
-        // Supervisor mode: Track all workers' activities
-        const newState = { ...prev };
+        // Manager/Supervisor Mode: Keep all worker highlighting, replace only for same worker
+        newWorkerColors.clear();
+        newWorkerStaffIds.clear();
+        
+        // Copy existing data
+        prev.workerColors.forEach((color, box) => newWorkerColors.set(box, color));
+        prev.workerStaffIds.forEach((staffId, box) => newWorkerStaffIds.set(box, staffId));
 
-        if (workerId && workerColor) {
-          newState.workerColors[boxNumber] = workerColor;
-          newState.activeWorkerBoxes[workerId] = boxNumber;
+        // If this worker was previously highlighting another box, remove that highlighting
+        if (workerId) {
+          const previousBox = prev.activeWorkerBoxes.get(workerId);
+          if (previousBox && previousBox !== boxNumber) {
+            // Clear previous box's worker highlighting (keep other data)
+            newWorkerColors.delete(previousBox);
+            newWorkerStaffIds.delete(previousBox);
+          }
+          
+          // Set current box as this worker's active box
+          newActiveWorkerBoxes.set(workerId, boxNumber);
         }
 
-        if (workerId && workerStaffId) {
-          newState.workerStaffIds[boxNumber] = workerStaffId;
+        // Store worker color and staffId for this box
+        if (workerColor) {
+          newWorkerColors.set(boxNumber, workerColor);
         }
-
-        console.log(`[useBoxHighlighting] Updated highlighting for box ${boxNumber} (Supervisor mode):`, {
-          workerColor,
-          workerStaffId,
-          workerId,
-          highlighting: newState
-        });
-
-        return newState;
+        if (workerStaffId) {
+          newWorkerStaffIds.set(boxNumber, workerStaffId);
+        }
       }
+
+      const newHighlighting = {
+        lastScannedBoxNumber: boxNumber,
+        workerColors: newWorkerColors,
+        activeWorkerBoxes: newActiveWorkerBoxes,
+        workerStaffIds: newWorkerStaffIds,
+      };
+      
+      console.log(`[useBoxHighlighting] Updated highlighting for box ${boxNumber} (${workerMode ? 'Worker' : 'Manager'} mode):`, {
+        workerId, 
+        workerColor, 
+        workerStaffId,
+        highlighting: newHighlighting
+      });
+      
+      return newHighlighting;
     });
   }, [workerMode]);
 
@@ -97,7 +119,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
   } => {
     const workerColor = highlighting.workerColors.get(boxNumber);
     const workerStaffId = highlighting.workerStaffIds.get(boxNumber);
-
+    
     // NEW Priority: Worker Color (50% transparent) > Complete > Default
     // Worker color IS the "just scanned" state now
     if (workerColor) {
@@ -113,7 +135,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
         };
       }
     }
-
+    
     if (isComplete) {
       return {
         backgroundColor: 'bg-red-50',
@@ -122,7 +144,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
         badgeColor: 'bg-red-400',
       };
     }
-
+    
     // Default grey for empty/unassigned
     return {
       backgroundColor: 'bg-gray-50',
@@ -158,6 +180,6 @@ function hexToTailwindColor(hexColor: string): string {
     '#10b981': 'emerald', // Worker 3 - green
     '#f59e0b': 'amber',   // Worker 4 - yellow
   };
-
+  
   return colorMap[hexColor?.toLowerCase()] || 'gray';
 }

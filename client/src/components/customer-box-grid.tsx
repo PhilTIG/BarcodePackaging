@@ -45,29 +45,21 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
     workerMode: !supervisorView // Workers only see their last scan, supervisors see all workers
   });
 
-  // WebSocket handler for both supervisor and worker views
+  // WebSocket handler for supervisor view real-time highlighting
   const handleWebSocketUpdate = (boxNumber: number, workerId: string, workerColor?: string, workerStaffId?: string) => {
     console.log(`[CustomerBoxGrid] WebSocket scan update: Box ${boxNumber}, Worker ${workerId}`, {
       workerColor, 
-      workerStaffId,
-      supervisorView
+      workerStaffId
     });
     
-    if (supervisorView) {
-      // Supervisor view: Track all workers
-      if (workerColor && workerStaffId) {
-        updateBoxHighlighting(boxNumber, workerId, workerColor, workerStaffId);
-      }
-    } else {
-      // Worker view: Only update if this is their scan
-      if (onBoxScanUpdate) {
-        onBoxScanUpdate(boxNumber, workerId, workerColor, workerStaffId);
-      }
+    if (supervisorView && workerColor && workerStaffId) {
+      // Trigger real-time highlighting for supervisors
+      updateBoxHighlighting(boxNumber, workerId, workerColor, workerStaffId);
     }
   };
 
-  // Connect to WebSocket for both supervisor and worker views
-  useWebSocket(jobId, handleWebSocketUpdate);
+  // Connect to WebSocket only for supervisor view
+  useWebSocket(supervisorView ? jobId : undefined, supervisorView ? handleWebSocketUpdate : undefined);
   
   const boxData = useMemo(() => {
     const boxes: { [key: number]: {

@@ -8,48 +8,34 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  endpoint: string,
-  method: string = "GET",
-  body?: any
+  method: string,
+  url: string,
+  data?: unknown | undefined,
 ): Promise<Response> {
-  const token = localStorage.getItem("auth_token");
-
-  console.log(`[API Request] ${method} ${endpoint}`, body ? { body } : '');
-
-  const config: RequestInit = {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  };
-
+  const token = localStorage.getItem("token");
+  const headers: Record<string, string> = {};
+  
+  // Auto-detect FormData and handle appropriately
+  const isFormData = data instanceof FormData;
+  
+  if (data && !isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+  // For FormData, don't set Content-Type - browser will set it with boundary
+  
   if (token) {
-    (config.headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
-  } else {
-    console.warn(`[API Request] No auth token found for ${method} ${endpoint}`);
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
-  if (body && (method === "POST" || method === "PUT" || method === "PATCH")) {
-    config.body = JSON.stringify(body);
-  }
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: data ? (isFormData ? data : JSON.stringify(data)) : undefined,
+    credentials: "include",
+  });
 
-  try {
-    const response = await fetch(endpoint, config);
-
-    console.log(`[API Request] ${method} ${endpoint} -> ${response.status} ${response.statusText}`);
-
-    // For debugging, log response for preferences endpoints
-    if (endpoint.includes('preferences')) {
-      const responseClone = response.clone();
-      const responseText = await responseClone.text();
-      console.log(`[API Request] Preferences response:`, responseText);
-    }
-
-    return response;
-  } catch (error) {
-    console.error(`[API Request] Network error for ${method} ${endpoint}:`, error);
-    throw error;
-  }
+  await throwIfResNotOk(res);
+  return res;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -58,9 +44,9 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const token = localStorage.getItem("auth_token");
+    const token = localStorage.getItem("token");
     const headers: Record<string, string> = {};
-
+    
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -71,8 +57,6 @@ export const getQueryFn: <T>(options: {
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      // Clear invalid token
-      localStorage.removeItem("auth_token");
       return null;
     }
 
