@@ -546,6 +546,18 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div>
+                <h3 className="font-medium text-gray-900">Default Single Box Mode</h3>
+                <p className="text-sm text-gray-600">Start in Single Box mode by default when scanning (can be changed during scanning)</p>
+              </div>
+              <Switch
+                checked={preferences.singleBoxMode}
+                onCheckedChange={(checked) => handleSettingChange("singleBoxMode", checked)}
+                data-testid="switch-default-single-box"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
                 <h3 className="font-medium text-gray-900">Single Box Mode</h3>
                 <p className="text-sm text-gray-600">Focus on one box at a time with full-screen display (mobile only)</p>
               </div>

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Camera, CameraOff, Package, Undo, Settings, RefreshCw, Target, Clock, TrendingUp } from "lucide-react";
+import { Camera, CameraOff, Package, Undo, Settings, RefreshCw, Target, Clock, TrendingUp, LogOut } from "lucide-react";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 interface MobileScannerInterfaceProps {
@@ -39,6 +39,9 @@ interface MobileScannerInterfaceProps {
     productName: string;
     progress: string;
   } | null;
+  runtimeSingleBoxMode?: boolean;
+  onRuntimeToggle?: (enabled: boolean) => void;
+  onLogout?: () => void;
 }
 
 export function MobileScannerInterface({
@@ -56,7 +59,10 @@ export function MobileScannerInterface({
   isUndoAvailable = false,
   isConnected = true,
   scanError = null,
-  scanResult = null
+  scanResult = null,
+  runtimeSingleBoxMode = false,
+  onRuntimeToggle,
+  onLogout
 }: MobileScannerInterfaceProps) {
   const [, setLocation] = useLocation();
   const { preferences, updatePreference } = useUserPreferences();
@@ -79,10 +85,13 @@ export function MobileScannerInterface({
     }
   };
 
-  // Handle single box toggle change
-  const handleSingleBoxToggle = async (enabled: boolean) => {
-    await updatePreference('singleBoxMode', enabled);
-    // This just toggles the mode without redirecting
+  // Handle single box toggle change (runtime only, don't save to preferences)
+  const handleSingleBoxToggle = (enabled: boolean) => {
+    // This will be handled by the parent component's runtime state
+    // Don't save to preferences from here
+    if (onRuntimeToggle) {
+      onRuntimeToggle(enabled);
+    }
   };
 
   return (
@@ -125,7 +134,7 @@ export function MobileScannerInterface({
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-600">Single Box</span>
               <Switch
-                checked={preferences.singleBoxMode}
+                checked={runtimeSingleBoxMode}
                 onCheckedChange={handleSingleBoxToggle}
                 data-testid="single-box-toggle"
               />
@@ -137,6 +146,16 @@ export function MobileScannerInterface({
               data-testid="button-settings"
             >
               <Settings className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (onLogout) onLogout();
+              }}
+              data-testid="button-logout"
+            >
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>

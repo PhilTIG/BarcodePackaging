@@ -46,10 +46,18 @@ export default function WorkerScanner() {
     productName: string;
     progress: string;
   } | null>(null);
+  
+  // Runtime single box mode state (separate from settings preference)
+  const [runtimeSingleBoxMode, setRuntimeSingleBoxMode] = useState(false);
 
-  // Mobile mode detection - now based on single box mode preference or screen size
-  const isMobileMode = preferences.singleBoxMode || (window.innerWidth < 800);
-  const isDesktopAndMobile = preferences.singleBoxMode && window.innerWidth >= 800;
+  // Initialize runtime mode from user's default preference on component mount
+  useEffect(() => {
+    setRuntimeSingleBoxMode(preferences.singleBoxMode);
+  }, [preferences.singleBoxMode]);
+
+  // Mobile mode detection - now based on runtime toggle or screen size
+  const isMobileMode = runtimeSingleBoxMode || (window.innerWidth < 800);
+  const isDesktopAndMobile = runtimeSingleBoxMode && window.innerWidth >= 800;
 
   // Fetch worker's job assignments
   const { data: assignmentsData, isLoading: isAssignmentsLoading, error: assignmentsError } = useQuery({
@@ -221,7 +229,7 @@ export default function WorkerScanner() {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "worker-performance", user?.id] });
       
       // Delay box switching to ensure fresh data is loaded for mobile mode
-      if (preferences.singleBoxMode && data.scanEvent?.customerName) {
+      if (runtimeSingleBoxMode && data.scanEvent?.customerName) {
         setTimeout(() => {
           const customers = getUniqueCustomers();
           const newBoxIndex = customers.indexOf(data.scanEvent.customerName);
@@ -389,7 +397,7 @@ export default function WorkerScanner() {
 
   const getCurrentCustomer = (): string => {
     // Don't show customer until scanning starts
-    if (!preferences.singleBoxMode || (jobPerformanceData?.performance?.totalScans || 0) === 0) return "Ready to Scan";
+    if (!runtimeSingleBoxMode || (jobPerformanceData?.performance?.totalScans || 0) === 0) return "Ready to Scan";
     const customers = getUniqueCustomers();
     return (customers[currentBoxIndex] as string) || (customers[0] as string) || "Ready to Scan";
   };
@@ -630,7 +638,7 @@ export default function WorkerScanner() {
   const workerAssignment = getWorkerAssignment();
 
   // Mobile interface mode
-  if (isMobileMode && preferences.singleBoxMode) {
+  if (isMobileMode) {
     return (
       <MobileScannerInterface
         currentCustomer={getCurrentCustomer()}
@@ -653,6 +661,12 @@ export default function WorkerScanner() {
         isConnected={isConnected}
         scanError={scanError}
         scanResult={scanResult}
+        runtimeSingleBoxMode={runtimeSingleBoxMode}
+        onRuntimeToggle={setRuntimeSingleBoxMode}
+        onLogout={() => {
+          logout();
+          setLocation("/login");
+        }}
       />
     );
   }
@@ -707,6 +721,22 @@ export default function WorkerScanner() {
                   Switch Job
                 </Button>
               )}
+              
+              {/* Single Box Mode Toggle - Always Visible */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600">Single Box</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={runtimeSingleBoxMode}
+                    onChange={(e) => setRuntimeSingleBoxMode(e.target.checked)}
+                    className="sr-only peer"
+                    data-testid="toggle-single-box-mode"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+              
               <Button
                 variant="ghost"
                 size="sm"
