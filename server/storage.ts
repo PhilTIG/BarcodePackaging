@@ -233,10 +233,21 @@ export class DatabaseStorage implements IStorage {
       const job = await this.getJobById(jobId);
       if (!job) return;
 
-      // Get products to calculate progress
-      const products = await this.getProductsByJobId(jobId);
-      const totalItems = products.reduce((sum, p) => sum + p.qty, 0);
-      const completedItems = products.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+      // Check if using new box requirements system or legacy products
+      const boxRequirements = await this.getBoxRequirementsByJobId(jobId);
+      let totalItems = 0;
+      let completedItems = 0;
+
+      if (boxRequirements.length > 0) {
+        // NEW SYSTEM: Use box requirements
+        totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
+        completedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
+      } else {
+        // LEGACY SYSTEM: Use products table
+        const products = await this.getProductsByJobId(jobId);
+        totalItems = products.reduce((sum, p) => sum + p.qty, 0);
+        completedItems = products.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+      }
 
       let newStatus = job.status;
 
@@ -338,15 +349,48 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get job with products
       const job = await this.getJobById(id);
-      const jobProducts = await this.getProductsByJobId(id);
+      
+      // Check if using new box requirements system or legacy products
+      const boxRequirements = await this.getBoxRequirementsByJobId(id);
+      let totalItems = 0;
+      let scannedItems = 0;
+      let jobProducts: any[] = [];
+
+      if (boxRequirements.length > 0) {
+        // NEW SYSTEM: Use box requirements
+        totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
+        scannedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
+        
+        // Transform to products format for compatibility
+        const productMap = new Map();
+        boxRequirements.forEach(req => {
+          const key = `${req.customerName}-${req.boxNumber}`;
+          if (!productMap.has(key)) {
+            productMap.set(key, {
+              customerName: req.customerName,
+              qty: 0,
+              scannedQty: 0,
+              boxNumber: req.boxNumber,
+              isComplete: true
+            });
+          }
+          const product = productMap.get(key);
+          product.qty += req.requiredQty;
+          product.scannedQty += req.scannedQty;
+          product.isComplete = product.isComplete && req.isComplete;
+        });
+        jobProducts = Array.from(productMap.values());
+      } else {
+        // LEGACY SYSTEM: Use products table
+        jobProducts = await this.getProductsByJobId(id);
+        totalItems = jobProducts.reduce((sum, p) => sum + p.qty, 0);
+        scannedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+      }
+
       const sessions = await this.getScanSessionsByJobId(id);
       const assignments = await this.getJobAssignmentsWithUsers(id);
 
       if (!job) return null;
-
-      // Calculate overall progress
-      const totalItems = jobProducts.reduce((sum, p) => sum + p.qty, 0);
-      const scannedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
 
       // Calculate Box Complete logic using helper method
       const boxCompletion = this.calculateBoxCompletion(jobProducts);
@@ -399,11 +443,46 @@ export class DatabaseStorage implements IStorage {
 
       const jobsWithStats = await Promise.all(allJobs.map(async (job: any) => {
         try {
-          const products = await this.getProductsByJobId(job.id);
+          // Check if using new box requirements system or legacy products
+          const boxRequirements = await this.getBoxRequirementsByJobId(job.id);
           const assignments = await this.getJobAssignmentsWithUsers(job.id);
+          
+          let totalProducts = 0;
+          let completedItems = 0;
+          let products: any[] = [];
+          let totalItems = 0;
 
-          const totalProducts = products.length;
-          const completedItems = products.filter((p: any) => (p.scannedQty || 0) >= p.qty).length;
+          if (boxRequirements.length > 0) {
+            // NEW SYSTEM: Use box requirements
+            totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
+            completedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
+            
+            // Transform to products format for box completion calculation
+            const productMap = new Map();
+            boxRequirements.forEach(req => {
+              const key = `${req.customerName}-${req.boxNumber}`;
+              if (!productMap.has(key)) {
+                productMap.set(key, {
+                  customerName: req.customerName,
+                  qty: 0,
+                  scannedQty: 0,
+                  boxNumber: req.boxNumber,
+                  isComplete: true
+                });
+              }
+              const product = productMap.get(key);
+              product.qty += req.requiredQty;
+              product.scannedQty += req.scannedQty;
+              product.isComplete = product.isComplete && req.isComplete;
+            });
+            products = Array.from(productMap.values());
+            totalProducts = totalItems; // Use total items, not product count
+          } else {
+            // LEGACY SYSTEM: Use products table
+            products = await this.getProductsByJobId(job.id);
+            totalProducts = products.reduce((sum, p) => sum + p.qty, 0); // Use total quantities, not product count
+            completedItems = products.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+          }
 
           // Calculate box completion using the same logic as getJobProgress
           const boxCompletion = this.calculateBoxCompletion(products);
@@ -551,8 +630,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async updateJobCompletedItems(jobId: string): Promise<void> {
-    const jobProducts = await this.getProductsByJobId(jobId);
-    const completedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+    // Check if using new box requirements system or legacy products
+    const boxRequirements = await this.getBoxRequirementsByJobId(jobId);
+    let completedItems = 0;
+
+    if (boxRequirements.length > 0) {
+      // NEW SYSTEM: Sum scanned quantities from box requirements
+      completedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
+    } else {
+      // LEGACY SYSTEM: Sum scanned quantities from products
+      const jobProducts = await this.getProductsByJobId(jobId);
+      completedItems = jobProducts.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+    }
 
     await this.db
       .update(jobs)
