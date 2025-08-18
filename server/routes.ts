@@ -74,10 +74,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (data.type === 'scan_event') {
           console.log(`[WebSocket Server] Broadcasting scan event for job ${data.jobId}`);
-          // Broadcast scan event to all clients monitoring this job
+          // Broadcast scan event to all clients monitoring this job with enhanced worker data
           broadcastToJob(data.jobId!, {
-            type: 'scan_update',
-            data: data.data
+            type: 'scan_event',
+            data: {
+              ...data.data,
+              // Ensure worker information is available for manager/supervisor highlighting
+              userId: data.data.userId,
+              workerId: data.data.userId, // Alias for consistency
+              workerColor: data.data.workerColor,
+              workerStaffId: data.data.workerStaffId,
+              boxNumber: data.data.boxNumber
+            }
           });
         }
       } catch (error) {
@@ -493,10 +501,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (boxRequirements.length > 0) {
         // Transform box requirements to product format for UI compatibility
         const productMap = new Map();
+        const workerIds = new Set<string>();
+        
+        // Collect all worker IDs for batch lookup
+        boxRequirements.forEach(req => {
+          if (req.lastWorkerUserId) {
+            workerIds.add(req.lastWorkerUserId);
+          }
+        });
+        
+        // Get worker info (staffId) for all workers
+        const workers = new Map();
+        if (workerIds.size > 0) {
+          const workerList = await Promise.all(
+            Array.from(workerIds).map(id => storage.getUserById(id))
+          );
+          workerList.forEach(worker => {
+            if (worker) {
+              workers.set(worker.id, worker);
+            }
+          });
+        }
         
         boxRequirements.forEach(req => {
           const key = `${req.customerName}-${req.boxNumber}`;
           if (!productMap.has(key)) {
+            const worker = req.lastWorkerUserId ? workers.get(req.lastWorkerUserId) : null;
             productMap.set(key, {
               id: `${req.customerName}-${req.boxNumber}`, // Synthetic ID for UI
               customerName: req.customerName,
@@ -505,7 +535,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               boxNumber: req.boxNumber,
               isComplete: true,
               lastWorkerUserId: req.lastWorkerUserId,
-              lastWorkerColor: req.lastWorkerColor
+              lastWorkerColor: req.lastWorkerColor,
+              lastWorkerStaffId: worker?.staffId // Add staffId for UI display
             });
           }
           
@@ -516,8 +547,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Update worker info if this requirement has more recent worker data
           if (req.lastWorkerUserId) {
+            const worker = workers.get(req.lastWorkerUserId);
             product.lastWorkerUserId = req.lastWorkerUserId;
             product.lastWorkerColor = req.lastWorkerColor;
+            product.lastWorkerStaffId = worker?.staffId;
           }
         });
         

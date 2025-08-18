@@ -35,8 +35,13 @@ export default function SupervisorView() {
     refetchInterval: 5000, // Refresh every 5 seconds
   });
 
-  // Connect to WebSocket for real-time updates
-  const { isConnected } = useWebSocket(jobId);
+  // Connect to WebSocket for real-time updates with worker box highlighting
+  const { isConnected } = useWebSocket(jobId, (boxNumber, workerId, workerColor, workerStaffId) => {
+    console.log(`[SupervisorView] Worker box highlighting update: Box ${boxNumber}, Worker ${workerId}`, {
+      workerColor,
+      workerStaffId
+    });
+  });
 
   // Redirect if not authenticated or not a supervisor/manager
   useEffect(() => {

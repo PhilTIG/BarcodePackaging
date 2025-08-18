@@ -9,7 +9,7 @@ interface WSMessage {
   sessionId?: string;
 }
 
-export function useWebSocket(jobId?: string) {
+export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: number, workerId: string, workerColor?: string, workerStaffId?: string) => void) {
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -153,6 +153,16 @@ export function useWebSocket(jobId?: string) {
         // Real-time scan event received
         console.log("[WebSocket] Scan event received:", message.data);
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+        
+        // Trigger box highlighting update for worker box highlighting
+        if (onWorkerBoxUpdate && message.data.boxNumber && message.data.userId) {
+          onWorkerBoxUpdate(
+            Number(message.data.boxNumber),
+            String(message.data.userId),
+            message.data.workerColor as string,
+            message.data.workerStaffId as string
+          );
+        }
         break;
       
       case "undo_event":
@@ -171,7 +181,7 @@ export function useWebSocket(jobId?: string) {
       default:
         console.log("[WebSocket] Unknown message type received:", message.type, message.data);
     }
-  }, [jobId]);
+  }, [jobId, onWorkerBoxUpdate]);
 
   const sendMessage = (message: WSMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

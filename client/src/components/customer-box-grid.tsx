@@ -15,6 +15,7 @@ interface Product {
   isComplete: boolean;
   lastWorkerUserId?: string;
   lastWorkerColor?: string;
+  lastWorkerStaffId?: string;
 }
 
 interface CustomerBoxGridProps {
@@ -52,6 +53,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
       isComplete: boolean;
       assignedWorker?: string;
       lastWorkerColor?: string;
+      lastWorkerStaffId?: string;
     }} = {};
 
     products.forEach(product => {
@@ -73,9 +75,12 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
       boxes[product.boxNumber].isComplete = boxes[product.boxNumber].totalQty > 0 && 
                                            boxes[product.boxNumber].scannedQty === boxes[product.boxNumber].totalQty;
       
-      // Update worker color tracking
+      // Update worker color and staffId tracking
       if (product.lastWorkerColor) {
         boxes[product.boxNumber].lastWorkerColor = product.lastWorkerColor;
+      }
+      if (product.lastWorkerStaffId) {
+        boxes[product.boxNumber].lastWorkerStaffId = product.lastWorkerStaffId;
       }
     });
 
@@ -127,7 +132,8 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
       updateBoxHighlighting(
         lastScannedBoxNumber,
         scannedBox?.assignedWorker,
-        scannedBox?.lastWorkerColor
+        scannedBox?.lastWorkerColor,
+        scannedBox?.lastWorkerStaffId
       );
     }
   }, [lastScannedBoxNumber, boxData, updateBoxHighlighting]);
@@ -141,11 +147,17 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
         const isLastScanned = lastScannedBoxNumber === box.boxNumber;
         const highlighting = getBoxHighlight(box.boxNumber, box.isComplete);
         
+        // Handle custom background colors (rgba) vs Tailwind classes
+        const customStyle = highlighting.backgroundColor.startsWith('rgba') ? {
+          backgroundColor: highlighting.backgroundColor,
+          borderColor: highlighting.borderColor,
+        } : {};
+        
         const boxClasses = [
           "border rounded-lg p-3 relative transition-all duration-200 cursor-pointer hover:shadow-lg",
-          highlighting.backgroundColor,
-          highlighting.borderColor
-        ].join(" ");
+          !highlighting.backgroundColor.startsWith('rgba') ? highlighting.backgroundColor : '',
+          !highlighting.borderColor.startsWith('rgba') ? highlighting.borderColor : '',
+        ].filter(Boolean).join(" ");
 
         const handleBoxClick = () => {
           if (supervisorView) {
@@ -164,7 +176,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
           <div
             key={box.boxNumber}
             className={boxClasses}
-            style={{ minHeight: '150px' }}
+            style={{ minHeight: '150px', ...customStyle }}
             data-testid={`box-${box.boxNumber}`}
             onClick={handleBoxClick}
           >
@@ -211,6 +223,12 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
               <div className={`text-lg font-bold ${highlighting.textColor}`} data-testid={`quantity-${box.boxNumber}`}>
                 {box.scannedQty}/{box.totalQty}
               </div>
+              {/* Worker staffId under quantity if available */}
+              {highlighting.workerStaffId && (
+                <div className={`text-xs font-medium mt-1 ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-700'}`} data-testid={`worker-code-${box.boxNumber}`}>
+                  {highlighting.workerStaffId}
+                </div>
+              )}
             </div>
 
             {/* Centered percentage text and progress bar at bottom */}
