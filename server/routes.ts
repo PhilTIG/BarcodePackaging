@@ -1008,12 +1008,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = req.body;
+      console.log('[API] Updating preferences for user:', req.user.id, 'with data:', updates);
+      
       const updatedPreferences = await storage.updateUserPreferences(req.user.id, updates);
       
       if (!updatedPreferences) {
         return res.status(404).json({ error: "User preferences not found" });
       }
       
+      console.log('[API] Updated preferences result:', updatedPreferences);
       res.json({ preferences: updatedPreferences });
     } catch (error) {
       console.error('Error updating user preferences:', error);

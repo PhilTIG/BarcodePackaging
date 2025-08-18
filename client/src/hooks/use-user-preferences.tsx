@@ -112,9 +112,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     // Update localStorage immediately for responsiveness
     localStorage.setItem('userPreferences', JSON.stringify(newPreferences));
     
-    // Re-enable server sync for theme updates
+    // Send only the changed field to the server
     console.log('Preference update:', key, value);
-    updatePreferencesMutation.mutate(newPreferences);
+    updatePreferencesMutation.mutate({ [key]: value } as Partial<UserPreferences>);
   };
 
   return (

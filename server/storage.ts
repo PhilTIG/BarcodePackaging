@@ -1176,6 +1176,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserPreferences(userId: string, updates: Partial<UserPreferences>): Promise<UserPreferences | undefined> {
+    console.log('[Storage] Updating user preferences for:', userId, 'with:', updates);
+    
     const [result] = await this.db
       .update(userPreferences)
       .set({ 
