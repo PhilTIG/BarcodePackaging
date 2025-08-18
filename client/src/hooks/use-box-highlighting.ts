@@ -118,12 +118,12 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
     }
     
     if (workerColor) {
-      // Convert hex color to CSS with 75% transparency for subtlety
+      // Convert hex color to CSS with 50% transparency for subtlety
       const rgbColor = hexToRgb(workerColor);
       if (rgbColor) {
         return {
-          backgroundColor: `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.75)`, // 75% transparency
-          borderColor: `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.9)`, // 90% for border
+          backgroundColor: `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.5)`, // 50% transparency
+          borderColor: `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.8)`, // 80% for border
           textColor: 'text-gray-800', // Darker text for readability
           badgeColor: workerColor, // Use exact hex for badge
           workerStaffId,

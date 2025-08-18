@@ -30,6 +30,8 @@ The system implements role-based access control using a staff ID and PIN-based l
 
 The application incorporates sophisticated performance tracking, including a scoring algorithm based on scans per hour. Real-time analytics dashboards are updated via WebSockets. Scan sessions are persistent with pause/resume functionality. Job completion is monitored with visual indicators, including precise box completion logic requiring 100% fulfillment of all items for a customer destination.
 
+**Worker Box Highlighting System**: Real-time WebSocket-based box highlighting for managers/supervisors shows which boxes workers are actively scanning. Features include 50% transparent worker color backgrounds, worker staffId display under quantities, and persistent color circles indicating the last worker to scan each box.
+
 ### Mobile and Hardware Support
 
 The design is optimized for warehouse environments, featuring responsive layouts for tablets and mobile devices. It supports both camera-based and hardware HID barcode scanners. The UI is touch-friendly with large targets.
