@@ -761,9 +761,9 @@ export class DatabaseStorage implements IStorage {
             .limit(1);
 
           if (existingProduct.length > 0) {
-            // This is a known product but excess quantity - mark as extra item
-            console.log(`Excess quantity scanned for known product ${insertEvent.barCode} - marking as extra item`);
-            insertEvent.eventType = 'extra_item';
+            // This is a known product but all quantities fulfilled - mark as ERROR (duplicate/consumed)
+            console.log(`Duplicate/consumed barcode ${insertEvent.barCode} scanned - all quantities fulfilled - marking as error`);
+            insertEvent.eventType = 'error';
             productName = existingProduct[0].productName;
             customerName = existingProduct[0].customerName;
           } else {
