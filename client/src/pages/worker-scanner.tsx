@@ -47,9 +47,9 @@ export default function WorkerScanner() {
     progress: string;
   } | null>(null);
 
-  // Mobile mode detection - now based on single box mode preference
-  const isMobileMode = preferences.singleBoxMode || (window.innerWidth <= 768);
-  const isDesktopAndMobile = preferences.singleBoxMode && window.innerWidth > 768;
+  // Mobile mode detection - now based on single box mode preference or screen size
+  const isMobileMode = preferences.singleBoxMode || (window.innerWidth < 800);
+  const isDesktopAndMobile = preferences.singleBoxMode && window.innerWidth >= 800;
 
   // Fetch worker's job assignments
   const { data: assignmentsData, isLoading: isAssignmentsLoading, error: assignmentsError } = useQuery({
@@ -740,118 +740,153 @@ export default function WorkerScanner() {
           </Card>
         )}
 
-        {/* Performance Dashboard */}
-        <Card data-testid="performance-dashboard">
-          <CardHeader>
-            <CardTitle>Session Performance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary-600" data-testid="stat-items-scanned">
-                  {scanStats.totalScans}
+        {/* Top Three Panels - Responsive Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Session Performance Panel */}
+          <Card data-testid="performance-dashboard" className="order-1 lg:order-1">
+            <CardHeader>
+              <CardTitle>Session Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <div className="text-xl font-bold text-primary-600" data-testid="stat-items-scanned">
+                    {scanStats.totalScans}
+                  </div>
+                  <p className="text-xs text-gray-600">Items Scanned</p>
                 </div>
-                <p className="text-sm text-gray-600">Items Scanned</p>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary-600" data-testid="stat-scans-per-hour">
-                  {scanStats.scansPerHour}
+                <div className="text-center">
+                  <div className="text-xl font-bold text-primary-600" data-testid="stat-scans-per-hour">
+                    {scanStats.scansPerHour}
+                  </div>
+                  <p className="text-xs text-gray-600">Scans/Hour</p>
                 </div>
-                <p className="text-sm text-gray-600">Scans/Hour</p>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-success-600" data-testid="stat-accuracy">
-                  {scanStats.accuracy}%
+                <div className="text-center">
+                  <div className="text-xl font-bold text-success-600" data-testid="stat-accuracy">
+                    {scanStats.accuracy}%
+                  </div>
+                  <p className="text-xs text-gray-600">Accuracy</p>
                 </div>
-                <p className="text-sm text-gray-600">Accuracy</p>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary-600" data-testid="stat-score">
-                  {scanStats.score.toFixed(1)}
+                <div className="text-center">
+                  <div className="text-xl font-bold text-primary-600" data-testid="stat-score">
+                    {scanStats.score.toFixed(1)}
+                  </div>
+                  <p className="text-xs text-gray-600">Score (1-10)</p>
                 </div>
-                <p className="text-sm text-gray-600">Score (1-10)</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Scanner Input */}
-        <Card data-testid="scanner-input">
-          <CardHeader>
-            <CardTitle>Barcode Scanner</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!session ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600 mb-4">
-                  {(jobData as any)?.job?.isActive === false
-                    ? "Scanning is paused by manager"
-                    : "Getting session ready..."
-                  }
-                </p>
-                {autoCreateSessionMutation.isPending && (
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="relative">
-                  <Input
-                    ref={barcodeInputRef}
-                    placeholder="Scan or type barcode here..."
-                    className="text-lg font-mono h-12"
-                    onKeyDown={handleKeyDown}
-                    data-testid="input-barcode"
-                  />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <Package className="text-gray-400 text-xl" />
+          {/* Barcode Scanner Panel */}
+          <Card data-testid="scanner-input" className="order-2 lg:order-2">
+            <CardHeader>
+              <CardTitle>Barcode Scanner</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!session ? (
+                <div className="text-center py-4">
+                  <p className="text-gray-600 mb-4 text-sm">
+                    {(jobData as any)?.job?.isActive === false
+                      ? "Scanning is paused by manager"
+                      : "Getting session ready..."
+                    }
+                  </p>
+                  {autoCreateSessionMutation.isPending && (
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Input
+                      ref={barcodeInputRef}
+                      placeholder="Scan or type barcode here..."
+                      className="text-lg font-mono h-12"
+                      onKeyDown={handleKeyDown}
+                      data-testid="input-barcode"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <Package className="text-gray-400 text-xl" />
+                    </div>
+                  </div>
+
+                  {/* Camera scanner only on larger screens */}
+                  <div className="hidden lg:block">
+                    <BarcodeScanner onScan={handleBarcodeSubmit} />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => undoMutation.mutate(1)}
+                      disabled={undoMutation.isPending || scanStats.totalScans === 0}
+                      data-testid="button-undo"
+                    >
+                      <Undo className="mr-1 h-3 w-3" />
+                      Undo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => undoMutation.mutate(5)}
+                      disabled={undoMutation.isPending || scanStats.totalScans < 5}
+                      data-testid="button-bulk-undo"
+                    >
+                      <RotateCcw className="mr-1 h-3 w-3" />
+                      Bulk Undo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => saveSessionMutation.mutate()}
+                      disabled={saveSessionMutation.isPending}
+                      data-testid="button-save"
+                    >
+                      <Save className="mr-1 h-3 w-3" />
+                      Save
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => finishSessionMutation.mutate()}
+                      disabled={finishSessionMutation.isPending}
+                      data-testid="button-finish"
+                    >
+                      <Check className="mr-1 h-3 w-3" />
+                      Finish
+                    </Button>
                   </div>
                 </div>
+              )}
+            </CardContent>
+          </Card>
 
-                <BarcodeScanner onScan={handleBarcodeSubmit} />
-
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => undoMutation.mutate(1)}
-                    disabled={undoMutation.isPending || scanStats.totalScans === 0}
-                    data-testid="button-undo"
-                  >
-                    <Undo className="mr-2 h-4 w-4" />
-                    Undo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => undoMutation.mutate(5)}
-                    disabled={undoMutation.isPending || scanStats.totalScans < 5}
-                    data-testid="button-bulk-undo"
-                  >
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Bulk Undo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => saveSessionMutation.mutate()}
-                    disabled={saveSessionMutation.isPending}
-                    data-testid="button-save"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => finishSessionMutation.mutate()}
-                    disabled={finishSessionMutation.isPending}
-                    data-testid="button-finish"
-                  >
-                    <Check className="mr-2 h-4 w-4" />
-                    Finish
-                  </Button>
+          {/* Last Scanned Item Panel */}
+          <Card data-testid="scan-info" className="order-3 lg:order-3 md:col-span-2 lg:col-span-1">
+            <CardHeader>
+              <CardTitle>Last Scanned Item</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {lastScanEvent ? (
+                <div className="flex items-center space-x-3">
+                  <div className="text-2xl font-bold text-success-600">✓</div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 truncate text-sm">{lastScanEvent.productName}</h3>
+                    <p className="text-xs text-gray-600 truncate">Barcode: {lastScanEvent.barCode}</p>
+                    <p className="text-xs text-success-600 font-medium truncate">
+                      {lastScanEvent.customerName} - Box {lastScanEvent.boxNumber}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              ) : (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  No scans yet
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Customer Boxes Grid */}
         <Card data-testid="customer-boxes">
@@ -871,33 +906,6 @@ export default function WorkerScanner() {
             />
           </CardContent>
         </Card>
-
-        {/* Current Scan Info */}
-        {lastScanEvent && (
-          <Card data-testid="scan-info">
-            <CardHeader>
-              <CardTitle>Last Scanned Item</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-4 p-4 bg-success-50 border border-success-200 rounded-lg">
-                <div className="text-4xl font-bold text-success-600">✓</div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">{lastScanEvent.productName}</h3>
-                  <p className="text-sm text-gray-600">Barcode: {lastScanEvent.barCode}</p>
-                  <p className="text-sm text-success-600 font-medium">
-                    Added to {lastScanEvent.customerName} - Box {lastScanEvent.boxNumber}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-success-600">
-                    {/* Current/Total count would be calculated here */}
-                  </div>
-                  <p className="text-xs text-gray-600">items</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
