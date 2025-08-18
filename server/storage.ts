@@ -1006,36 +1006,6 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-    // Calculate score based on industry standards
-    let score = 0;
-    if (scansPerHour >= 360) score = 10;
-    else if (scansPerHour >= 180) score = 8 + (scansPerHour - 180) / 180 * 2;
-    else if (scansPerHour >= 71) score = 6 + (scansPerHour - 71) / 109 * 2;
-    else if (scansPerHour >= 36) score = 4 + (scansPerHour - 36) / 35 * 2;
-    else if (scansPerHour >= 18) score = 2 + (scansPerHour - 18) / 18 * 2;
-    else score = 1;
-
-    // Apply penalties
-    score = Math.max(1, score - (errorEvents.length * 0.1) - (undoEvents.length * 0.05));
-    score = Math.min(10, Math.round(score * 10) / 10);
-
-    const averageTimePerScan = scanEvents.length > 0
-      ? sessionDuration / scanEvents.length / 1000 // Convert to seconds
-      : 0;
-
-    return {
-      sessionId,
-      totalScans: scanEvents.length,
-      scansPerHour,
-      accuracy,
-      score,
-      sessionDuration: Math.round(sessionDuration / 1000), // Convert to seconds
-      averageTimePerScan: Math.round(averageTimePerScan),
-      errorCount: errorEvents.length,
-      undoCount: undoEvents.length,
-    };
-  }
-
   async createJobAssignment(insertAssignment: InsertJobAssignment): Promise<JobAssignment> {
     const [assignment] = await this.db
       .insert(jobAssignments)
