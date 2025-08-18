@@ -51,7 +51,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   // Re-enabled mutation with proper backend implementation and retry limit
   const updatePreferencesMutation = useMutation({
     mutationFn: async (newPreferences: Partial<UserPreferences>) => {
-      return apiRequest('/api/users/me/preferences', 'PUT', newPreferences);
+      return apiRequest('PUT', '/api/users/me/preferences', newPreferences);
     },
     onSuccess: (data: any) => {
       if (data?.preferences) {
