@@ -66,7 +66,7 @@ export default function WorkerScanner() {
   });
 
   // Fetch active session
-  const { data: sessionData } = useQuery({
+  const { data: sessionData, refetch: refetchSession } = useQuery({
     queryKey: ["/api/scan-sessions/my-active"],
     enabled: !!user,
   });
@@ -117,13 +117,17 @@ export default function WorkerScanner() {
       return response.json();
     },
     onSuccess: (data) => {
+      console.log('[WorkerScanner] Session created successfully:', data.session);
       setActiveSession(data.session);
+      // Refetch the session query to update sessionData for consistency
+      refetchSession();
       toast({
         title: "Session ready",
         description: "You can now scan barcodes",
       });
     },
     onError: (error: Error) => {
+      console.error('[WorkerScanner] Session creation failed:', error);
       toast({
         title: "Cannot start scanning",
         description: error.message,
@@ -353,7 +357,8 @@ export default function WorkerScanner() {
 
   // Auto-start session when entering a job
   useEffect(() => {
-    if (jobId && user && !activeSession && !sessionData) {
+    if (jobId && user && !activeSession && !sessionData?.session) {
+      console.log('[WorkerScanner] Auto-creating session for W002:', { jobId, user: user?.staffId, activeSession, sessionData });
       autoCreateSessionMutation.mutate();
     }
   }, [jobId, user, activeSession, sessionData]);
@@ -621,7 +626,8 @@ export default function WorkerScanner() {
   }
 
   const { job, products } = jobData as any;
-  const session = (sessionData as any)?.session || activeSession;
+  // Use activeSession first (from mutations), fallback to sessionData (from queries)
+  const session = activeSession || (sessionData as any)?.session;
   const workerAssignment = getWorkerAssignment();
 
   // Mobile interface mode
