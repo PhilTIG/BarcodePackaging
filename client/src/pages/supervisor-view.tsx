@@ -9,7 +9,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { Settings, LogOut, Users, Package, ChevronLeft } from "lucide-react";
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { PerformanceDashboard } from "@/components/performance-dashboard";
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export default function SupervisorView() {
   const { jobId } = useParams();
@@ -35,13 +35,8 @@ export default function SupervisorView() {
     refetchInterval: 5000, // Refresh every 5 seconds
   });
 
-  // Connect to WebSocket for real-time updates with worker box highlighting
-  const { isConnected } = useWebSocket(jobId, (boxNumber, workerId, workerColor, workerStaffId) => {
-    console.log(`[SupervisorView] Worker box highlighting update: Box ${boxNumber}, Worker ${workerId}`, {
-      workerColor,
-      workerStaffId
-    });
-  });
+  // Connect to WebSocket for real-time updates 
+  const { isConnected } = useWebSocket(jobId);
 
   // Redirect if not authenticated or not a supervisor/manager
   useEffect(() => {
@@ -335,7 +330,6 @@ export default function SupervisorView() {
               products={products}
               jobId={job.id}
               supervisorView={true}
-              lastScannedBoxNumber={null}
             />
           </CardContent>
         </Card>

@@ -72,22 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }));
         }
         
-        if (data.type === 'scan_event') {
-          console.log(`[WebSocket Server] Broadcasting scan event for job ${data.jobId}`);
-          // Broadcast scan event to all clients monitoring this job with enhanced worker data
-          broadcastToJob(data.jobId!, {
-            type: 'scan_event',
-            data: {
-              ...data.data,
-              // Ensure worker information is available for manager/supervisor highlighting
-              userId: data.data.userId,
-              workerId: data.data.userId, // Alias for consistency
-              workerColor: data.data.workerColor,
-              workerStaffId: data.data.workerStaffId,
-              boxNumber: data.data.boxNumber
-            }
-          });
-        }
+        // Note: scan_event broadcasting is handled by the API route, no need to re-broadcast here
       } catch (error) {
         console.error(`[WebSocket Server] Message parsing error from client ${clientId}:`, error, 'Raw message:', message.toString());
       }

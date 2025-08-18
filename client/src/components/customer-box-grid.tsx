@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Lock } from "lucide-react";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useBoxHighlighting } from "@/hooks/use-box-highlighting";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { BoxDetailsModal } from "./box-details-modal";
 
 interface Product {
@@ -23,7 +24,7 @@ interface CustomerBoxGridProps {
   jobId: string;
   supervisorView?: boolean;
   lastScannedBoxNumber?: number | null; // For POC-style single box highlighting
-  onBoxScanUpdate?: (boxNumber: number, workerId?: string, workerColor?: string) => void;
+  onBoxScanUpdate?: (boxNumber: number, workerId?: string, workerColor?: string, workerStaffId?: string) => void;
 }
 
 export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate }: CustomerBoxGridProps) {
@@ -43,6 +44,22 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
   const { updateBoxHighlighting, clearHighlighting, getBoxHighlight } = useBoxHighlighting({
     autoResetDelay: 0 // DISABLED: Green highlighting now persists until next scan
   });
+
+  // WebSocket handler for supervisor view real-time highlighting
+  const handleWebSocketUpdate = (boxNumber: number, workerId: string, workerColor?: string, workerStaffId?: string) => {
+    console.log(`[CustomerBoxGrid] WebSocket scan update: Box ${boxNumber}, Worker ${workerId}`, {
+      workerColor, 
+      workerStaffId
+    });
+    
+    if (supervisorView && workerColor && workerStaffId) {
+      // Trigger real-time highlighting for supervisors
+      updateBoxHighlighting(boxNumber, workerId, workerColor, workerStaffId);
+    }
+  };
+
+  // Connect to WebSocket only for supervisor view
+  useWebSocket(supervisorView ? jobId : undefined, supervisorView ? handleWebSocketUpdate : undefined);
   
   const boxData = useMemo(() => {
     const boxes: { [key: number]: {
@@ -124,10 +141,10 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
     return gridClasses;
   };
 
-  // Update highlighting when lastScannedBoxNumber changes
+  // Update highlighting when lastScannedBoxNumber changes (worker view)
   useEffect(() => {
-    if (lastScannedBoxNumber !== null) {
-      // Find the box that was scanned to get worker color info
+    if (lastScannedBoxNumber !== null && !supervisorView) {
+      // Worker view: Use static box data for highlighting
       const scannedBox = boxData.find(box => box.boxNumber === lastScannedBoxNumber);
       updateBoxHighlighting(
         lastScannedBoxNumber,
@@ -136,7 +153,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
         scannedBox?.lastWorkerStaffId
       );
     }
-  }, [lastScannedBoxNumber, boxData, updateBoxHighlighting]);
+  }, [lastScannedBoxNumber, boxData, updateBoxHighlighting, supervisorView]);
 
   return (
     <div className={getGridClasses()} data-testid="customer-box-grid">
