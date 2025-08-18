@@ -930,6 +930,22 @@ export class DatabaseStorage implements IStorage {
       .insert(jobAssignments)
       .values(insertAssignment)
       .returning();
+
+    // CRITICAL FIX: Automatically create corresponding worker_box_assignment
+    // This is required for the scanning logic to work properly
+    try {
+      await this.createWorkerBoxAssignment({
+        jobId: insertAssignment.jobId,
+        workerId: insertAssignment.userId,
+        assignmentType: insertAssignment.allocationPattern || 'ascending',
+        boxNumber: null, // No specific box assignment, just the pattern
+      });
+      console.log(`[createJobAssignment] Created worker_box_assignment for user ${insertAssignment.userId}`);
+    } catch (error) {
+      console.error(`[createJobAssignment] Failed to create worker_box_assignment:`, error);
+      // Don't throw - the job assignment was successful, this is just supplementary
+    }
+
     return assignment;
   }
 

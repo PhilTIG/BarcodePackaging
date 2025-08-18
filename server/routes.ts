@@ -421,6 +421,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isActive: true,
       });
 
+      console.log(`[Job Assignment] Worker ${userId} assigned to job ${jobId} with ${allocationPattern || 'ascending'} pattern`);
+
       res.status(201).json({ 
         assignment: {
           ...assignment,
