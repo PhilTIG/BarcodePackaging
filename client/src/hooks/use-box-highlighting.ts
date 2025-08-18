@@ -7,23 +7,21 @@ import { useState, useCallback } from 'react';
 
 export interface BoxHighlighting {
   lastScannedBoxNumber: number | null;
-  workerColors: Map<number, string>; // boxNumber -> worker color
-  justScannedBoxes: Set<number>; // boxes that show green highlight
+  workerColors: Map<number, string>; // boxNumber -> worker color (50% transparent)
   activeWorkerBoxes: Map<string, number>; // workerId -> current active box number
   workerStaffIds: Map<number, string>; // boxNumber -> worker staffId for display
 }
 
 interface UseBoxHighlightingOptions {
-  autoResetDelay?: number; // ms to clear green highlighting
+  autoResetDelay?: number; // Not used anymore - worker colors persist until replaced
 }
 
 export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
-  const { autoResetDelay = 2000 } = options;
+  // autoResetDelay is no longer used - worker colors persist until replaced
   
   const [highlighting, setHighlighting] = useState<BoxHighlighting>({
     lastScannedBoxNumber: null,
     workerColors: new Map(),
-    justScannedBoxes: new Set(),
     activeWorkerBoxes: new Map(),
     workerStaffIds: new Map(),
   });
@@ -53,20 +51,28 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
         newActiveWorkerBoxes.set(workerId, boxNumber);
       }
 
+      // Store worker color and staffId for this box (this IS the new "just scanned" state)
+      if (workerColor) {
+        newWorkerColors.set(boxNumber, workerColor);
+      }
+      if (workerStaffId) {
+        newWorkerStaffIds.set(boxNumber, workerStaffId);
+      }
+
       const newHighlighting = {
         lastScannedBoxNumber: boxNumber,
         workerColors: newWorkerColors,
-        justScannedBoxes: new Set([boxNumber]), // Only one box highlighted at a time - PERSISTENT until next scan
         activeWorkerBoxes: newActiveWorkerBoxes,
         workerStaffIds: newWorkerStaffIds,
       };
-
-      // Track worker color and staffId for this box
-      if (workerId && workerColor && workerStaffId) {
-        newHighlighting.workerColors.set(boxNumber, workerColor);
-        newHighlighting.workerStaffIds.set(boxNumber, workerStaffId);
-      }
-
+      
+      console.log(`[useBoxHighlighting] Updated worker highlighting for box ${boxNumber}:`, {
+        workerId, 
+        workerColor, 
+        workerStaffId,
+        highlighting: newHighlighting
+      });
+      
       return newHighlighting;
     });
   }, []);
@@ -76,7 +82,6 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
     setHighlighting({
       lastScannedBoxNumber: null,
       workerColors: new Map(),
-      justScannedBoxes: new Set(),
       activeWorkerBoxes: new Map(),
       workerStaffIds: new Map(),
     });
@@ -93,32 +98,13 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
     badgeColor: string;
     workerStaffId?: string;
   } => {
-    const isJustScanned = highlighting.justScannedBoxes.has(boxNumber);
     const workerColor = highlighting.workerColors.get(boxNumber);
     const workerStaffId = highlighting.workerStaffIds.get(boxNumber);
     
-    // Priority: GREEN (just-scanned) > Grey-Red (complete) > Worker Color > Grey (empty)
-    if (isJustScanned) {
-      return {
-        backgroundColor: 'bg-green-500', // CHANGED: Completely green background instead of light green
-        borderColor: 'border-green-600',
-        textColor: 'text-white', // White text for contrast against green background
-        badgeColor: 'bg-green-700', // Darker green for badge
-        workerStaffId,
-      };
-    }
-    
-    if (isComplete) {
-      return {
-        backgroundColor: 'bg-red-50',
-        borderColor: 'border-red-300',
-        textColor: 'text-red-700',
-        badgeColor: 'bg-red-400',
-      };
-    }
-    
+    // NEW Priority: Worker Color (50% transparent) > Complete > Default
+    // Worker color IS the "just scanned" state now
     if (workerColor) {
-      // Convert hex color to CSS with 50% transparency for subtlety
+      // Convert hex color to CSS with 50% transparency
       const rgbColor = hexToRgb(workerColor);
       if (rgbColor) {
         return {
@@ -129,6 +115,15 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
           workerStaffId,
         };
       }
+    }
+    
+    if (isComplete) {
+      return {
+        backgroundColor: 'bg-red-50',
+        borderColor: 'border-red-300',
+        textColor: 'text-red-700',
+        badgeColor: 'bg-red-400',
+      };
     }
     
     // Default grey for empty/unassigned

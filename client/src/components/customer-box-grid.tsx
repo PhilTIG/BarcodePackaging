@@ -40,10 +40,8 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
   // Use actual user preferences for box layout
   const { preferences } = useUserPreferences();
   
-  // POC-style box highlighting system - PERSISTENT green until next scan
-  const { updateBoxHighlighting, clearHighlighting, getBoxHighlight } = useBoxHighlighting({
-    autoResetDelay: 0 // DISABLED: Green highlighting now persists until next scan
-  });
+  // Worker box highlighting system - 50% transparent worker colors persist until replaced
+  const { updateBoxHighlighting, clearHighlighting, getBoxHighlight } = useBoxHighlighting();
 
   // WebSocket handler for supervisor view real-time highlighting
   const handleWebSocketUpdate = (boxNumber: number, workerId: string, workerColor?: string, workerStaffId?: string) => {
