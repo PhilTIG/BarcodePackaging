@@ -348,7 +348,7 @@ export class DatabaseStorage implements IStorage {
       // Use box requirements system (all jobs should have box requirements)
       const boxRequirements = await this.getBoxRequirementsByJobId(id);
       const totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
-      const scannedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
+      const scannedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
       
       // Transform to products format for compatibility with existing components
       const productMap = new Map();
@@ -366,7 +366,7 @@ export class DatabaseStorage implements IStorage {
         }
         const product = productMap.get(key);
         product.qty += req.requiredQty;
-        product.scannedQty += req.scannedQty;
+        product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
         product.isComplete = product.isComplete && req.isComplete;
         // Keep the most recent worker info
         if (req.lastWorkerColor) product.lastWorkerColor = req.lastWorkerColor;
@@ -446,7 +446,7 @@ export class DatabaseStorage implements IStorage {
           if (boxRequirements.length > 0) {
             // NEW SYSTEM: Use box requirements
             totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
-            completedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
+            completedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
             
             // Transform to products format for box completion calculation
             const productMap = new Map();
@@ -463,7 +463,7 @@ export class DatabaseStorage implements IStorage {
               }
               const product = productMap.get(key);
               product.qty += req.requiredQty;
-              product.scannedQty += req.scannedQty;
+              product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
               product.isComplete = product.isComplete && req.isComplete;
             });
             products = Array.from(productMap.values());
