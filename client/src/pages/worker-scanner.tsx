@@ -168,7 +168,7 @@ export default function WorkerScanner() {
     onSuccess: (data) => {
       setLastScanEvent(data.scanEvent);
 
-      // Clear any previous scan result since we have a new scan
+      // Clear any previous scan result (extra items only) since we have a new scan
       setScanResult(null);
 
       // Check if backend marked this as an error scan
@@ -236,17 +236,13 @@ export default function WorkerScanner() {
 
       // Set visual feedback for successful scan
       if (data.scanEvent?.boxNumber && data.scanEvent?.customerName && data.scanEvent?.productName) {
-        setScanResult({
-          boxNumber: data.scanEvent.boxNumber,
-          customerName: data.scanEvent.customerName,
-          productName: data.scanEvent.productName,
-          progress: `Scan successful` // Simple message, progress will be calculated from fresh data
-        });
-
+        // For successful scans, only use lastScanEvent (which shows detailed box with progress)
+        // Do NOT set scanResult for successful scans - scanResult is only for extra items
+        
         // Update last scanned box for highlighting
         setLastScannedBoxNumber(data.scanEvent.boxNumber);
 
-        // Successful scans persist until next scan - no timeout
+        // lastScanEvent will persist until next scan and shows the correct detailed box design
       }
 
       // Flash success feedback
