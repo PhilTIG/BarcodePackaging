@@ -220,12 +220,20 @@ export function MobileScannerInterface({
 
         {/* Customer name */}
         <div className="text-center mb-6">
-          <div className="text-2xl font-semibold text-gray-900 mb-2" data-testid="customer-name">
-            {scanResult ? scanResult.customerName : (currentCustomer === 'Ready to Scan' ? 'Ready to Scan' : currentCustomer)}
+          <div className={`text-2xl font-semibold mb-2 ${
+            scanResult && scanResult.isExtraItem ? 'text-orange-600' : 'text-gray-900'
+          }`} data-testid="customer-name">
+            {scanResult ? (
+              scanResult.isExtraItem ? 'Extra Item' : scanResult.customerName
+            ) : (
+              currentCustomer === 'Ready to Scan' ? 'Ready to Scan' : currentCustomer
+            )}
           </div>
           
           {scanResult && (
-            <div className="text-lg text-gray-600" data-testid="product-name">
+            <div className={`text-lg ${
+              scanResult.isExtraItem ? 'text-orange-600' : 'text-gray-600'
+            }`} data-testid="product-name">
               {scanResult.productName}
             </div>
           )}

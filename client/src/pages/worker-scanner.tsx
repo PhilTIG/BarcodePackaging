@@ -168,6 +168,9 @@ export default function WorkerScanner() {
     onSuccess: (data) => {
       setLastScanEvent(data.scanEvent);
 
+      // Clear any previous scan result since we have a new scan
+      setScanResult(null);
+
       // Check if backend marked this as an error scan
       if (data.scanEvent.eventType === 'error') {
         // Handle error scans from backend
@@ -195,18 +198,18 @@ export default function WorkerScanner() {
           setScanError(`⚠️\nExtra Item\nUnknown Product scanned: ${data.scanEvent.barCode}\nItem added to Extra Items`);
         }
 
-        // Set scan result for "Last Scanned Item" with orange styling
-        setScanResult({
-          boxNumber: null,
-          customerName: 'Extra Item',
-          productName: data.scanEvent.productName || `Barcode: ${data.scanEvent.barCode}`,
-          progress: null,
-          isExtraItem: true
-        });
-
+        // After 3 seconds, clear error but keep extra item info until next scan
         setTimeout(() => {
           setScanError(null);
-          setScanResult(null);
+          
+          // Set orange extra item display that persists until next scan
+          setScanResult({
+            boxNumber: null,
+            customerName: '', // No customer since it's not for any customer in CSV
+            productName: `${data.scanEvent.barCode} ${data.scanEvent.productName || 'Unknown'} Added to Extra Items`,
+            progress: null,
+            isExtraItem: true
+          });
         }, 3000);
         showScanFeedback(false);
         
@@ -243,8 +246,7 @@ export default function WorkerScanner() {
         // Update last scanned box for highlighting
         setLastScannedBoxNumber(data.scanEvent.boxNumber);
 
-        // Clear scan result after 2 seconds
-        setTimeout(() => setScanResult(null), 2000);
+        // Successful scans persist until next scan - no timeout
       }
 
       // Flash success feedback
@@ -982,8 +984,10 @@ export default function WorkerScanner() {
 
                       {/* Customer name or "Extra Item" */}
                       <div className="mb-4 pr-2">
-                        <h3 className="font-medium text-sm truncate text-gray-900" title={scanResult.customerName}>
-                          {scanResult.customerName}
+                        <h3 className={`font-medium text-sm truncate ${
+                          scanResult.isExtraItem ? 'text-orange-900' : 'text-gray-900'
+                        }`} title={scanResult.isExtraItem ? 'Extra Item' : scanResult.customerName}>
+                          {scanResult.isExtraItem ? 'Extra Item' : scanResult.customerName}
                         </h3>
                       </div>
 
