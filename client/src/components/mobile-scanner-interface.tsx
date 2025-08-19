@@ -26,6 +26,7 @@ interface MobileScannerInterfaceProps {
     barCode: string;
     customerName: string;
     boxNumber: number;
+    scanTime?: string;
   } | null;
   onScan: (barcode: string) => void;
   onUndo?: () => void;
@@ -39,6 +40,7 @@ interface MobileScannerInterfaceProps {
     productName: string;
     progress: string | null;
     isExtraItem?: boolean;
+    timestamp?: string;
   } | null;
   runtimeSingleBoxMode?: boolean;
   onRuntimeToggle?: (enabled: boolean) => void;
@@ -212,68 +214,118 @@ export function MobileScannerInterface({
         {/* Very large box number display */}
         <div className="text-center mb-8">
           <div className={`text-[120px] font-bold leading-none ${
-            scanResult && scanResult.isExtraItem ? 'text-orange-500' : 'text-blue-500'
+            (() => {
+              const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
+              const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
+              return (scanResult && scanResult.isExtraItem && scanResultTime >= lastScanTime) ? 'text-orange-500' : 'text-blue-500';
+            })()
           }`} data-testid="box-number-display">
-            {scanResult ? (scanResult.isExtraItem ? 'EXTRA' : scanResult.boxNumber) : (currentCustomer === 'Ready to Scan' ? '-' : (currentBoxNumber || '-'))}
+            {(() => {
+              // Determine which scan was most recent by comparing timestamps
+              const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
+              const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
+              
+              // Show most recent scan result
+              if (scanResult && scanResultTime >= lastScanTime) {
+                return scanResult.isExtraItem ? 'EXTRA' : scanResult.boxNumber;
+              } else if (lastScanEvent && currentCustomer !== 'Ready to Scan') {
+                return lastScanEvent.boxNumber;
+              } else {
+                return currentCustomer === 'Ready to Scan' ? '-' : (currentBoxNumber || '-');
+              }
+            })()}
           </div>
         </div>
 
         {/* Customer name */}
         <div className="text-center mb-6">
           <div className={`text-2xl font-semibold mb-2 ${
-            scanResult && scanResult.isExtraItem ? 'text-orange-600' : 'text-gray-900'
+            (() => {
+              const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
+              const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
+              return (scanResult && scanResult.isExtraItem && scanResultTime >= lastScanTime) ? 'text-orange-600' : 'text-gray-900';
+            })()
           }`} data-testid="customer-name">
-            {scanResult ? (
-              scanResult.isExtraItem ? 'Extra Item' : scanResult.customerName
-            ) : (
-              currentCustomer === 'Ready to Scan' ? 'Ready to Scan' : currentCustomer
-            )}
+            {(() => {
+              // Determine which scan was most recent by comparing timestamps
+              const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
+              const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
+              
+              // Show most recent scan (successful or extra item)
+              if (scanResult && scanResultTime >= lastScanTime) {
+                return scanResult.isExtraItem ? 'Extra Item' : scanResult.customerName;
+              } else if (lastScanEvent && currentCustomer !== 'Ready to Scan') {
+                return lastScanEvent.customerName;
+              } else {
+                return currentCustomer === 'Ready to Scan' ? 'Ready to Scan' : currentCustomer;
+              }
+            })()}
           </div>
           
-          {scanResult && (
-            <div className={`text-lg ${
-              scanResult.isExtraItem ? 'text-orange-600' : 'text-gray-600'
-            }`} data-testid="product-name">
-              {scanResult.productName}
-            </div>
-          )}
-          {!scanResult && lastScanEvent && currentCustomer !== 'Ready to Scan' && (
-            <div className="text-lg text-gray-600" data-testid="product-name">
-              {lastScanEvent.productName}
-            </div>
-          )}
-          {!scanResult && (currentCustomer === 'Ready to Scan' || !lastScanEvent) && (
-            <div className="text-lg text-gray-500" data-testid="scan-instruction">
-              Scan a barcode to begin
-            </div>
-          )}
+          {(() => {
+            // Determine which scan was most recent by comparing timestamps
+            const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
+            const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
+            
+            if (scanResult && scanResultTime >= lastScanTime) {
+              // Show scanResult (extra item) product name
+              return (
+                <div className={`text-lg ${
+                  scanResult.isExtraItem ? 'text-orange-600' : 'text-gray-600'
+                }`} data-testid="product-name">
+                  {scanResult.productName}
+                </div>
+              );
+            } else if (lastScanEvent && currentCustomer !== 'Ready to Scan') {
+              // Show lastScanEvent (successful scan) product name
+              return (
+                <div className="text-lg text-gray-600" data-testid="product-name">
+                  {lastScanEvent.productName}
+                </div>
+              );
+            } else {
+              // Show default instruction
+              return (
+                <div className="text-lg text-gray-500" data-testid="scan-instruction">
+                  Scan a barcode to begin
+                </div>
+              );
+            }
+          })()}
         </div>
 
         {/* Progress indicator */}
-        {scanResult && scanResult.progress && (
-          <div className="text-center">
-            <div className={`inline-flex items-center px-4 py-2 border-2 rounded-full ${
-              scanResult.isExtraItem 
-                ? 'bg-orange-100 border-orange-300' 
-                : 'bg-green-100 border-green-300'
-            }`}>
-              <span className={`text-lg font-medium ${
-                scanResult.isExtraItem ? 'text-orange-800' : 'text-green-800'
-              }`} data-testid="progress-indicator">
-                {scanResult.progress}
-              </span>
-            </div>
-          </div>
-        )}
-        {!scanResult && currentBoxProgress.total > 0 && currentCustomer !== 'Ready to Scan' && (
-          <div className="text-center">
-            <div className="inline-flex items-center px-4 py-2 bg-green-100 border-2 border-green-300 rounded-full">
-              <span className="text-lg font-medium text-green-800" data-testid="progress-indicator">
-                {currentBoxProgress.completed}/{currentBoxProgress.total} items
-              </span>
-            </div>
-          </div>
-        )}
+        {(() => {
+          // Determine which scan was most recent by comparing timestamps
+          const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
+          const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
+          
+          // Show progress based on most recent scan
+          if (scanResult && scanResult.isExtraItem && scanResultTime >= lastScanTime) {
+            // Extra item - show orange message
+            return (
+              <div className="text-center">
+                <div className="inline-flex items-center px-4 py-2 border-2 rounded-full bg-orange-100 border-orange-300">
+                  <span className="text-lg font-medium text-orange-800" data-testid="progress-indicator">
+                    Added to Extra Items
+                  </span>
+                </div>
+              </div>
+            );
+          } else if (currentBoxProgress.total > 0 && currentCustomer !== 'Ready to Scan') {
+            // Regular scan or returning to view - show current box progress
+            return (
+              <div className="text-center">
+                <div className="inline-flex items-center px-4 py-2 bg-green-100 border-2 border-green-300 rounded-full">
+                  <span className="text-lg font-medium text-green-800" data-testid="progress-indicator">
+                    {currentBoxProgress.completed}/{currentBoxProgress.total} items
+                  </span>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
 
       {/* Bottom stats section - Light blue background */}

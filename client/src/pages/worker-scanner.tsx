@@ -46,6 +46,7 @@ export default function WorkerScanner() {
     productName: string;
     progress: string | null;
     isExtraItem?: boolean;
+    timestamp?: string;
   } | null>(null);
   
   // Runtime single box mode state (separate from settings preference)
@@ -208,7 +209,8 @@ export default function WorkerScanner() {
             customerName: '', // No customer since it's not for any customer in CSV
             productName: `${data.scanEvent.barCode} ${data.scanEvent.productName || 'Unknown'} Added to Extra Items`,
             progress: null,
-            isExtraItem: true
+            isExtraItem: true,
+            timestamp: data.scanEvent.scanTime || new Date().toISOString()
           });
         }, 3000);
         showScanFeedback(false);
