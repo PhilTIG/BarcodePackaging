@@ -394,6 +394,7 @@ export class DatabaseStorage implements IStorage {
           return {
             id: assignment.userId,
             name: assignment.assignee.name,
+            staffId: assignment.assignee.staffId,
             isActive: session?.status === 'active' || false,
             scansPerHour: performance?.scansPerHour || 0,
             score: performance?.score || 0,
