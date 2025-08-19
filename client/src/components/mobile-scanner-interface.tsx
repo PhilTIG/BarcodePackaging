@@ -34,10 +34,11 @@ interface MobileScannerInterfaceProps {
   isConnected?: boolean;
   scanError?: string | null;
   scanResult?: {
-    boxNumber: number;
+    boxNumber: number | null;
     customerName: string;
     productName: string;
-    progress: string;
+    progress: string | null;
+    isExtraItem?: boolean;
   } | null;
   runtimeSingleBoxMode?: boolean;
   onRuntimeToggle?: (enabled: boolean) => void;
@@ -210,8 +211,10 @@ export function MobileScannerInterface({
       <div className="flex-1 flex flex-col justify-center items-center px-4 py-8 bg-gray-50">
         {/* Very large box number display */}
         <div className="text-center mb-8">
-          <div className="text-[120px] font-bold text-blue-500 leading-none" data-testid="box-number-display">
-            {scanResult ? scanResult.boxNumber : (currentCustomer === 'Ready to Scan' ? '-' : (currentBoxNumber || '-'))}
+          <div className={`text-[120px] font-bold leading-none ${
+            scanResult && scanResult.isExtraItem ? 'text-orange-500' : 'text-blue-500'
+          }`} data-testid="box-number-display">
+            {scanResult ? (scanResult.isExtraItem ? 'EXTRA' : scanResult.boxNumber) : (currentCustomer === 'Ready to Scan' ? '-' : (currentBoxNumber || '-'))}
           </div>
         </div>
 
@@ -241,8 +244,14 @@ export function MobileScannerInterface({
         {/* Progress indicator */}
         {scanResult && scanResult.progress && (
           <div className="text-center">
-            <div className="inline-flex items-center px-4 py-2 bg-green-100 border-2 border-green-300 rounded-full">
-              <span className="text-lg font-medium text-green-800" data-testid="progress-indicator">
+            <div className={`inline-flex items-center px-4 py-2 border-2 rounded-full ${
+              scanResult.isExtraItem 
+                ? 'bg-orange-100 border-orange-300' 
+                : 'bg-green-100 border-green-300'
+            }`}>
+              <span className={`text-lg font-medium ${
+                scanResult.isExtraItem ? 'text-orange-800' : 'text-green-800'
+              }`} data-testid="progress-indicator">
                 {scanResult.progress}
               </span>
             </div>

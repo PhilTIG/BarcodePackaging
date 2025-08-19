@@ -41,10 +41,11 @@ export default function WorkerScanner() {
   const [lastScannedBoxNumber, setLastScannedBoxNumber] = useState<number | null>(null); // Track last scanned box for POC-style highlighting
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<{
-    boxNumber: number;
+    boxNumber: number | null;
     customerName: string;
     productName: string;
-    progress: string;
+    progress: string | null;
+    isExtraItem?: boolean;
   } | null>(null);
   
   // Runtime single box mode state (separate from settings preference)
@@ -176,6 +177,37 @@ export default function WorkerScanner() {
           setScanError('Unexpected stock scanned: unknown stock');
         }
         setTimeout(() => setScanError(null), 3000);
+        showScanFeedback(false);
+        
+        // Clear input and focus
+        if (barcodeInputRef.current) {
+          barcodeInputRef.current.value = "";
+          barcodeInputRef.current.focus();
+        }
+        return;
+      }
+
+      if (data.scanEvent.eventType === 'extra_item') {
+        // Handle extra items - both fulfilled products and unknown barcodes
+        if (data.scanEvent.productName && data.scanEvent.productName !== 'Unknown') {
+          setScanError(`⚠️\nExtra Item\nUnexpected stock scanned: ${data.scanEvent.productName}\nAll quantities for this product have been fulfilled\nItem added to Extra Items`);
+        } else {
+          setScanError(`⚠️\nExtra Item\nUnknown Product scanned: ${data.scanEvent.barCode}\nItem added to Extra Items`);
+        }
+
+        // Set scan result for "Last Scanned Item" with orange styling
+        setScanResult({
+          boxNumber: null,
+          customerName: 'Extra Item',
+          productName: data.scanEvent.productName || `Barcode: ${data.scanEvent.barCode}`,
+          progress: null,
+          isExtraItem: true
+        });
+
+        setTimeout(() => {
+          setScanError(null);
+          setScanResult(null);
+        }, 3000);
         showScanFeedback(false);
         
         // Clear input and focus
@@ -916,7 +948,64 @@ export default function WorkerScanner() {
               <CardTitle>Last Scanned Item</CardTitle>
             </CardHeader>
             <CardContent>
-              {lastScanEvent ? (
+              {scanResult ? (
+                <div className="flex items-center space-x-4">
+                  {/* Text area on the left */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 text-sm mb-1">{scanResult.productName}</h3>
+                    <p className="text-xs text-gray-600 mb-1">
+                      {scanResult.isExtraItem ? 'Extra Item' : `Box: ${scanResult.boxNumber}`}
+                    </p>
+                    <p className={`text-xs font-medium ${
+                      scanResult.isExtraItem ? 'text-orange-600' : 'text-success-600'
+                    }`}>
+                      {scanResult.isExtraItem ? 'Added to Extra Items' : `Just scanned into Box ${scanResult.boxNumber}`}
+                    </p>
+                  </div>
+                  
+                  {/* Box tile on the right - Orange for Extra Items */}
+                  <div className="flex-shrink-0">
+                    <div 
+                      className={`border rounded-lg p-3 relative transition-all duration-200 ${
+                        scanResult.isExtraItem 
+                          ? 'bg-orange-100 border-orange-300' 
+                          : 'bg-green-100 border-green-300'
+                      }`}
+                      style={{ minHeight: '150px', width: '192px' }}
+                    >
+                      {/* Indicator for just-scanned */}
+                      <div className="absolute top-1 left-1">
+                        <div className={`w-3 h-3 rounded-full ${
+                          scanResult.isExtraItem ? 'bg-orange-500' : 'bg-green-500'
+                        }`}></div>
+                      </div>
+
+                      {/* Customer name or "Extra Item" */}
+                      <div className="mb-4 pr-2">
+                        <h3 className="font-medium text-sm truncate text-gray-900" title={scanResult.customerName}>
+                          {scanResult.customerName}
+                        </h3>
+                      </div>
+
+                      {/* Center content */}
+                      <div className="flex items-center justify-center h-20">
+                        <div className="text-center">
+                          <div className={`text-2xl font-bold ${
+                            scanResult.isExtraItem ? 'text-orange-600' : 'text-primary-600'
+                          }`}>
+                            {scanResult.isExtraItem ? 'EXTRA' : scanResult.boxNumber}
+                          </div>
+                          {scanResult.isExtraItem && (
+                            <div className="text-sm font-medium text-orange-600 mt-1">
+                              ITEM
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : lastScanEvent ? (
                 <div className="flex items-center space-x-4">
                   {/* Text area on the left */}
                   <div className="flex-1 min-w-0">
