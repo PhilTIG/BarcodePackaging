@@ -529,7 +529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const product = productMap.get(key);
           product.qty += req.requiredQty;
-          product.scannedQty += req.scannedQty;
+          product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
           product.isComplete = product.isComplete && req.isComplete;
           
           // Update worker info if this requirement has more recent worker data
