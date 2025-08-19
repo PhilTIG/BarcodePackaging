@@ -3,6 +3,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
+// Helper function to calculate if text should be white or black based on background color brightness
+function getContrastingTextColor(hexColor: string): string {
+  // Remove # if present
+  const color = hexColor.replace('#', '');
+  
+  // Convert to RGB
+  const r = parseInt(color.substring(0, 2), 16);
+  const g = parseInt(color.substring(2, 4), 16);
+  const b = parseInt(color.substring(4, 6), 16);
+  
+  // Calculate brightness using standard formula
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  
+  // Return black for light backgrounds, white for dark backgrounds
+  return brightness > 128 ? '#000000' : '#FFFFFF';
+}
+
 interface PerformanceDashboardProps {
   jobId: string;
   supervisorView?: boolean;
@@ -44,7 +61,7 @@ export function PerformanceDashboard({ jobId, supervisorView = false }: Performa
             data-testid={`worker-performance-${worker.id}`}
           >
             <div className="flex items-center space-x-3">
-              {/* Worker Color Icon */}
+              {/* Worker StaffId Box Icon */}
               <div className="flex items-center space-x-2">
                 <div 
                   className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
@@ -52,17 +69,17 @@ export function PerformanceDashboard({ jobId, supervisorView = false }: Performa
                   title={`Worker color: ${worker.assignedColor || '#3B82F6'}`}
                   data-testid={`worker-color-icon-${worker.id}`}
                 />
-                <Avatar className={`w-10 h-10 ${
-                  performanceLevel === "high" 
-                    ? "bg-success-500" 
-                    : performanceLevel === "medium"
-                      ? "bg-warning-500"
-                      : "bg-gray-500"
-                }`}>
-                  <AvatarFallback className="text-white font-bold">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+                <div 
+                  className="px-2 py-1 rounded text-xs font-bold min-w-[2.5rem] text-center"
+                  style={{ 
+                    backgroundColor: worker.assignedColor || '#6B7280',
+                    color: getContrastingTextColor(worker.assignedColor || '#6B7280')
+                  }}
+                  title={`Worker: ${worker.staffId || 'Worker'}`}
+                  data-testid={`worker-staffid-icon-${worker.id}`}
+                >
+                  {worker.staffId || 'Worker'}
+                </div>
               </div>
               <div>
                 <h3 className="font-medium text-gray-900">{worker.name}</h3>
