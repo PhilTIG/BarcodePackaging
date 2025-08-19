@@ -32,6 +32,121 @@ const uploadFormSchema = z.object({
 
 type UploadForm = z.infer<typeof uploadFormSchema>;
 
+// Component for Extra Items and Boxes Complete buttons
+function ExtraItemsAndBoxesButtons({ 
+  jobId, 
+  onExtraItemsClick, 
+  onBoxesCompleteClick 
+}: { 
+  jobId: string; 
+  onExtraItemsClick: () => void;
+  onBoxesCompleteClick: () => void;
+}) {
+  // Fetch extra items count
+  const { data: extraItemsData } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/extra-items`],
+    enabled: !!jobId,
+  });
+
+  // Fetch job progress for correct box completion data
+  const { data: progressData } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/progress`],
+    enabled: !!jobId,
+    refetchInterval: 5000,
+  });
+
+  const extraItemsCount = (extraItemsData as any)?.extraItems?.length || 0;
+  const completedBoxes = (progressData as any)?.completedBoxes || 0;
+  const totalBoxes = (progressData as any)?.totalBoxes || 0;
+
+  return (
+    <div className="space-y-2">
+      {/* Extra Items Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onExtraItemsClick}
+        className="w-full min-w-[120px]"
+        data-testid={`button-extra-items-${jobId}`}
+      >
+        <Package className="mr-1 h-4 w-4" />
+        {extraItemsCount} Extra Items
+      </Button>
+      
+      {/* Boxes Complete Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onBoxesCompleteClick}
+        className="w-full min-w-[120px]"
+        data-testid={`button-boxes-complete-${jobId}`}
+      >
+        {completedBoxes}/{totalBoxes} Complete
+      </Button>
+    </div>
+  );
+}
+
+// Component for Completed Boxes Modal
+function CompletedBoxesModal({ 
+  isOpen, 
+  onClose, 
+  jobId 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  jobId: string | null; 
+}) {
+  const { data: progressData } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/progress`],
+    enabled: !!jobId && isOpen,
+  });
+
+  const completedBoxes = (progressData as any)?.products?.filter((product: any) => product.isComplete) || [];
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Completed Boxes</DialogTitle>
+          <DialogDescription>
+            List of all completed boxes showing item counts
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="mt-4">
+          {completedBoxes.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No completed boxes found.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {completedBoxes
+                .sort((a: any, b: any) => a.boxNumber - b.boxNumber)
+                .map((box: any, index: number) => (
+                <div key={`${box.customerName}-${box.boxNumber}`} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-green-50">
+                  <div>
+                    <div className="font-medium">Box {box.boxNumber}</div>
+                    <div className="text-sm text-gray-600">{box.customerName}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-green-600">{box.scannedQty}/{box.qty} items</div>
+                    <div className="text-xs text-gray-500">100% Complete</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ManagerDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -49,6 +164,8 @@ export default function ManagerDashboard() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
   const [extraItemsJobId, setExtraItemsJobId] = useState<string | null>(null);
+  const [isCompletedBoxesModalOpen, setIsCompletedBoxesModalOpen] = useState(false);
+  const [completedBoxesJobId, setCompletedBoxesJobId] = useState<string | null>(null);
 
   // Assignment form state
   const [assignForm, setAssignForm] = useState({
@@ -657,14 +774,19 @@ export default function ManagerDashboard() {
                         </div>
                       </div>
 
-                      {/* Boxes Complete Counter - Bottom Right */}
-                      <div className="absolute bottom-4 right-4">
-                        <div className="bg-white border border-gray-300 rounded-md px-2 py-1 shadow-sm">
-                          <div className="text-xs text-gray-500 font-medium">Boxes Complete</div>
-                          <div className="text-sm font-bold text-gray-900" data-testid={`boxes-complete-${job.id}`}>
-                            {job.completedBoxes || 0}/{job.totalCustomers}
-                          </div>
-                        </div>
+                      {/* Extra Items and Boxes Complete - Bottom Right Vertical Stack */}
+                      <div className="absolute bottom-4 right-4 space-y-2">
+                        {/* Get extra items count and progress data */}
+                        <ExtraItemsAndBoxesButtons jobId={job.id} 
+                          onExtraItemsClick={() => {
+                            setExtraItemsJobId(job.id);
+                            setIsExtraItemsModalOpen(true);
+                          }}
+                          onBoxesCompleteClick={() => {
+                            setCompletedBoxesJobId(job.id);
+                            setIsCompletedBoxesModalOpen(true);
+                          }} 
+                        />
                       </div>
 
                       {/* Assigned Workers Display with Allocation Patterns */}
@@ -736,18 +858,7 @@ export default function ManagerDashboard() {
                           <Users className="mr-1 h-4 w-4" />
                           Assign Workers
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => {
-                            setExtraItemsJobId(job.id);
-                            setIsExtraItemsModalOpen(true);
-                          }}
-                          data-testid={`button-extra-items-${job.id}`}
-                        >
-                          <Package className="mr-1 h-4 w-4" />
-                          Extra Items
-                        </Button>
+
                         <Button variant="outline" size="sm" data-testid={`button-export-${job.id}`}>
                           <Download className="mr-1 h-4 w-4" />
                           Export
@@ -953,6 +1064,18 @@ export default function ManagerDashboard() {
             setExtraItemsJobId(null);
           }}
           jobId={extraItemsJobId}
+        />
+      )}
+
+      {/* Completed Boxes Modal */}
+      {completedBoxesJobId && (
+        <CompletedBoxesModal
+          isOpen={isCompletedBoxesModalOpen}
+          onClose={() => {
+            setIsCompletedBoxesModalOpen(false);
+            setCompletedBoxesJobId(null);
+          }}
+          jobId={completedBoxesJobId}
         />
       )}
     </div>
