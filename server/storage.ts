@@ -376,8 +376,9 @@ export class DatabaseStorage implements IStorage {
       const sessions = await this.getScanSessionsByJobId(id);
       const assignments = await this.getJobAssignmentsWithUsers(id);
       
-      // Get extra items count (items scanned that are not in the original job)
+      // Get extra items count and details (items scanned that are not in the original job)
       const extraItemsCount = await this.getExtraItemsCount(id);
+      const extraItemsDetails = await this.getExtraItemsDetails(id);
 
       if (!job) return null;
 
@@ -419,6 +420,7 @@ export class DatabaseStorage implements IStorage {
           waitingSessions: sessions.filter(s => s.status === 'paused').length,
           totalAssignedWorkers: assignments.length,
           extraItemsCount, // NEW: Extra items count for modal display
+          extraItemsDetails, // NEW: Extra items details for modal display
           workers: workersData,
         },
         products: jobProducts, // ADD: Products array for completed boxes modal

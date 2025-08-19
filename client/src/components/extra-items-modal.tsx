@@ -26,12 +26,14 @@ interface ExtraItemsModalProps {
 }
 
 export function ExtraItemsModal({ isOpen, onClose, jobId }: ExtraItemsModalProps) {
-  const { data: extraItemsData, isLoading } = useQuery({
-    queryKey: ["/api/jobs", jobId, "extra-items"],
+  // Use same progress endpoint as Dashboard and Job Monitoring for consistency
+  const { data: progressData, isLoading } = useQuery({
+    queryKey: ["/api/jobs", jobId, "progress"],
     enabled: isOpen,
+    refetchInterval: 5000, // 5-second polling for real-time updates
   });
 
-  const extraItems: ExtraItem[] = (extraItemsData as any)?.extraItems || [];
+  const extraItems: ExtraItem[] = (progressData as any)?.progress?.extraItemsDetails || [];
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();

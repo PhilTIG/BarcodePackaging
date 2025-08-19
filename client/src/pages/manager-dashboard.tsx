@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -42,20 +43,18 @@ function ExtraItemsAndBoxesButtons({
   onExtraItemsClick: () => void;
   onBoxesCompleteClick: () => void;
 }) {
-  // Fetch extra items count
-  const { data: extraItemsData } = useQuery({
-    queryKey: [`/api/jobs/${jobId}/extra-items`],
-    enabled: !!jobId,
-  });
+  // Connect to WebSocket for real-time updates (same as Job Monitoring)
+  const { isConnected } = useWebSocket(jobId);
 
-  // Fetch job progress for correct box completion data
+  // Use single /progress endpoint for consistent real-time data (same as Job Monitoring)
   const { data: progressData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/progress`],
     enabled: !!jobId,
-    refetchInterval: 5000,
+    refetchInterval: 5000, // 5-second polling as requested
   });
 
-  const extraItemsCount = (extraItemsData as any)?.extraItems?.length || 0;
+  // Extract consistent data from progress endpoint (matches SupervisorView)
+  const extraItemsCount = (progressData as any)?.progress?.extraItemsCount || 0;
   const completedBoxes = (progressData as any)?.progress?.completedBoxes || 0;
   const totalBoxes = (progressData as any)?.progress?.totalBoxes || 0;
 
@@ -97,9 +96,11 @@ function CompletedBoxesModal({
   onClose: () => void; 
   jobId: string | null; 
 }) {
+  // Use same real-time progress endpoint as Job Monitoring
   const { data: progressData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/progress`],
     enabled: !!jobId && isOpen,
+    refetchInterval: 5000, // 5-second polling for consistency
   });
 
   // Get completed boxes from progress data - now includes products array
