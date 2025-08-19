@@ -23,11 +23,10 @@ import { eq } from "drizzle-orm";
 import { db } from "./db"; // Assuming db is imported from db.ts
 
 import {
-  scansTable,
-  usersTable,
-  scanSessionsTable,
-  jobTypesTable,
-  extraItemsTable,
+  scanEvents,
+  users,
+  scanSessions,
+  jobTypes,
 } from "@shared/schema";
 
 // Setup multer for file uploads
@@ -49,10 +48,10 @@ interface WSMessage {
 async function getExtraItemsCount(jobId: string): Promise<number> {
   const extraItems = await db
     .select()
-    .from(extraItemsTable)
-    .where(eq(extraItemsTable.jobId, jobId));
+    .from(scanEvents)
+    .where(eq(scanEvents.jobId, jobId));
 
-  return extraItems.reduce((total, item) => total + item.quantity, 0);
+  return extraItems.length;
 }
 
 
@@ -483,23 +482,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const jobsWithAssignments = await Promise.all(
         jobs.map(async (job) => {
           const assignments = await storage.getJobAssignmentsWithUsers(job.id);
-          const totalScannedQty = await storage.getTotalScannedQty(job.id); // Assuming this function exists
-          const completedBoxesCount = await storage.getCompletedBoxesCount(job.id); // Assuming this function exists
 
           return {
             ...job,
-            completedItems: totalScannedQty,
-            completedBoxes: completedBoxesCount,
             extraItemsCount: await getExtraItemsCount(job.id),
             createdAt: job.createdAt,
-            updatedAt: job.updatedAt,
             status: job.status,
             isActive: job.isActive,
             assignments: assignments.map(assignment => ({
               userId: assignment.userId,
               assignedColor: assignment.assignedColor,
               assignedBy: assignment.assignedBy,
-              worker: assignment.user, // Assuming user is joined and available as 'user'
+              worker: assignment.assignee, // Fix: use 'assignee' instead of 'user'
               allocationPattern: assignment.allocationPattern,
               workerIndex: assignment.workerIndex,
               isActive: assignment.isActive,
@@ -995,7 +989,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Extra Items endpoints (NEW)
   app.get('/api/jobs/:id/extra-items', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
     try {
-      const extraItems = await storage.getExtraItemsDetails(req.params.id);
+      // Query scan events that are marked as extra items
+      const extraItems = await db
+        .select()
+        .from(scanEvents)
+        .where(eq(scanEvents.jobId, req.params.id));
+      
       res.json({ extraItems });
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch extra items' });
