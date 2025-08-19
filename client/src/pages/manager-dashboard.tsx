@@ -56,8 +56,8 @@ function ExtraItemsAndBoxesButtons({
   });
 
   const extraItemsCount = (extraItemsData as any)?.extraItems?.length || 0;
-  const completedBoxes = (progressData as any)?.completedBoxes || 0;
-  const totalBoxes = (progressData as any)?.totalBoxes || 0;
+  const completedBoxes = (progressData as any)?.progress?.completedBoxes || 0;
+  const totalBoxes = (progressData as any)?.progress?.totalBoxes || 0;
 
   return (
     <div className="space-y-2">
@@ -102,7 +102,36 @@ function CompletedBoxesModal({
     enabled: !!jobId && isOpen,
   });
 
-  const completedBoxes = (progressData as any)?.products?.filter((product: any) => product.isComplete) || [];
+  // Get completed boxes from progress data - need to transform products to box format
+  const products = (progressData as any)?.products || [];
+  
+  // Group by customer and check if all items in customer's box are complete
+  const boxMap = new Map<string, { 
+    customerName: string; 
+    boxNumber: number; 
+    totalQty: number; 
+    scannedQty: number; 
+    isComplete: boolean; 
+  }>();
+  
+  products.forEach((product: any) => {
+    const key = `${product.customerName}-${product.boxNumber}`;
+    if (!boxMap.has(key)) {
+      boxMap.set(key, {
+        customerName: product.customerName,
+        boxNumber: product.boxNumber,
+        totalQty: 0,
+        scannedQty: 0,
+        isComplete: true
+      });
+    }
+    const box = boxMap.get(key)!;
+    box.totalQty += product.qty;
+    box.scannedQty += product.scannedQty;
+    box.isComplete = box.isComplete && product.isComplete;
+  });
+  
+  const completedBoxes = Array.from(boxMap.values()).filter(box => box.isComplete);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
