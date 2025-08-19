@@ -64,12 +64,6 @@ export function PerformanceDashboard({ jobId, supervisorView = false }: Performa
               {/* Worker StaffId Box Icon */}
               <div className="flex items-center space-x-2">
                 <div 
-                  className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                  style={{ backgroundColor: worker.assignedColor || '#3B82F6' }}
-                  title={`Worker color: ${worker.assignedColor || '#3B82F6'}`}
-                  data-testid={`worker-color-icon-${worker.id}`}
-                />
-                <div 
                   className="px-2 py-1 rounded text-xs font-bold min-w-[2.5rem] text-center"
                   style={{ 
                     backgroundColor: worker.assignedColor || '#6B7280',
