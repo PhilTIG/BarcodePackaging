@@ -657,14 +657,36 @@ export default function ManagerDashboard() {
                         </div>
                       </div>
 
-                      {/* Boxes Complete Counter - Bottom Right */}
-                      <div className="absolute bottom-4 right-4">
-                        <div className="bg-white border border-gray-300 rounded-md px-2 py-1 shadow-sm">
+                      {/* Extra Items and Boxes Complete Counters - Bottom Right */}
+                      <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-auto p-2 flex flex-col items-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExtraItemsJobId(job.id);
+                            setIsExtraItemsModalOpen(true);
+                          }}
+                          data-testid={`button-extra-items-count-${job.id}`}
+                        >
+                          <div className="text-xs text-gray-500 font-medium">Extra Items</div>
+                          <div className="text-sm font-bold text-gray-900">
+                            {job.extraItemsCount || 0}
+                          </div>
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-auto p-2 flex flex-col items-center cursor-default"
+                          data-testid={`boxes-complete-${job.id}`}
+                        >
                           <div className="text-xs text-gray-500 font-medium">Boxes Complete</div>
-                          <div className="text-sm font-bold text-gray-900" data-testid={`boxes-complete-${job.id}`}>
+                          <div className="text-sm font-bold text-gray-900">
                             {job.completedBoxes || 0}/{job.totalCustomers}
                           </div>
-                        </div>
+                        </Button>
                       </div>
 
                       {/* Assigned Workers Display with Allocation Patterns */}
@@ -736,18 +758,7 @@ export default function ManagerDashboard() {
                           <Users className="mr-1 h-4 w-4" />
                           Assign Workers
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => {
-                            setExtraItemsJobId(job.id);
-                            setIsExtraItemsModalOpen(true);
-                          }}
-                          data-testid={`button-extra-items-${job.id}`}
-                        >
-                          <Package className="mr-1 h-4 w-4" />
-                          Extra Items
-                        </Button>
+                        
                         <Button variant="outline" size="sm" data-testid={`button-export-${job.id}`}>
                           <Download className="mr-1 h-4 w-4" />
                           Export
