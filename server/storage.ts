@@ -420,6 +420,7 @@ export class DatabaseStorage implements IStorage {
           extraItemsCount, // NEW: Extra items count for modal display
           workers: workersData,
         },
+        products: jobProducts, // ADD: Products array for completed boxes modal
       };
     } catch (error) {
       console.error(`[ERROR] getJobProgress failed for job ${id}:`, error);

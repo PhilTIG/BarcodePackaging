@@ -102,7 +102,7 @@ function CompletedBoxesModal({
     enabled: !!jobId && isOpen,
   });
 
-  // Get completed boxes from progress data - need to transform products to box format
+  // Get completed boxes from progress data - now includes products array
   const products = (progressData as any)?.products || [];
   
   // Group by customer and check if all items in customer's box are complete
@@ -159,7 +159,7 @@ function CompletedBoxesModal({
                     <div className="text-sm text-gray-600">{box.customerName}</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-green-600">{box.scannedQty}/{box.qty} items</div>
+                    <div className="font-bold text-green-600">{box.scannedQty}/{box.totalQty} items</div>
                     <div className="text-xs text-gray-500">100% Complete</div>
                   </div>
                 </div>
