@@ -236,7 +236,7 @@ export class DatabaseStorage implements IStorage {
       if (boxRequirements.length > 0) {
         // NEW SYSTEM: Use box requirements
         totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
-        completedItems = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
+        completedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
       } else {
         // LEGACY SYSTEM: Use products table
         const products = await this.getProductsByJobId(jobId);
