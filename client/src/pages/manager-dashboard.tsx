@@ -81,7 +81,7 @@ function ExtraItemsAndBoxesButtons({
         className="w-full min-w-[120px]"
         data-testid={`button-boxes-complete-${jobId}`}
       >
-        {completedBoxes}/{totalBoxes} Complete
+        {completedBoxes}/{totalBoxes} Boxes
       </Button>
     </div>
   );
