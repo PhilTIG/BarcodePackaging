@@ -140,29 +140,11 @@ export function BoxDetailsModal({
     }
   });
 
-  // Debug logging for worker lookup investigation
-  console.log(`[BoxModal] Box ${boxNumber} Debug Info:`, {
-    boxRequirementsCount: boxRequirements.length,
-    workersAvailable: workers.length,
-    workerMapSize: workerMap.size,
-    allWorkersFound: allWorkers.size,
-    workerIds: Array.from(allWorkers.keys()),
-    availableWorkerIds: workers.map(w => w.id),
-    workerMapKeys: Array.from(workerMap.keys())
-  });
-
-  console.log(`[BoxModal] Box ${boxNumber} workers:`, Array.from(allWorkers.entries()).map(([id, worker]) => {
-    const workerInfo = workerMap.get(id);
-    return {
-      workerId: id.slice(-8),
-      fullWorkerId: id,
-      staffId: workerInfo?.staffId || 'NOT_FOUND',
-      workerName: workerInfo?.name || 'NOT_FOUND',
-      color: worker.color, 
-      contribution: worker.totalContribution,
-      foundInMap: !!workerInfo
-    };
-  }));
+  console.log(`[BoxModal] Box ${boxNumber} workers:`, Array.from(allWorkers.entries()).map(([id, worker]) => ({
+    workerId: id.slice(-8),
+    color: worker.color, 
+    contribution: worker.totalContribution
+  })));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -274,23 +256,7 @@ export function BoxDetailsModal({
               <div className="flex flex-wrap gap-2">
                 {Array.from(allWorkers.entries()).map(([userId, worker]) => {
                   const workerInfo = workerMap.get(userId);
-                  
-                  // Enhanced fallback logic with better debugging
-                  let displayName: string;
-                  if (workerInfo) {
-                    displayName = `${workerInfo.name} (${workerInfo.staffId})`;
-                  } else {
-                    // Try to find worker by partial ID match as fallback
-                    const partialMatch = workers.find(w => w.id.includes(userId) || userId.includes(w.id));
-                    if (partialMatch) {
-                      console.log(`[BoxModal] Found partial match for ${userId}:`, partialMatch);
-                      displayName = `${partialMatch.name} (${partialMatch.staffId})`;
-                    } else {
-                      // Ultimate fallback - show truncated ID but mark as unresolved
-                      console.warn(`[BoxModal] Cannot resolve worker ${userId} to staffId`);
-                      displayName = `Worker ${userId.slice(-4)} (UNRESOLVED)`;
-                    }
-                  }
+                  const displayName = workerInfo ? `${workerInfo.name} (${workerInfo.staffId})` : `Worker ${userId.slice(-4)}`;
                   
                   return (
                     <Badge 

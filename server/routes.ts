@@ -963,47 +963,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Diagnostic endpoint for worker ID investigation
-  app.get('/api/jobs/:id/worker-debug', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
-    try {
-      const jobId = req.params.id;
-      
-      // Get box requirements with worker IDs
-      const boxRequirements = await storage.getBoxRequirementsByJobId(jobId);
-      
-      // Get all workers
-      const workers = await storage.getUsersByRole('worker');
-      
-      // Get job assignments
-      const assignments = await storage.getJobAssignmentsWithUsers(jobId);
-      
-      // Analyze worker ID patterns
-      const uniqueWorkerIds = [...new Set(boxRequirements
-        .filter(req => req.lastWorkerUserId)
-        .map(req => req.lastWorkerUserId))];
-      
-      const analysis = {
-        boxRequirementsCount: boxRequirements.length,
-        uniqueWorkerIdsInBoxReqs: uniqueWorkerIds.length,
-        workerIdsInBoxReqs: uniqueWorkerIds,
-        availableWorkerIds: workers.map(w => ({ id: w.id, staffId: w.staffId, name: w.name })),
-        assignedWorkerIds: assignments.map(a => ({ id: a.userId, staffId: a.user?.staffId, name: a.user?.name })),
-        missingWorkers: uniqueWorkerIds.filter(id => !workers.find(w => w.id === id)),
-        idPatterns: {
-          boxReqWorkerIdLengths: uniqueWorkerIds.map(id => id?.length || 0),
-          workerIdLengths: workers.map(w => w.id.length),
-          exampleBoxReqIds: uniqueWorkerIds.slice(0, 3),
-          exampleWorkerIds: workers.slice(0, 3).map(w => w.id)
-        }
-      };
-      
-      res.json({ analysis });
-    } catch (error) {
-      console.error('Worker debug endpoint error:', error);
-      res.status(500).json({ message: 'Failed to generate worker debug info' });
-    }
-  });
-
   // User preferences routes - EMERGENCY BLOCK to stop infinite requests
   // User Preferences endpoints
   app.get('/api/users/me/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {

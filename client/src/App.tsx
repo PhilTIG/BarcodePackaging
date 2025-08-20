@@ -14,7 +14,6 @@ import SupervisorView from "@/pages/supervisor-view";
 import WorkerScanner from "@/pages/worker-scanner";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
-import { WorkerDebugPage } from "@/pages/worker-debug";
 
 function Router() {
   return (
@@ -25,7 +24,6 @@ function Router() {
       <Route path="/supervisor/:jobId?" component={SupervisorView} />
       <Route path="/scanner/:jobId?" component={WorkerScanner} />
       <Route path="/settings" component={Settings} />
-      <Route path="/debug/worker/:jobId?" component={WorkerDebugPage} />
       <Route component={NotFound} />
     </Switch>
   );
