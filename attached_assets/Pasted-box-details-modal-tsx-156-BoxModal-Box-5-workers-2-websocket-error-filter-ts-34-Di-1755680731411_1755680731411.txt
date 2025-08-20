@@ -1,0 +1,137 @@
+box-details-modal.tsx:156 [BoxModal] Box 5 workers: (2) [{…}, {…}]
+websocket-error-filter.ts:34 `DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.
+
+If you want to hide the `DialogTitle`, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/dialog Error Component Stack
+    at TitleWarning (@radix-ui_react-dialog.js?v=de4044e7:318:23)
+    at @radix-ui_react-dialog.js?v=de4044e7:238:13
+    at @radix-ui_react-dialog.js?v=de4044e7:161:58
+    at Presence (chunk-E4UC4BFD.js?v=de4044e7:24:11)
+    at @radix-ui_react-dialog.js?v=de4044e7:152:64
+    at chunk-2K77HOHX.js?v=de4044e7:79:13
+    at chunk-2K77HOHX.js?v=de4044e7:56:13
+    at chunk-AXMZZQ2X.js?v=de4044e7:42:13
+    at chunk-G76BAGTM.js?v=de4044e7:260:22
+    at Presence (chunk-E4UC4BFD.js?v=de4044e7:24:11)
+    at Provider (chunk-OXZDJRWN.js?v=de4044e7:38:15)
+    at DialogPortal (@radix-ui_react-dialog.js?v=de4044e7:114:11)
+    at _c3 (dialog.tsx:35:6)
+    at Provider (chunk-OXZDJRWN.js?v=de4044e7:38:15)
+    at Dialog (@radix-ui_react-dialog.js?v=de4044e7:55:5)
+    at BoxDetailsModal (box-details-modal.tsx:48:3)
+    at div (<anonymous>)
+    at CustomerBoxGrid (customer-box-grid.tsx:31:35)
+    at div (<anonymous>)
+    at _c9 (card.tsx:62:6)
+    at div (<anonymous>)
+    at _c (card.tsx:8:6)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at WorkerScanner (worker-scanner.tsx:20:21)
+    at Route (wouter.js?v=de4044e7:323:16)
+    at Switch (wouter.js?v=de4044e7:379:17)
+    at Router (<anonymous>)
+    at Provider (chunk-OXZDJRWN.js?v=de4044e7:38:15)
+    at TooltipProvider (@radix-ui_react-tooltip.js?v=de4044e7:64:5)
+    at AuthProvider (use-auth.tsx:21:32)
+    at ThemeProvider (theme-provider.tsx:12:33)
+    at UserPreferencesProvider (use-user-preferences.tsx:43:43)
+    at ErrorProvider (error-context.tsx:12:33)
+    at QueryClientProvider (@tanstack_react-query.js?v=de4044e7:2805:3)
+    at App (<anonymous>)
+overrideMethod @ hook.js:608
+filteredConsoleError @ websocket-error-filter.ts:34
+(anonymous) @ @radix-ui_react-dialog.js?v=de4044e7:328
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=de4044e7:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=de4044e7:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=de4044e7:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=de4044e7:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=de4044e7:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=de4044e7:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=de4044e7:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=de4044e7:19416
+commitRoot @ chunk-RPCDYKBN.js?v=de4044e7:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=de4044e7:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=de4044e7:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=de4044e7:18627
+hook.js:608 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. Error Component Stack
+    at DescriptionWarning (@radix-ui_react-dialog.js?v=de4044e7:334:29)
+    at @radix-ui_react-dialog.js?v=de4044e7:238:13
+    at @radix-ui_react-dialog.js?v=de4044e7:161:58
+    at Presence (chunk-E4UC4BFD.js?v=de4044e7:24:11)
+    at @radix-ui_react-dialog.js?v=de4044e7:152:64
+    at chunk-2K77HOHX.js?v=de4044e7:79:13
+    at chunk-2K77HOHX.js?v=de4044e7:56:13
+    at chunk-AXMZZQ2X.js?v=de4044e7:42:13
+    at chunk-G76BAGTM.js?v=de4044e7:260:22
+    at Presence (chunk-E4UC4BFD.js?v=de4044e7:24:11)
+    at Provider (chunk-OXZDJRWN.js?v=de4044e7:38:15)
+    at DialogPortal (@radix-ui_react-dialog.js?v=de4044e7:114:11)
+    at _c3 (dialog.tsx:35:6)
+    at Provider (chunk-OXZDJRWN.js?v=de4044e7:38:15)
+    at Dialog (@radix-ui_react-dialog.js?v=de4044e7:55:5)
+    at BoxDetailsModal (box-details-modal.tsx:48:3)
+    at div (<anonymous>)
+    at CustomerBoxGrid (customer-box-grid.tsx:31:35)
+    at div (<anonymous>)
+    at _c9 (card.tsx:62:6)
+    at div (<anonymous>)
+    at _c (card.tsx:8:6)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at WorkerScanner (worker-scanner.tsx:20:21)
+    at Route (wouter.js?v=de4044e7:323:16)
+    at Switch (wouter.js?v=de4044e7:379:17)
+    at Router (<anonymous>)
+    at Provider (chunk-OXZDJRWN.js?v=de4044e7:38:15)
+    at TooltipProvider (@radix-ui_react-tooltip.js?v=de4044e7:64:5)
+    at AuthProvider (use-auth.tsx:21:32)
+    at ThemeProvider (theme-provider.tsx:12:33)
+    at UserPreferencesProvider (use-user-preferences.tsx:43:43)
+    at ErrorProvider (error-context.tsx:12:33)
+    at QueryClientProvider (@tanstack_react-query.js?v=de4044e7:2805:3)
+    at App (<anonymous>)
+overrideMethod @ hook.js:608
+(anonymous) @ @radix-ui_react-dialog.js?v=de4044e7:342
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=de4044e7:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=de4044e7:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=de4044e7:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=de4044e7:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=de4044e7:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=de4044e7:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=de4044e7:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=de4044e7:19416
+commitRoot @ chunk-RPCDYKBN.js?v=de4044e7:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=de4044e7:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=de4044e7:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=de4044e7:18627
+queryClient.ts:54  GET https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/api/users?role=worker 403 (Forbidden)
+(anonymous) @ queryClient.ts:54
+fetchFn @ @tanstack_react-query.js?v=de4044e7:840
+run @ @tanstack_react-query.js?v=de4044e7:494
+start @ @tanstack_react-query.js?v=de4044e7:536
+fetch @ @tanstack_react-query.js?v=de4044e7:926
+executeFetch_fn @ @tanstack_react-query.js?v=de4044e7:2211
+setOptions @ @tanstack_react-query.js?v=de4044e7:1955
+(anonymous) @ @tanstack_react-query.js?v=de4044e7:3032
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=de4044e7:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=de4044e7:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=de4044e7:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=de4044e7:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=de4044e7:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=de4044e7:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=de4044e7:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=de4044e7:19416
+commitRoot @ chunk-RPCDYKBN.js?v=de4044e7:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=de4044e7:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=de4044e7:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=de4044e7:18627
+box-details-modal.tsx:181 [DEBUG] CheckCount button clicked!
+box-details-modal.tsx:182 [DEBUG] boxNumber: 5
+box-details-modal.tsx:183 [DEBUG] canCheckCount(): true
+box-details-modal.tsx:184 [DEBUG] user: {id: 'a53f9730-8aa4-488b-a281-11a277c41efb', staffId: 'W002', name: 'Test Worker 2', role: 'worker'}
+box-details-modal.tsx:185 [DEBUG] preferences: {maxBoxesPerRow: 12, autoClearInput: true, soundFeedback: true, vibrationFeedback: false, scannerType: 'camera', …}
+box-details-modal.tsx:192 [DEBUG] Closing box modal first
+box-details-modal.tsx:195 [DEBUG] Setting isCheckCountModalOpen to true
+box-details-modal.tsx:198 [DEBUG] isCheckCountModalOpen after set: true

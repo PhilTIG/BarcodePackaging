@@ -56,8 +56,7 @@ export function BoxDetailsModal({
   lastWorkerColor,
   onCheckCount
 }: BoxDetailsModalProps) {
-  // CheckCount modal state
-  const [isCheckCountModalOpen, setIsCheckCountModalOpen] = useState(false);
+
   
   // User authentication and preferences
   const { user } = useAuth();
@@ -178,24 +177,15 @@ export function BoxDetailsModal({
 
   // Handle CheckCount button click
   const handleCheckCount = () => {
-    console.log('[DEBUG] CheckCount button clicked!');
-    console.log('[DEBUG] boxNumber:', boxNumber);
-    console.log('[DEBUG] canCheckCount():', canCheckCount());
-    console.log('[DEBUG] user:', user);
-    console.log('[DEBUG] preferences:', preferences);
-    
     if (!boxNumber || !canCheckCount()) {
-      console.log('[DEBUG] Early return - missing boxNumber or no permission');
       return;
     }
     
-    console.log('[DEBUG] Closing box modal first');
-    onClose(); // Close box modal immediately
-    
-    console.log('[DEBUG] Setting isCheckCountModalOpen to true');
-    setIsCheckCountModalOpen(true);
-    
-    console.log('[DEBUG] isCheckCountModalOpen after set:', true);
+    // Close box modal and trigger navigation to CheckCount page
+    onClose();
+    if (onCheckCount) {
+      onCheckCount(boxNumber, jobId);
+    }
   };
 
   // Get theme color for button styling
