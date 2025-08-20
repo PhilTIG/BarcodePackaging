@@ -1196,6 +1196,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all user preferences (Manager only)
+  app.get('/api/users/preferences/all', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const allPreferences = await storage.getAllUserPreferences();
+      res.json({ preferences: allPreferences });
+    } catch (error) {
+      console.error('Error fetching all user preferences:', error);
+      res.status(500).json({ error: "Failed to fetch all preferences" });
+    }
+  });
+
+  // Update specific user preferences (Manager only)
+  app.patch('/api/users/:userId/preferences', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const updates = req.body;
+      
+      // Check if user exists
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      console.log('[API] Manager updating preferences for user:', userId, 'with data:', updates);
+      
+      const updatedPreferences = await storage.updateUserPreferences(userId, updates);
+      
+      if (!updatedPreferences) {
+        return res.status(404).json({ error: "User preferences not found" });
+      }
+      
+      console.log('[API] Updated user preferences result:', updatedPreferences);
+      res.json({ preferences: updatedPreferences });
+    } catch (error) {
+      console.error('Error updating user preferences:', error);
+      res.status(500).json({ error: "Failed to update user preferences" });
+    }
+  });
+
   // User management - consolidated endpoint with optional role filtering
   app.get('/api/users', requireAuth, requireRole(['manager']), async (req, res) => {
     try {

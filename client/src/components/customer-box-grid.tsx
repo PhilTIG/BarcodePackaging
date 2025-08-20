@@ -1,11 +1,12 @@
 import { useMemo, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Lock } from "lucide-react";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useBoxHighlighting } from "@/hooks/use-box-highlighting";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { BoxDetailsModal } from "./box-details-modal";
+import { CheckBoxButton } from "./check-box-button";
+import { CheckCountModal } from "./check-count-modal";
 
 interface Product {
   id: string;
@@ -36,6 +37,12 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
     scannedQty: number;
     isComplete: boolean;
     lastWorkerColor?: string;
+  } | null>(null);
+  
+  // State for CheckCount modal
+  const [checkCountSession, setCheckCountSession] = useState<{
+    sessionId: string;
+    boxNumber: number;
   } | null>(null);
   // Use actual user preferences for box layout
   const { preferences } = useUserPreferences();
@@ -196,10 +203,22 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
             data-testid={`box-${box.boxNumber}`}
             onClick={handleBoxClick}
           >
-            {/* Lock icon for 100% completed boxes */}
+            {/* CheckBox button for completed boxes */}
             {box.isComplete && (
-              <div className="absolute top-1 right-1">
-                <Lock className={`w-5 h-5 ${highlighting.textColor}`} />
+              <div className="absolute top-1 right-1" onClick={(e) => e.stopPropagation()}>
+                <CheckBoxButton
+                  boxNumber={box.boxNumber}
+                  jobId={jobId}
+                  totalItemsExpected={box.totalQty}
+                  isUserAuthorized={(preferences as any).checkBoxEnabled || supervisorView}
+                  onCheckStart={(sessionId) => {
+                    setCheckCountSession({
+                      sessionId,
+                      boxNumber: box.boxNumber
+                    });
+                  }}
+                  size="sm"
+                />
               </div>
             )}
 
@@ -286,6 +305,15 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
         scannedQty={selectedBox?.scannedQty || 0}
         isComplete={selectedBox?.isComplete || false}
         lastWorkerColor={selectedBox?.lastWorkerColor}
+      />
+
+      {/* CheckCount Modal */}
+      <CheckCountModal
+        isOpen={checkCountSession !== null}
+        onClose={() => setCheckCountSession(null)}
+        sessionId={checkCountSession?.sessionId || null}
+        boxNumber={checkCountSession?.boxNumber || 0}
+        jobId={jobId}
       />
     </div>
   );
