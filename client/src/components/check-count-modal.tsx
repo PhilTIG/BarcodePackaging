@@ -158,11 +158,12 @@ export function CheckCountModal({
   // Start session when modal opens and close box modal
   useEffect(() => {
     if (isOpen && !checkSession) {
-      startCheckSessionMutation.mutate();
-      // Close the parent box modal when CheckCount modal opens
+      // Close the parent box modal first to prevent z-index conflicts
       if (onBoxModalClose) {
         onBoxModalClose();
       }
+      // Start the check session
+      startCheckSessionMutation.mutate();
     }
   }, [isOpen]);
 
@@ -297,7 +298,7 @@ export function CheckCountModal({
   console.log('[DEBUG CheckCountModal] Modal is open, rendering...');
 
   return (
-    <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900">
+    <div className="fixed inset-0 z-[150] bg-white dark:bg-gray-900">
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center justify-between">

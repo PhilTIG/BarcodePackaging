@@ -190,6 +190,9 @@ export function BoxDetailsModal({
       return;
     }
     
+    console.log('[DEBUG] Closing box modal first');
+    onClose(); // Close box modal immediately
+    
     console.log('[DEBUG] Setting isCheckCountModalOpen to true');
     setIsCheckCountModalOpen(true);
     
