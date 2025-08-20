@@ -1,0 +1,29 @@
+*Box Checking system.
+
+**Box Modal Check Button
+A "Check Count" button is to be added to this modal. This will show for all Managers and Supervisors. If switched on for workers in the settings section (See setting task information below).
+
+**Box check count system
+When the "Check Count" button is pressed the view will go to full screen and show the same information as the original modal. The below additional features and functions will be added to this screen.
+1. A barcode scanner entry point will show on the top panel.
+2. The product containers will all show the same details including the progress bar.
+* Underneath the progress bar will be a "Check Count" progress bar (Second progress bar) that will show the "Check Count" barcode scanned items as the same percentage method as the above progress bar. (This is all per product container)
+* When the check bar matches the same position as the project bar (even if the progress bar is not at 100% then it will show green for both bars and place a tick for that product container.
+* If the check goes over the current value of the items count in the box then it should show red with an error. If over 100% it should show "Extra Item found" and show an orange icon stating "Extra" in the products container.
+3. If all items in the box are scanned but there is a shortfall then the user can select a button called "Scan Complete" and the system will come back and state that there is stock missing and do you want to correct (yes/no).
+* If content in the box is over then the "Extra" Items should be recorded to the Extra's count. If the items is under then the box should be readjusted to show the corrected count.
+4. All checks performed should be logged to the system and include the results and changes made. It should include the time and the user that performed the task.
+5. A "QA" button standing for Quality Assurance" should be placed on the Job panel in the Active Jobs Dashboard and the top panel in the Job monitor for the Manager and Supervisor roles. This should show a detailed report of the checks on the job and all changes by users.
+6. If a box is checked successfully then it should show a tick on it if not correct it should show a cross on it. This will replace the lock icon that is shown on the top right corner of the box.
+
+**Settings
+These settings are for the Manager only to change.
+1. The User Management section will have an extra setting per worker. The setting will be called "Check Boxes" with a toggle control to switch on and off.
+2 When switched on the worker will see the "Check" button in the box content modal.
+Managers and Supervisors will always have the ability to check boxes.
+
+Can you perform a deep search through the related code and database to determine a full understanding of the database and API endpoints in preparation to build out this solution.
+
+Do not make any changes, until you have 95% confidence that you know what to build, ask me follow up questions until you have that confidence. We need to write a full functional task list representing this project and check it as we develop this functionality.
+
+
