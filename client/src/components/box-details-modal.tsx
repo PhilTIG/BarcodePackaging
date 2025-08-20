@@ -256,7 +256,7 @@ export function BoxDetailsModal({
               <div className="flex flex-wrap gap-2">
                 {Array.from(allWorkers.entries()).map(([userId, worker]) => {
                   const workerInfo = workerMap.get(userId);
-                  const displayName = workerInfo ? workerInfo.name : `Worker ${userId.slice(-4)}`;
+                  const displayName = workerInfo ? `${workerInfo.name} (${workerInfo.staffId})` : `Worker ${userId.slice(-4)}`;
                   
                   return (
                     <Badge 
