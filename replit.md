@@ -20,7 +20,7 @@ The backend is a RESTful API built with Express.js and TypeScript. It includes a
 
 ### Data Storage Solutions
 
-PostgreSQL serves as the primary database, managed by Drizzle ORM for type-safe queries and schema management. Neon serverless PostgreSQL provides scalable cloud hosting. The relational schema includes tables for users, jobs, products, scan sessions, scan events, job assignments, job types, worker box assignments, session snapshots, and job archives.
+PostgreSQL serves as the primary database, managed by Drizzle ORM for type-safe queries and schema management. Neon serverless PostgreSQL provides scalable cloud hosting. The relational schema includes tables for users, jobs, products, scan sessions, scan events, job assignments, job types, worker box assignments, session snapshots, job archives, and **NEW CheckCount tables** (check_sessions, check_events, check_results) for quality assurance functionality.
 
 ### Authentication and Authorization
 
@@ -33,6 +33,8 @@ The application incorporates sophisticated performance tracking, including a sco
 **Worker Box Highlighting System**: Real-time WebSocket-based box highlighting for managers/supervisors shows which boxes workers are actively scanning. Features include 50% transparent worker color backgrounds, worker staffId display under quantities, and persistent color circles indicating the last worker to scan each box.
 
 **Product Calculation Fix (January 2025)**: Corrected critical calculation error where `totalProducts` was counting CSV rows instead of summing quantities. Fixed calculation logic to properly sum all `Qty` values from CSV data, ensuring accurate product counts for job management and progress tracking.
+
+**CheckCount Phase 1 Implementation (August 2025)**: Completed database foundation and API infrastructure for box verification system. Added comprehensive CheckCount schema with check_sessions, check_events, and check_results tables. Implemented full storage interface and API endpoints with role-based permissions. Workers require manager-enabled `checkBoxEnabled` preference to perform checks. System ready for UI component development in Phase 2.
 
 ### Mobile and Hardware Support
 

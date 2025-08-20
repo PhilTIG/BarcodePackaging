@@ -12,6 +12,10 @@ import {
   workerBoxAssignments,
   // PHASE 4: sessionSnapshots removed
   jobArchives,
+  // NEW CheckCount tables
+  checkSessions,
+  checkEvents,
+  checkResults,
   type User, 
   type InsertUser,
   type Job,
@@ -36,7 +40,14 @@ import {
   type InsertWorkerBoxAssignment,
   // PHASE 4: SessionSnapshot types removed
   type JobArchive,
-  type InsertJobArchive
+  type InsertJobArchive,
+  // NEW CheckCount types
+  type CheckSession,
+  type InsertCheckSession,
+  type CheckEvent,
+  type InsertCheckEvent,
+  type CheckResult,
+  type InsertCheckResult
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
@@ -123,6 +134,28 @@ export interface IStorage {
   getJobArchives(): Promise<JobArchive[]>;
   searchJobArchives(query: string): Promise<JobArchive[]>;
   deleteJobArchive(id: string): Promise<boolean>;
+
+  // NEW CheckCount methods
+  // Check session methods
+  createCheckSession(session: InsertCheckSession): Promise<CheckSession>;
+  getCheckSessionById(id: string): Promise<CheckSession | undefined>;
+  getCheckSessionsByJobId(jobId: string): Promise<CheckSession[]>;
+  getCheckSessionsByBoxNumber(jobId: string, boxNumber: number): Promise<CheckSession[]>;
+  updateCheckSessionStatus(id: string, status: string): Promise<CheckSession | undefined>;
+  completeCheckSession(id: string, endTime: Date, discrepanciesFound: number): Promise<CheckSession | undefined>;
+
+  // Check event methods
+  createCheckEvent(event: InsertCheckEvent): Promise<CheckEvent>;
+  getCheckEventsBySessionId(sessionId: string): Promise<CheckEvent[]>;
+  
+  // Check result methods
+  createCheckResult(result: InsertCheckResult): Promise<CheckResult>;
+  getCheckResultsBySessionId(sessionId: string): Promise<CheckResult[]>;
+  updateCheckResult(id: string, updates: Partial<InsertCheckResult>): Promise<CheckResult | undefined>;
+  
+  // QA reporting methods
+  getJobQAReport(jobId: string): Promise<any>;
+  getDiscrepancyReport(jobId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1149,6 +1182,7 @@ export class DatabaseStorage implements IStorage {
       batchScanMode: result.batchScanMode || false,
       mobileModePreference: result.mobileModePreference || false,
       singleBoxMode: result.singleBoxMode || false,
+      checkBoxEnabled: result.checkBoxEnabled || false,
     };
   }
 
@@ -1176,6 +1210,7 @@ export class DatabaseStorage implements IStorage {
       batchScanMode: result.batchScanMode || false,
       mobileModePreference: result.mobileModePreference || false,
       singleBoxMode: result.singleBoxMode || false,
+      checkBoxEnabled: result.checkBoxEnabled || false,
     };
   }
 
@@ -1213,6 +1248,7 @@ export class DatabaseStorage implements IStorage {
       batchScanMode: result.batchScanMode || false,
       mobileModePreference: result.mobileModePreference || false,
       singleBoxMode: result.singleBoxMode || false,
+      checkBoxEnabled: result.checkBoxEnabled || false,
     };
   }
 
@@ -1657,6 +1693,180 @@ export class DatabaseStorage implements IStorage {
       console.error('Error deleting all job data:', error);
       throw new Error('Failed to delete job data: ' + (error as Error).message);
     }
+  }
+
+  // NEW CheckCount Methods Implementation
+  async createCheckSession(session: InsertCheckSession): Promise<CheckSession> {
+    const [result] = await this.db
+      .insert(checkSessions)
+      .values(session)
+      .returning();
+    return result;
+  }
+
+  async getCheckSessionById(id: string): Promise<CheckSession | undefined> {
+    const [session] = await this.db
+      .select()
+      .from(checkSessions)
+      .where(eq(checkSessions.id, id));
+    return session || undefined;
+  }
+
+  async getCheckSessionsByJobId(jobId: string): Promise<CheckSession[]> {
+    return await this.db
+      .select()
+      .from(checkSessions)
+      .where(eq(checkSessions.jobId, jobId))
+      .orderBy(desc(checkSessions.startTime));
+  }
+
+  async getCheckSessionsByBoxNumber(jobId: string, boxNumber: number): Promise<CheckSession[]> {
+    return await this.db
+      .select()
+      .from(checkSessions)
+      .where(and(
+        eq(checkSessions.jobId, jobId),
+        eq(checkSessions.boxNumber, boxNumber)
+      ))
+      .orderBy(desc(checkSessions.startTime));
+  }
+
+  async updateCheckSessionStatus(id: string, status: string): Promise<CheckSession | undefined> {
+    const [session] = await this.db
+      .update(checkSessions)
+      .set({ status })
+      .where(eq(checkSessions.id, id))
+      .returning();
+    return session || undefined;
+  }
+
+  async completeCheckSession(id: string, endTime: Date, discrepanciesFound: number): Promise<CheckSession | undefined> {
+    const [session] = await this.db
+      .update(checkSessions)
+      .set({ 
+        status: 'completed',
+        endTime,
+        discrepanciesFound,
+        isComplete: true 
+      })
+      .where(eq(checkSessions.id, id))
+      .returning();
+    return session || undefined;
+  }
+
+  async createCheckEvent(event: InsertCheckEvent): Promise<CheckEvent> {
+    const [result] = await this.db
+      .insert(checkEvents)
+      .values(event)
+      .returning();
+    return result;
+  }
+
+  async getCheckEventsBySessionId(sessionId: string): Promise<CheckEvent[]> {
+    return await this.db
+      .select()
+      .from(checkEvents)
+      .where(eq(checkEvents.checkSessionId, sessionId))
+      .orderBy(checkEvents.scanTime);
+  }
+
+  async createCheckResult(result: InsertCheckResult): Promise<CheckResult> {
+    const [checkResult] = await this.db
+      .insert(checkResults)
+      .values(result)
+      .returning();
+    return checkResult;
+  }
+
+  async getCheckResultsBySessionId(sessionId: string): Promise<CheckResult[]> {
+    return await this.db
+      .select()
+      .from(checkResults)
+      .where(eq(checkResults.checkSessionId, sessionId))
+      .orderBy(checkResults.createdAt);
+  }
+
+  async updateCheckResult(id: string, updates: Partial<InsertCheckResult>): Promise<CheckResult | undefined> {
+    const [result] = await this.db
+      .update(checkResults)
+      .set(updates)
+      .where(eq(checkResults.id, id))
+      .returning();
+    return result || undefined;
+  }
+
+  async getJobQAReport(jobId: string): Promise<any> {
+    // Get all check sessions for this job with user info
+    const sessions = await this.db
+      .select({
+        sessionId: checkSessions.id,
+        boxNumber: checkSessions.boxNumber,
+        status: checkSessions.status,
+        startTime: checkSessions.startTime,
+        endTime: checkSessions.endTime,
+        totalItemsExpected: checkSessions.totalItemsExpected,
+        totalItemsScanned: checkSessions.totalItemsScanned,
+        discrepanciesFound: checkSessions.discrepanciesFound,
+        isComplete: checkSessions.isComplete,
+        userId: checkSessions.userId,
+        userName: users.name,
+        userStaffId: users.staffId,
+      })
+      .from(checkSessions)
+      .leftJoin(users, eq(checkSessions.userId, users.id))
+      .where(eq(checkSessions.jobId, jobId))
+      .orderBy(desc(checkSessions.startTime));
+
+    // Get total discrepancies and completion rate
+    const totalSessions = sessions.length;
+    const completedSessions = sessions.filter((s: any) => s.status === 'completed').length;
+    const totalDiscrepancies = sessions.reduce((sum: number, s: any) => sum + (s.discrepanciesFound || 0), 0);
+
+    return {
+      jobId,
+      totalSessions,
+      completedSessions,
+      completionRate: totalSessions > 0 ? (completedSessions / totalSessions) * 100 : 0,
+      totalDiscrepancies,
+      sessions
+    };
+  }
+
+  async getDiscrepancyReport(jobId: string): Promise<any> {
+    // Get all check results that show discrepancies
+    const discrepancies = await this.db
+      .select({
+        sessionId: checkResults.checkSessionId,
+        boxNumber: checkSessions.boxNumber,
+        boxRequirementId: checkResults.boxRequirementId,
+        originalQty: checkResults.originalQty,
+        checkedQty: checkResults.checkedQty,
+        adjustedQty: checkResults.adjustedQty,
+        discrepancyType: checkResults.discrepancyType,
+        correctionApplied: checkResults.correctionApplied,
+        notes: checkResults.notes,
+        createdAt: checkResults.createdAt,
+        userName: users.name,
+        userStaffId: users.staffId,
+        barCode: boxRequirements.barCode,
+        productName: boxRequirements.productName,
+        customerName: boxRequirements.customerName,
+      })
+      .from(checkResults)
+      .leftJoin(checkSessions, eq(checkResults.checkSessionId, checkSessions.id))
+      .leftJoin(users, eq(checkSessions.userId, users.id))
+      .leftJoin(boxRequirements, eq(checkResults.boxRequirementId, boxRequirements.id))
+      .where(and(
+        eq(checkSessions.jobId, jobId),
+        sql`${checkResults.discrepancyType} != 'match'`
+      ))
+      .orderBy(desc(checkResults.createdAt));
+
+    return {
+      jobId,
+      totalDiscrepancies: discrepancies.length,
+      discrepancies
+    };
   }
 }
 

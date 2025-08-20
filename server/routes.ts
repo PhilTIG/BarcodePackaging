@@ -923,6 +923,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // NEW CheckCount API Routes
+  // Check session management
+  app.post('/api/check-sessions', requireAuth, requireRole(['manager', 'supervisor', 'worker']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, boxNumber, totalItemsExpected } = req.body;
+      
+      // Verify user has permission to perform checks
+      if (req.user!.role === 'worker') {
+        const preferences = await storage.getUserPreferences(req.user!.id);
+        if (!preferences?.checkBoxEnabled) {
+          return res.status(403).json({ message: 'Check box permission not enabled for this worker' });
+        }
+      }
+
+      const sessionData = {
+        jobId,
+        boxNumber: parseInt(boxNumber),
+        userId: req.user!.id,
+        totalItemsExpected: parseInt(totalItemsExpected),
+        status: 'active'
+      };
+
+      const session = await storage.createCheckSession(sessionData);
+      res.status(201).json({ session });
+    } catch (error) {
+      console.error('Failed to create check session:', error);
+      res.status(500).json({ message: 'Failed to create check session' });
+    }
+  });
+
+  app.get('/api/check-sessions/:id', requireAuth, async (req, res) => {
+    try {
+      const session = await storage.getCheckSessionById(req.params.id);
+      
+      if (!session) {
+        return res.status(404).json({ message: 'Check session not found' });
+      }
+
+      res.json({ session });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch check session' });
+    }
+  });
+
+  app.patch('/api/check-sessions/:id', requireAuth, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const session = await storage.updateCheckSessionStatus(req.params.id, status);
+      
+      if (!session) {
+        return res.status(404).json({ message: 'Check session not found' });
+      }
+
+      res.json({ session });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update check session' });
+    }
+  });
+
+  app.post('/api/check-sessions/:id/complete', requireAuth, async (req, res) => {
+    try {
+      const { discrepanciesFound } = req.body;
+      const session = await storage.completeCheckSession(
+        req.params.id,
+        new Date(),
+        parseInt(discrepanciesFound) || 0
+      );
+      
+      if (!session) {
+        return res.status(404).json({ message: 'Check session not found' });
+      }
+
+      res.json({ session });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to complete check session' });
+    }
+  });
+
+  // Check events
+  app.post('/api/check-events', requireAuth, async (req, res) => {
+    try {
+      const eventData = req.body;
+      const checkEvent = await storage.createCheckEvent(eventData);
+      
+      res.status(201).json({ checkEvent });
+    } catch (error) {
+      console.error('Failed to create check event:', error);
+      res.status(500).json({ message: 'Failed to create check event' });
+    }
+  });
+
+  app.get('/api/check-sessions/:id/events', requireAuth, async (req, res) => {
+    try {
+      const events = await storage.getCheckEventsBySessionId(req.params.id);
+      res.json({ events });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch check events' });
+    }
+  });
+
+  // Check results
+  app.post('/api/check-results', requireAuth, async (req, res) => {
+    try {
+      const resultData = req.body;
+      const checkResult = await storage.createCheckResult(resultData);
+      
+      res.status(201).json({ checkResult });
+    } catch (error) {
+      console.error('Failed to create check result:', error);
+      res.status(500).json({ message: 'Failed to create check result' });
+    }
+  });
+
+  app.get('/api/check-sessions/:id/results', requireAuth, async (req, res) => {
+    try {
+      const results = await storage.getCheckResultsBySessionId(req.params.id);
+      res.json({ results });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch check results' });
+    }
+  });
+
+  // QA Reporting endpoints
+  app.get('/api/jobs/:id/qa-report', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const report = await storage.getJobQAReport(req.params.id);
+      res.json({ report });
+    } catch (error) {
+      console.error('Failed to generate QA report:', error);
+      res.status(500).json({ message: 'Failed to generate QA report' });
+    }
+  });
+
+  app.get('/api/jobs/:id/check-sessions', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const sessions = await storage.getCheckSessionsByJobId(req.params.id);
+      res.json({ sessions });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch check sessions' });
+    }
+  });
+
+  app.get('/api/jobs/:id/discrepancy-report', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const report = await storage.getDiscrepancyReport(req.params.id);
+      res.json({ report });
+    } catch (error) {
+      console.error('Failed to generate discrepancy report:', error);
+      res.status(500).json({ message: 'Failed to generate discrepancy report' });
+    }
+  });
+
+  // User preferences update for checkBoxEnabled
+  app.patch('/api/users/:id/preferences', requireAuth, requireRole(['manager']), async (req, res) => {
+    try {
+      const { checkBoxEnabled } = req.body;
+      const preferences = await storage.updateUserPreferences(req.params.id, { checkBoxEnabled });
+      
+      if (!preferences) {
+        return res.status(404).json({ message: 'User preferences not found' });
+      }
+
+      res.json({ preferences });
+    } catch (error) {
+      console.error('Failed to update user preferences:', error);
+      res.status(500).json({ message: 'Failed to update user preferences' });
+    }
+  });
+
   // Performance and reporting
   app.get('/api/scan-sessions/:id/performance', requireAuth, async (req, res) => {
     try {

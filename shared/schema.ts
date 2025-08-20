@@ -155,6 +155,9 @@ export const userPreferences = pgTable("user_preferences", {
   mobileModePreference: boolean("mobile_mode_preference").default(false),
   singleBoxMode: boolean("single_box_mode").default(false),
   
+  // CheckCount Preferences (NEW)
+  checkBoxEnabled: boolean("check_box_enabled").default(false), // Worker permission to perform checks
+  
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });
@@ -180,6 +183,47 @@ export const jobAssignments = pgTable("job_assignments", {
   workerIndex: integer("worker_index").default(0), // Position in worker assignment order (0-3)
 });
 
+// CheckCount Tables (NEW)
+export const checkSessions = pgTable("check_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
+  boxNumber: integer("box_number").notNull(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  status: text("status").notNull().default('active'), // 'active', 'completed', 'cancelled'
+  startTime: timestamp("start_time").default(sql`now()`),
+  endTime: timestamp("end_time"),
+  totalItemsExpected: integer("total_items_expected").notNull(),
+  totalItemsScanned: integer("total_items_scanned").default(0),
+  discrepanciesFound: integer("discrepancies_found").default(0),
+  isComplete: boolean("is_complete").default(false),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const checkEvents = pgTable("check_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  checkSessionId: varchar("check_session_id").notNull().references(() => checkSessions.id, { onDelete: 'cascade' }),
+  barCode: text("bar_code").notNull(),
+  productName: text("product_name"),
+  scannedQty: integer("scanned_qty").notNull(),
+  expectedQty: integer("expected_qty").notNull(),
+  discrepancyType: text("discrepancy_type").notNull(), // 'match', 'shortage', 'excess'
+  eventType: text("event_type").notNull().default('scan'), // 'scan', 'manual_adjustment'
+  scanTime: timestamp("scan_time").default(sql`now()`),
+});
+
+export const checkResults = pgTable("check_results", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  checkSessionId: varchar("check_session_id").notNull().references(() => checkSessions.id, { onDelete: 'cascade' }),
+  boxRequirementId: varchar("box_requirement_id").notNull().references(() => boxRequirements.id),
+  originalQty: integer("original_qty").notNull(),
+  checkedQty: integer("checked_qty").notNull(),
+  adjustedQty: integer("adjusted_qty"),
+  discrepancyType: text("discrepancy_type").notNull(), // 'match', 'shortage', 'excess'
+  correctionApplied: boolean("correction_applied").default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   createdJobs: many(jobs, { relationName: "creator" }),
@@ -191,6 +235,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdJobTypes: many(jobTypes),
   workerBoxAssignments: many(workerBoxAssignments),
   archivedJobs: many(jobArchives),
+  checkSessions: many(checkSessions), // NEW
 }));
 
 export const jobTypesRelations = relations(jobTypes, ({ one, many }) => ({
@@ -250,9 +295,10 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
   scanSessions: many(scanSessions),
   assignments: many(jobAssignments),
   workerBoxAssignments: many(workerBoxAssignments),
+  checkSessions: many(checkSessions), // NEW
 }));
 
-export const boxRequirementsRelations = relations(boxRequirements, ({ one }) => ({
+export const boxRequirementsRelations = relations(boxRequirements, ({ one, many }) => ({
   job: one(jobs, {
     fields: [boxRequirements.jobId],
     references: [jobs.id],
@@ -261,6 +307,7 @@ export const boxRequirementsRelations = relations(boxRequirements, ({ one }) => 
     fields: [boxRequirements.lastWorkerUserId],
     references: [users.id],
   }),
+  checkResults: many(checkResults), // NEW
 }));
 
 export const productsRelations = relations(products, ({ one }) => ({
@@ -307,6 +354,38 @@ export const jobAssignmentsRelations = relations(jobAssignments, ({ one }) => ({
   }),
 }));
 
+// NEW CheckCount Relations
+export const checkSessionsRelations = relations(checkSessions, ({ one, many }) => ({
+  job: one(jobs, {
+    fields: [checkSessions.jobId],
+    references: [jobs.id],
+  }),
+  user: one(users, {
+    fields: [checkSessions.userId],
+    references: [users.id],
+  }),
+  checkEvents: many(checkEvents),
+  checkResults: many(checkResults),
+}));
+
+export const checkEventsRelations = relations(checkEvents, ({ one }) => ({
+  checkSession: one(checkSessions, {
+    fields: [checkEvents.checkSessionId],
+    references: [checkSessions.id],
+  }),
+}));
+
+export const checkResultsRelations = relations(checkResults, ({ one }) => ({
+  checkSession: one(checkSessions, {
+    fields: [checkResults.checkSessionId],
+    references: [checkSessions.id],
+  }),
+  boxRequirement: one(boxRequirements, {
+    fields: [checkResults.boxRequirementId],
+    references: [boxRequirements.id],
+  }),
+}));
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -339,6 +418,23 @@ export const insertScanSessionSchema = createInsertSchema(scanSessions).omit({
 export const insertJobAssignmentSchema = createInsertSchema(jobAssignments).omit({
   id: true,
   assignedAt: true,
+});
+
+// NEW CheckCount Schemas
+export const insertCheckSessionSchema = createInsertSchema(checkSessions).omit({
+  id: true,
+  startTime: true,
+  createdAt: true,
+});
+
+export const insertCheckEventSchema = createInsertSchema(checkEvents).omit({
+  id: true,
+  scanTime: true,
+});
+
+export const insertCheckResultSchema = createInsertSchema(checkResults).omit({
+  id: true,
+  createdAt: true,
 });
 
 // New table insert schemas
@@ -402,6 +498,9 @@ export interface UserPreferences {
   // Mobile Preferences (NEW)
   mobileModePreference: boolean;
   singleBoxMode: boolean;
+  
+  // CheckCount Preferences (NEW)
+  checkBoxEnabled: boolean;
 }
 
 // Remove duplicate schemas that were already defined earlier
@@ -473,6 +572,14 @@ export type WorkerBoxAssignment = typeof workerBoxAssignments.$inferSelect;
 export type InsertWorkerBoxAssignment = z.infer<typeof insertWorkerBoxAssignmentSchema>;
 // PHASE 4: Removed SessionSnapshot types (table removed)
 export type JobArchive = typeof jobArchives.$inferSelect;
+
+// NEW CheckCount Types
+export type CheckSession = typeof checkSessions.$inferSelect;
+export type InsertCheckSession = z.infer<typeof insertCheckSessionSchema>;
+export type CheckEvent = typeof checkEvents.$inferSelect;
+export type InsertCheckEvent = z.infer<typeof insertCheckEventSchema>;
+export type CheckResult = typeof checkResults.$inferSelect;
+export type InsertCheckResult = z.infer<typeof insertCheckResultSchema>;
 export type InsertJobArchive = z.infer<typeof insertJobArchiveSchema>;
 export type BoxRequirement = typeof boxRequirements.$inferSelect;
 export type InsertBoxRequirement = z.infer<typeof insertBoxRequirementSchema>;
