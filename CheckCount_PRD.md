@@ -198,11 +198,11 @@ checkBoxEnabled: boolean -- Worker permission to perform checks
 - [ ] Update box grid visual states to show CheckCount status
 - [ ] Ensure proper icon rendering across all themes
 
-#### Sub-Task 2.2: Box Modal CheckCount Button
-- [ ] Add "Check Count" button to box-details-modal.tsx
-- [ ] Style button with user's theme color background
-- [ ] Implement click handler to launch full-screen CheckCount interface
-- [ ] Add permission checking (only show if checkBoxEnabled or manager/supervisor)
+#### Sub-Task 2.2: Box Modal CheckCount Button ✅ COMPLETE
+- [x] Add "Check Count" button to box-details-modal.tsx
+- [x] Style button with user's theme color background
+- [x] Implement click handler to launch full-screen CheckCount interface
+- [x] Add permission checking (only show if checkBoxEnabled or manager/supervisor)
 
 #### Sub-Task 2.3: Full-Screen CheckCount Interface
 - [ ] Create new CheckCountModal component for full-screen scanning
@@ -222,9 +222,9 @@ checkBoxEnabled: boolean -- Worker permission to perform checks
 - [ ] Create correction dialog (Yes/No) for stock discrepancies
 - [ ] Update box quantities based on CheckCount corrections
 
-#### Sub-Task 2.6: Manager Controls
-- [ ] Add checkBoxEnabled toggle to user management screens
-- [ ] Implement worker permission management UI
+#### Sub-Task 2.6: Manager Controls ✅ COMPLETE
+- [x] Add checkBoxEnabled toggle to user management screens
+- [x] Implement worker permission management UI
 - [ ] Add bulk permission controls for multiple workers
 
 #### Sub-Task 2.7: Supervisor Access & Reporting
