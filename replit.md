@@ -47,6 +47,14 @@ The application incorporates sophisticated performance tracking, including a sco
 - **Visual Feedback**: Color-coded progress bars and badges distinguish between recovered items (blue), excess items (orange), and shortages (red)
 - **Box Status Indicators**: Green check/red cross icons under box numbers showing CheckCount verification status (separate from completion lock icons)
 
+**QA Reporting Dashboard (August 2025)**: 
+- **Business Requirement**: Comprehensive quality assurance analytics system extending CheckCount functionality
+- **Architecture**: Main dashboard QA summary panel + dedicated QA dashboard with job-specific routing
+- **Data Sources**: CheckCount sessions, events, results tables + extra items from scanEvents
+- **Key Features**: Verification rates, accuracy scores, worker QA performance, discrepancy analysis, extra items tracking
+- **Scope**: Active jobs only, 7-day activity window, real-time WebSocket updates, tablet-optimized design
+- **Implementation Plan**: 4-phase rollout (Backend → Main Dashboard → Dedicated Dashboard → Advanced Features)
+
 ### Mobile and Hardware Support
 
 The design is optimized for warehouse environments, featuring responsive layouts for tablets and mobile devices. It supports both camera-based and hardware HID barcode scanners. The UI is touch-friendly with large targets.
