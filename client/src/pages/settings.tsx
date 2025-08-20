@@ -37,6 +37,7 @@ const userFormSchema = z.object({
     required_error: "Role is required",
   }),
   pin: z.string().min(4, "PIN must be at least 4 characters"),
+  checkBoxEnabled: z.boolean().default(false),
 });
 
 const jobTypeFormSchema = z.object({
@@ -75,6 +76,7 @@ export default function Settings() {
       name: "",
       role: "worker",
       pin: "",
+      checkBoxEnabled: false,
     },
   });
 
@@ -222,6 +224,7 @@ export default function Settings() {
       name: userToEdit.name,
       role: userToEdit.role,
       pin: "", // Don't pre-fill PIN for security
+      checkBoxEnabled: userToEdit.preferences?.checkBoxEnabled || false,
     });
     setIsCreateDialogOpen(true);
   };
@@ -835,6 +838,31 @@ export default function Settings() {
                             </FormItem>
                           )}
                         />
+
+                        {/* CheckCount Permission - Only show for workers */}
+                        {form.watch("role") === "worker" && (
+                          <FormField
+                            control={form.control}
+                            name="checkBoxEnabled"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-base">Enable Check Count</FormLabel>
+                                  <div className="text-sm text-muted-foreground">
+                                    Allow this worker to perform check count verification on completed boxes
+                                  </div>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    data-testid="switch-check-count-enabled"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        )}
 
                         <div className="flex justify-end space-x-2 pt-4">
                           <Button

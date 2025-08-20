@@ -1211,8 +1211,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.json({ users });
         }
       } else {
-        // Return all users
-        const users = await storage.getAllUsers();
+        // Return all users with preferences for management interface
+        const users = await storage.getAllUsersWithPreferences();
         res.json({ users });
       }
     } catch (error) {
@@ -1278,7 +1278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/users/:id', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
     try {
-      const { staffId, name, role, pin } = req.body;
+      const { staffId, name, role, pin, checkBoxEnabled } = req.body;
       const userId = req.params.id;
 
       // Validate required fields (pin is optional for updates)
@@ -1311,6 +1311,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.updateUser(userId, updateData);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Update user preferences if checkBoxEnabled is provided (only for workers)
+      if (role === 'worker' && checkBoxEnabled !== undefined) {
+        await storage.updateUserPreferences(userId, { checkBoxEnabled });
       }
 
       res.json({ 

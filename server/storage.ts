@@ -61,6 +61,7 @@ export interface IStorage {
   deleteUser(id: string): Promise<boolean>;
   getAllUsers(): Promise<User[]>;
   getUsersByRole(role: string): Promise<User[]>;
+  getAllUsersWithPreferences(): Promise<(User & { preferences?: any })[]>;
 
   // Job methods
   createJob(job: InsertJob): Promise<Job>;
@@ -204,6 +205,19 @@ export class DatabaseStorage implements IStorage {
 
   async getUsersByRole(role: string): Promise<User[]> {
     return await this.db.select().from(users).where(and(eq(users.role, role), eq(users.isActive, true)));
+  }
+
+  // Fetch users with their preferences included (for management interface)
+  async getAllUsersWithPreferences(): Promise<(User & { preferences?: any })[]> {
+    const allUsers = await this.db.select().from(users).where(eq(users.isActive, true));
+    const usersWithPreferences = [];
+    
+    for (const user of allUsers) {
+      const preferences = await this.getUserPreferences(user.id);
+      usersWithPreferences.push({ ...user, preferences });
+    }
+    
+    return usersWithPreferences;
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
