@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -286,18 +287,23 @@ export function CheckCountModal({
     return "bg-blue-500"; // Default progress color
   };
 
-  console.log('[DEBUG CheckCountModal] isOpen:', isOpen);
-  console.log('[DEBUG CheckCountModal] boxNumber:', boxNumber);
-  console.log('[DEBUG CheckCountModal] checkSession:', checkSession);
+  console.log('[DEBUG CheckCountModal] RENDER STATE:', {
+    isOpen,
+    boxNumber,
+    checkSession,
+    boxRequirements: boxRequirements?.length || 0,
+    componentMounted: true
+  });
   
   if (!isOpen) {
     console.log('[DEBUG CheckCountModal] Modal not open, returning null');
     return null;
   }
   
-  console.log('[DEBUG CheckCountModal] Modal is open, rendering...');
+  console.log('[DEBUG CheckCountModal] Modal is open, ATTEMPTING TO RENDER FULL UI...');
+  console.log('[DEBUG CheckCountModal] DOM Element will be created with z-[150]');
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-[150] bg-white dark:bg-gray-900">
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4">
@@ -521,4 +527,7 @@ export function CheckCountModal({
       )}
     </div>
   );
+
+  // Render the modal using a portal to avoid z-index conflicts
+  return createPortal(modalContent, document.body);
 }

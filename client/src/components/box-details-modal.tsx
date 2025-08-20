@@ -214,6 +214,19 @@ export function BoxDetailsModal({
 
   return (
     <>
+    {/* CheckCount Modal - Rendered at top level to avoid portal conflicts */}
+    {boxNumber && (
+      <CheckCountModal
+        isOpen={isCheckCountModalOpen}
+        onClose={() => setIsCheckCountModalOpen(false)}
+        boxNumber={boxNumber}
+        customerName={customerName}
+        jobId={jobId}
+        boxRequirements={boxRequirements as SchemaBoxRequirement[]}
+        onBoxModalClose={onClose}
+      />
+    )}
+    
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" data-testid="box-details-modal">
         
@@ -358,19 +371,6 @@ export function BoxDetailsModal({
         )}
       </DialogContent>
     </Dialog>
-    
-    {/* CheckCount Modal */}
-    {boxNumber && (
-      <CheckCountModal
-        isOpen={isCheckCountModalOpen}
-        onClose={() => setIsCheckCountModalOpen(false)}
-        boxNumber={boxNumber}
-        customerName={customerName}
-        jobId={jobId}
-        boxRequirements={boxRequirements as SchemaBoxRequirement[]}
-        onBoxModalClose={onClose}
-      />
-    )}
     </>
   );
 }
