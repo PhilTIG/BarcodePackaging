@@ -327,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: req.body.name || `Job ${new Date().toISOString().split('T')[0]}`,
         description: req.body.description || '',
         jobTypeId: jobTypeId,
-        totalProducts: csvData.length,
+        totalProducts: csvData.reduce((sum, row) => sum + row.Qty, 0), // Sum all quantities, not just count rows
         totalCustomers: Array.from(new Set(csvData.map(row => row.CustomName))).length,
         csvData,
         createdBy: req.user!.id

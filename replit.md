@@ -32,6 +32,8 @@ The application incorporates sophisticated performance tracking, including a sco
 
 **Worker Box Highlighting System**: Real-time WebSocket-based box highlighting for managers/supervisors shows which boxes workers are actively scanning. Features include 50% transparent worker color backgrounds, worker staffId display under quantities, and persistent color circles indicating the last worker to scan each box.
 
+**Product Calculation Fix (January 2025)**: Corrected critical calculation error where `totalProducts` was counting CSV rows instead of summing quantities. Fixed calculation logic to properly sum all `Qty` values from CSV data, ensuring accurate product counts for job management and progress tracking.
+
 ### Mobile and Hardware Support
 
 The design is optimized for warehouse environments, featuring responsive layouts for tablets and mobile devices. It supports both camera-based and hardware HID barcode scanners. The UI is touch-friendly with large targets.
