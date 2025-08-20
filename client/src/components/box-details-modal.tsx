@@ -205,6 +205,12 @@ export function BoxDetailsModal({
     <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" data-testid="box-details-modal">
+        <DialogHeader>
+          <DialogTitle>Box {boxNumber} Details</DialogTitle>
+          <DialogDescription>
+            View detailed information about box contents, progress, and workers for {customerName}
+          </DialogDescription>
+        </DialogHeader>
         
         {/* Box Summary with Box Number in top-right */}
         <Card data-testid="box-summary-card">

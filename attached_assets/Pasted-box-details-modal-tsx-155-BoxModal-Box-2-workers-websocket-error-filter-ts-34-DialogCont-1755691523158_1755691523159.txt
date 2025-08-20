@@ -1,0 +1,170 @@
+box-details-modal.tsx:155 [BoxModal] Box 2 workers: [{…}]
+websocket-error-filter.ts:34  `DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.
+
+If you want to hide the `DialogTitle`, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/dialog
+filteredConsoleError @ websocket-error-filter.ts:34
+(anonymous) @ dialog.tsx:519
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+commitRootImpl @ react-dom.development.js:26974
+commitRoot @ react-dom.development.js:26721
+performSyncWorkOnRoot @ react-dom.development.js:26156
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+dialog.tsx:542  Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ dialog.tsx:542
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+commitRootImpl @ react-dom.development.js:26974
+commitRoot @ react-dom.development.js:26721
+performSyncWorkOnRoot @ react-dom.development.js:26156
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+queryClient.ts:54   GET https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/api/check-sessions/a764c040-912f-4b5f-8cd6-d5b5a7781a3c 404 (Not Found)
+(anonymous) @ queryClient.ts:54
+fetchFn @ query.ts:429
+run @ retryer.ts:153
+start @ retryer.ts:218
+fetch @ query.ts:540
+executeFetch_fn @ queryObserver.ts:346
+(anonymous) @ queryObserver.ts:409
+setInterval
+updateRefetchInterval_fn @ queryObserver.ts:404
+updateTimers_fn @ queryObserver.ts:416
+onQueryUpdate @ queryObserver.ts:739
+(anonymous) @ query.ts:619
+(anonymous) @ query.ts:618
+batch @ notifyManager.ts:52
+dispatch_fn @ query.ts:617
+onError @ query.ts:465
+reject @ retryer.ts:116
+(anonymous) @ retryer.ts:180
+Promise.catch
+run @ retryer.ts:160
+start @ retryer.ts:218
+fetch @ query.ts:540
+executeFetch_fn @ queryObserver.ts:346
+(anonymous) @ queryObserver.ts:409
+setInterval
+updateRefetchInterval_fn @ queryObserver.ts:404
+updateTimers_fn @ queryObserver.ts:416
+onQueryUpdate @ queryObserver.ts:739
+(anonymous) @ query.ts:619
+(anonymous) @ query.ts:618
+batch @ notifyManager.ts:52
+dispatch_fn @ query.ts:617
+onError @ query.ts:465
+reject @ retryer.ts:116
+(anonymous) @ retryer.ts:180
+Promise.catch
+run @ retryer.ts:160
+start @ retryer.ts:218
+fetch @ query.ts:540
+executeFetch_fn @ queryObserver.ts:346
+onSubscribe @ queryObserver.ts:108
+subscribe @ subscribable.ts:11
+(anonymous) @ useBaseQuery.ts:92
+subscribeToStore @ react-dom.development.js:16139
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+commitRootImpl @ react-dom.development.js:26974
+commitRoot @ react-dom.development.js:26721
+performSyncWorkOnRoot @ react-dom.development.js:26156
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+queryClient.ts:54   GET https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/api/check-sessions/a764c040-912f-4b5f-8cd6-d5b5a7781a3c 404 (Not Found)
+(anonymous) @ queryClient.ts:54
+fetchFn @ query.ts:429
+run @ retryer.ts:153
+start @ retryer.ts:218
+fetch @ query.ts:540
+executeFetch_fn @ queryObserver.ts:346
+(anonymous) @ queryObserver.ts:409
+setInterval
+updateRefetchInterval_fn @ queryObserver.ts:404
+updateTimers_fn @ queryObserver.ts:416
+onQueryUpdate @ queryObserver.ts:739
+(anonymous) @ query.ts:619
+(anonymous) @ query.ts:618
+batch @ notifyManager.ts:52
+dispatch_fn @ query.ts:617
+onError @ query.ts:465
+reject @ retryer.ts:116
+(anonymous) @ retryer.ts:180
+Promise.catch
+run @ retryer.ts:160
+start @ retryer.ts:218
+fetch @ query.ts:540
+executeFetch_fn @ queryObserver.ts:346
+(anonymous) @ queryObserver.ts:409
+setInterval
+updateRefetchInterval_fn @ queryObserver.ts:404
+updateTimers_fn @ queryObserver.ts:416
+onQueryUpdate @ queryObserver.ts:739
+(anonymous) @ query.ts:619
+(anonymous) @ query.ts:618
+batch @ notifyManager.ts:52
+dispatch_fn @ query.ts:617
+onError @ query.ts:465
+reject @ retryer.ts:116
+(anonymous) @ retryer.ts:180
+Promise.catch
+run @ retryer.ts:160
+start @ retryer.ts:218
+fetch @ query.ts:540
+executeFetch_fn @ queryObserver.ts:346
+(anonymous) @ queryObserver.ts:409
+setInterval
+updateRefetchInterval_fn @ queryObserver.ts:404
+updateTimers_fn @ queryObserver.ts:416
+onQueryUpdate @ queryObserver.ts:739
+(anonymous) @ query.ts:619
+(anonymous) @ query.ts:618
+batch @ notifyManager.ts:52
+dispatch_fn @ query.ts:617
+onError @ query.ts:465
+reject @ retryer.ts:116
+(anonymous) @ retryer.ts:180
+Promise.catch
+run @ retryer.ts:160
+start @ retryer.ts:218
+fetch @ query.ts:540
+executeFetch_fn @ queryObserver.ts:346
+onSubscribe @ queryObserver.ts:108
+subscribe @ subscribable.ts:11
+(anonymous) @ useBaseQuery.ts:92
+subscribeToStore @ react-dom.development.js:16139
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+commitRootImpl @ react-dom.development.js:26974
+commitRoot @ react-dom.development.js:26721
+performSyncWorkOnRoot @ react-dom.development.js:26156
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690

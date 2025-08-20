@@ -65,7 +65,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
 
   // Query for check sessions to show completion status
   const { data: checkSessionsData } = useQuery({
-    queryKey: ["/api/check-sessions", jobId],
+    queryKey: [`/api/check-sessions?jobId=${jobId}`],
     enabled: !!jobId,
     refetchInterval: 10000, // Refresh every 10 seconds
   });
