@@ -640,30 +640,12 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Scanning is currently paused for this job. Please contact your manager.');
     }
 
-    // Multi-job support: Pause any existing active session for this user instead of completing it
+    // Close any existing active sessions for this user
     if (existingSession) {
-      console.log(`[MultiJob] Pausing existing session ${existingSession.id} for job ${existingSession.jobId} to start job ${jobId}`);
-      await this.updateScanSessionStatus(existingSession.id, 'paused');
-    }
-
-    // Check if there's an existing paused session for this specific job and resume it
-    const pausedSession = await this.db
-      .select()
-      .from(scanSessions)
-      .where(and(
-        eq(scanSessions.userId, userId), 
-        eq(scanSessions.jobId, jobId),
-        eq(scanSessions.status, 'paused')
-      ))
-      .orderBy(desc(scanSessions.lastActivityTime));
-
-    if (pausedSession.length > 0) {
-      console.log(`[MultiJob] Resuming paused session ${pausedSession[0].id} for job ${jobId}`);
-      return await this.updateScanSessionStatus(pausedSession[0].id, 'active') as ScanSession;
+      await this.updateScanSessionStatus(existingSession.id, 'completed');
     }
 
     // Create new session
-    console.log(`[MultiJob] Creating new session for user ${userId} on job ${jobId}`);
     return await this.createScanSession({
       userId,
       jobId,

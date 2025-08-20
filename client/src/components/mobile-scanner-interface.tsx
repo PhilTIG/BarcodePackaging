@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Camera, CameraOff, Package, Undo, Settings, RefreshCw, Target, Clock, TrendingUp, LogOut } from "lucide-react";
-import { JobSwitcher } from "@/components/job-switcher";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 interface MobileScannerInterfaceProps {
@@ -46,8 +45,6 @@ interface MobileScannerInterfaceProps {
   runtimeSingleBoxMode?: boolean;
   onRuntimeToggle?: (enabled: boolean) => void;
   onLogout?: () => void;
-  assignments?: any[];
-  currentJobId?: string;
 }
 
 export function MobileScannerInterface({
@@ -166,17 +163,6 @@ export function MobileScannerInterface({
           </div>
         </div>
       </div>
-
-      {/* Job Switcher - Mobile */}
-      {assignments && assignments.length > 1 && (
-        <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
-          <JobSwitcher
-            assignments={assignments}
-            currentJobId={currentJobId}
-            className=""
-          />
-        </div>
-      )}
 
       {/* Top action bar with undo and switch session */}
       <div className="bg-white px-4 py-2 border-b border-gray-100">
