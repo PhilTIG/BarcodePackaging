@@ -10,13 +10,21 @@ import { Settings, LogOut, Users, Package, ChevronLeft } from "lucide-react";
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { PerformanceDashboard } from "@/components/performance-dashboard";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
+import { CheckCountScreen } from "@/components/check-count-screen";
 import { useEffect, useState, useCallback } from "react";
+import type { BoxRequirement } from "@shared/schema";
 
 export default function SupervisorView() {
   const { jobId } = useParams();
   const [, setLocation] = useLocation();
   const { user, isLoading, logout } = useAuth();
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
+  const [isCheckCountOpen, setIsCheckCountOpen] = useState(false);
+  const [checkCountData, setCheckCountData] = useState<{
+    boxNumber: number | null;
+    customerName: string;
+    boxRequirements: BoxRequirement[];
+  } | null>(null);
 
   // Fetch all jobs for supervisor (job selection)
   const { data: allJobsData } = useQuery({
@@ -345,8 +353,31 @@ export default function SupervisorView() {
               jobId={job.id}
               supervisorView={true}
               onCheckCount={(boxNumber, jobId) => {
-                // TODO: Sub-Task 2.3 - Open full-screen CheckCount interface
-                console.log(`CheckCount requested for Box ${boxNumber} in Job ${jobId}`);
+                // Get box requirements for this specific box
+                const boxProducts = products.filter((p: any) => p.boxNumber === boxNumber);
+                if (boxProducts.length > 0) {
+                  const customerName = boxProducts[0].customerName;
+                  
+                  // Convert products to box requirements format
+                  const boxRequirements: BoxRequirement[] = boxProducts.map((product: any) => ({
+                    id: `${product.barCode}-${boxNumber}`,
+                    jobId: jobId,
+                    boxNumber: boxNumber,
+                    customerName: customerName,
+                    barCode: product.barCode,
+                    productName: product.productName,
+                    requiredQty: product.qty,
+                    scannedQty: product.scannedQty || 0,
+                    isComplete: product.isComplete || false
+                  }));
+                  
+                  setCheckCountData({
+                    boxNumber,
+                    customerName,
+                    boxRequirements
+                  });
+                  setIsCheckCountOpen(true);
+                }
               }}
             />
           </CardContent>
@@ -399,6 +430,22 @@ export default function SupervisorView() {
         onClose={() => setIsExtraItemsModalOpen(false)}
         jobId={jobId!}
       />
+
+      {/* CheckCount Full-Screen Interface */}
+      {checkCountData && (
+        <CheckCountScreen
+          isOpen={isCheckCountOpen}
+          onClose={() => {
+            setIsCheckCountOpen(false);
+            setCheckCountData(null);
+          }}
+          boxNumber={checkCountData.boxNumber}
+          customerName={checkCountData.customerName}
+          jobId={jobId!}
+          boxRequirements={checkCountData.boxRequirements}
+          returnLocation="monitor"
+        />
+      )}
     </div>
   );
 }

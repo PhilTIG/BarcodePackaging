@@ -8,7 +8,6 @@ import { CheckCircle, XCircle, Users, ClipboardCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
-import { CheckCountModal } from '@/components/check-count-modal';
 import type { BoxRequirement as SchemaBoxRequirement } from '@shared/schema';
 
 interface BoxDetailsModalProps {
@@ -214,19 +213,6 @@ export function BoxDetailsModal({
 
   return (
     <>
-    {/* CheckCount Modal - Rendered at top level to avoid portal conflicts */}
-    {boxNumber && (
-      <CheckCountModal
-        isOpen={isCheckCountModalOpen}
-        onClose={() => setIsCheckCountModalOpen(false)}
-        boxNumber={boxNumber}
-        customerName={customerName}
-        jobId={jobId}
-        boxRequirements={boxRequirements as SchemaBoxRequirement[]}
-        onBoxModalClose={onClose}
-      />
-    )}
-    
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" data-testid="box-details-modal">
         
