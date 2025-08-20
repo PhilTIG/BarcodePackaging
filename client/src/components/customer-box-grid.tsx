@@ -64,21 +64,12 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
   useWebSocket(supervisorView ? jobId : undefined, supervisorView ? handleWebSocketUpdate : undefined);
 
   // Query for check sessions to show completion status
-  const { data: checkSessions } = useQuery({
+  const { data: checkSessionsData } = useQuery({
     queryKey: ["/api/check-sessions", jobId],
-    queryFn: async () => {
-      const response = await fetch(`/api/check-sessions?jobId=${jobId}`, {
-        credentials: 'include' // Include session cookies for authentication
-      });
-      if (!response.ok) {
-        return []; // Return empty array if unauthorized or error
-      }
-      const data = await response.json();
-      return data.sessions || [];
-    },
     enabled: !!jobId,
     refetchInterval: 10000, // Refresh every 10 seconds
   });
+  const checkSessions = checkSessionsData?.sessions || [];
 
   // Function to get check status for a box
   const getCheckStatus = (boxNumber: number): 'completed' | 'rejected' | null => {
