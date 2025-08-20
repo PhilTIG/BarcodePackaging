@@ -178,6 +178,21 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", message.data.jobId] });
         break;
       
+      case "check_count_update":
+        // CheckCount corrections applied - update all monitoring interfaces
+        console.log("[WebSocket] CheckCount update received:", message.data);
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/check-sessions"] });
+        
+        // Show user feedback about the CheckCount correction
+        if (message.data.applyCorrections && message.data.corrections?.length > 0) {
+          console.log(`[CheckCount] Box ${message.data.boxNumber} corrections applied by ${message.data.userName}`);
+          console.log(`[CheckCount] Extra items: ${message.data.extraItemsCount || 0}`);
+        }
+        break;
+      
       default:
         console.log("[WebSocket] Unknown message type received:", message.type, message.data);
     }

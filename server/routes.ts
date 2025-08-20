@@ -1039,6 +1039,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createExtraItemsFromCheck(session.jobId, extraItems, session.userId);
       }
 
+      // Broadcast CheckCount completion with corrections to all monitoring interfaces
+      if (applyCorrections && corrections && corrections.length > 0) {
+        // Get updated job progress for real-time updates
+        const updatedProgress = await storage.getJobProgress(session.jobId);
+        
+        broadcastToJob(session.jobId, {
+          type: 'check_count_update',
+          data: {
+            sessionId: session.id,
+            boxNumber: session.boxNumber,
+            applyCorrections,
+            corrections,
+            extraItems: extraItems || [],
+            extraItemsCount: extraItems ? extraItems.length : 0,
+            progress: updatedProgress,
+            timestamp: new Date().toISOString(),
+            userId: session.userId,
+            userName: (req as AuthenticatedRequest).user!.name
+          }
+        });
+      }
+
       res.json({ session });
     } catch (error) {
       console.error('Failed to complete check session:', error);

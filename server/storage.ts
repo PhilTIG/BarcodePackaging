@@ -1987,6 +1987,7 @@ export class DatabaseStorage implements IStorage {
         .insert(scanEvents)
         .values({
           sessionId: sessionId,
+          jobId: jobId, // Ensure jobId is included for proper tracking
           barCode: extraItem.barCode,
           productName: extraItem.productName || 'Unknown',
           customerName: 'Unassigned',
