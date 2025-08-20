@@ -183,42 +183,66 @@ checkBoxEnabled: boolean -- Worker permission to perform checks
 - Handle scanner failures gracefully
 - Prevent data corruption of original records
 
-## Implementation Phases
+## Implementation Timeline
 
-### Phase 1: Database & API Foundation
-1. Create new database tables (check_sessions, check_events, check_results)
-2. Add checkBoxEnabled to userPreferences 
-3. Implement core API endpoints
-4. Create storage interface methods
+### Phase 1: Database Foundation ✅ COMPLETE
+- [x] Database schema design and implementation (check_sessions, check_events, check_results)
+- [x] Storage interface methods (12 new CheckCount methods)
+- [x] API endpoints with role-based permissions (10 new endpoints)
+- [x] User preferences extension (checkBoxEnabled field)
 
-### Phase 2: Basic Check Interface
-1. Add "Check Count" button to BoxDetailsModal
-2. Create full-screen check interface component
-3. Implement barcode scanning for check mode
-4. Basic progress tracking and visual feedback
+### Phase 2: UI Components Implementation
 
-### Phase 3: Discrepancy Management
-1. Implement shortage/excess detection
-2. Add correction workflow and UI
-3. Result logging and session completion
-4. Box visual indicator updates
+#### Sub-Task 2.1: Visual Icon System
+- [ ] Replace lock icons with check tick icons when boxes have completed CheckCount
+- [ ] Update box grid visual states to show CheckCount status
+- [ ] Ensure proper icon rendering across all themes
 
-### Phase 4: Settings & Permissions
-1. Add worker check permission toggle in settings
-2. Implement role-based access controls
-3. Manager-only permission management UI
+#### Sub-Task 2.2: Box Modal CheckCount Button
+- [ ] Add "Check Count" button to box-details-modal.tsx
+- [ ] Style button with user's theme color background
+- [ ] Implement click handler to launch full-screen CheckCount interface
+- [ ] Add permission checking (only show if checkBoxEnabled or manager/supervisor)
 
-### Phase 5: QA Dashboard & Reporting
-1. Add QA buttons to dashboards
-2. Create comprehensive QA report interface
-3. Session history and analytics
-4. Time/user tracking displays
+#### Sub-Task 2.3: Full-Screen CheckCount Interface
+- [ ] Create new CheckCountModal component for full-screen scanning
+- [ ] Implement barcode scanner integration (camera + HID support)
+- [ ] Add manual barcode input field as fallback
+- [ ] Create CheckCount session management (start/pause/complete)
 
-### Phase 6: Testing & Refinement
-1. Integration testing with existing workflows
-2. Performance optimization
-3. Error handling and edge cases
-4. User acceptance testing
+#### Sub-Task 2.4: Dual Progress Bar System
+- [ ] Extend product containers with second "Check Count" progress bar
+- [ ] Implement percentage calculation for CheckCount progress
+- [ ] Color coding: Green when bars match, Red for overages, Orange for extras
+- [ ] Add tick icons when product container CheckCount matches expected
+
+#### Sub-Task 2.5: Error Handling & Corrections
+- [ ] Implement overage detection with "Extra Item found" messaging
+- [ ] Add "Scan Complete" button for shortfall scenarios
+- [ ] Create correction dialog (Yes/No) for stock discrepancies
+- [ ] Update box quantities based on CheckCount corrections
+
+#### Sub-Task 2.6: Manager Controls
+- [ ] Add checkBoxEnabled toggle to user management screens
+- [ ] Implement worker permission management UI
+- [ ] Add bulk permission controls for multiple workers
+
+#### Sub-Task 2.7: Supervisor Access & Reporting
+- [ ] Extend supervisor role permissions for CheckCount functionality
+- [ ] Add CheckCount reports to supervisor dashboard
+- [ ] Implement QA analytics views for supervisors
+
+#### Sub-Task 2.8: Integration & Testing
+- [ ] WebSocket integration for real-time CheckCount updates
+- [ ] Mobile responsiveness testing
+- [ ] End-to-end workflow testing
+- [ ] Performance optimization
+
+### Phase 3: Advanced Features (Future)
+- [ ] QA Dashboard enhancements
+- [ ] Advanced reporting and analytics
+- [ ] Performance optimizations
+- [ ] User training materials
 
 ## Success Criteria
 
