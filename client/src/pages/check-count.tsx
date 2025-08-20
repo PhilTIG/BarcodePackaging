@@ -283,10 +283,44 @@ export default function CheckCountPage() {
   };
 
   const handleScanComplete = () => {
-    const discrepancies = Object.values(checkProgress).filter(p => p.discrepancyType !== 'match');
+    const scannedDiscrepancies = Object.values(checkProgress).filter(p => p.discrepancyType !== 'match');
     
-    if (discrepancies.length > 0) {
-      setDiscrepancyData(discrepancies);
+    // Check for zero-scan scenario: if no scans occurred but products were previously scanned
+    const totalCheckScans = Object.values(checkProgress).reduce((sum, p) => sum + p.checkScannedQty, 0);
+    const hasZeroScans = totalCheckScans === 0;
+    
+    // Create discrepancies for products that were previously scanned but not found during CheckCount
+    let zeroScanDiscrepancies: any[] = [];
+    if (hasZeroScans) {
+      boxRequirements.forEach(requirement => {
+        if (requirement.scannedQty > 0) {
+          // Product was previously scanned but not found during CheckCount = discrepancy
+          zeroScanDiscrepancies.push({
+            barCode: requirement.barCode,
+            productName: requirement.productName,
+            expectedQty: requirement.scannedQty, // What was previously scanned
+            originalScannedQty: requirement.scannedQty,
+            checkScannedQty: 0, // Nothing found during CheckCount
+            discrepancyType: 'shortage' as const,
+            isComplete: false
+          });
+        }
+      });
+    }
+    
+    const allDiscrepancies = [...scannedDiscrepancies, ...zeroScanDiscrepancies];
+    
+    if (allDiscrepancies.length > 0) {
+      // Update checkProgress to include zero-scan discrepancies for dialog display
+      if (zeroScanDiscrepancies.length > 0) {
+        const updatedProgress = { ...checkProgress };
+        zeroScanDiscrepancies.forEach(disc => {
+          updatedProgress[disc.barCode] = disc;
+        });
+        setCheckProgress(updatedProgress);
+      }
+      
+      setDiscrepancyData(allDiscrepancies);
       setShowDiscrepancyDialog(true);
     } else {
       // No discrepancies - complete normally
@@ -325,7 +359,7 @@ export default function CheckCountPage() {
           barCode: requirement.barCode,
           originalQty: progress.originalScannedQty,
           checkQty: progress.checkScannedQty,
-          correctedQty: progress.checkScannedQty, // Use check count as correction
+          correctedQty: progress.checkScannedQty, // Use check count as correction (0 for zero-scan discrepancies)
         });
         
         // If excess items found, add them as extra items
