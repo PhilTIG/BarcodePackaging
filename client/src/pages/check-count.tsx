@@ -93,7 +93,10 @@ export default function CheckCountPage() {
           originalScannedQty: req.scannedQty || 0,
           checkScannedQty: 0,
           discrepancyType: 'match',
-          isComplete: false
+          isComplete: false,
+          requiredQty: req.requiredQty, // Add required quantity for allocation logic
+          barCode: req.barCode,
+          productName: req.productName
         };
       });
       setCheckProgress(initialProgress);
@@ -283,10 +286,31 @@ export default function CheckCountPage() {
   };
 
   const handleScanComplete = () => {
-    const scannedDiscrepancies = Object.values(checkProgress).filter(p => p.discrepancyType !== 'match');
+    // Apply new allocation logic to categorize discrepancies
+    const updatedProgress = { ...checkProgress };
+    Object.values(updatedProgress).forEach(p => {
+      if (p.checkScannedQty !== p.originalScannedQty) {
+        if (p.checkScannedQty > p.originalScannedQty) {
+          // Found more items than originally scanned
+          if (p.checkScannedQty <= p.requiredQty) {
+            // Items found are within required limit - these will be allocated to box
+            p.discrepancyType = 'recovered'; // New category for items that will go to box
+          } else {
+            // Items beyond required limit - true excess that will become extras
+            p.discrepancyType = 'excess';
+          }
+        } else {
+          // Found fewer items than originally scanned
+          p.discrepancyType = 'shortage';
+        }
+      }
+    });
+    setCheckProgress(updatedProgress);
+    
+    const scannedDiscrepancies = Object.values(updatedProgress).filter(p => p.discrepancyType !== 'match');
     
     // Check for zero-scan scenario: if no scans occurred but products were previously scanned
-    const totalCheckScans = Object.values(checkProgress).reduce((sum, p) => sum + p.checkScannedQty, 0);
+    const totalCheckScans = Object.values(updatedProgress).reduce((sum, p) => sum + p.checkScannedQty, 0);
     const hasZeroScans = totalCheckScans === 0;
     
     // Create discrepancies for products that were previously scanned but not found during CheckCount
@@ -302,7 +326,8 @@ export default function CheckCountPage() {
             originalScannedQty: requirement.scannedQty,
             checkScannedQty: 0, // Nothing found during CheckCount
             discrepancyType: 'shortage' as const,
-            isComplete: false
+            isComplete: false,
+            requiredQty: requirement.requiredQty
           });
         }
       });
@@ -345,32 +370,36 @@ export default function CheckCountPage() {
   const handleApplyCorrections = () => {
     setShowDiscrepancyDialog(false);
     
-    // Prepare correction data and extra items
+    // Prepare correction data and extra items with new allocation logic
     const corrections: any[] = [];
     const extraItems: any[] = [];
     
     boxRequirements.forEach(requirement => {
       const progress = checkProgress[requirement.barCode];
       if (progress && progress.discrepancyType !== 'match') {
-        // Create correction record
+        // Calculate allocation with new logic:
+        // - Items up to required_qty go to the box
+        // - Only items beyond required_qty become extras
+        const maxBoxAllocation = Math.min(progress.checkScannedQty, requirement.requiredQty);
+        const extraCount = Math.max(0, progress.checkScannedQty - requirement.requiredQty);
+        
+        // Create correction record with allocated quantity (capped at required_qty)
         corrections.push({
           sessionId: currentSession?.id,
           boxRequirementId: requirement.id,
           barCode: requirement.barCode,
           originalQty: progress.originalScannedQty,
           checkQty: progress.checkScannedQty,
-          correctedQty: progress.checkScannedQty, // Use check count as correction (0 for zero-scan discrepancies)
+          correctedQty: maxBoxAllocation, // Allocate up to required_qty to box
+          requiredQty: requirement.requiredQty, // Include for backend logic
         });
         
-        // If excess items found, add them as extra items
-        if (progress.discrepancyType === 'excess') {
-          const excessCount = progress.checkScannedQty - progress.originalScannedQty;
-          for (let i = 0; i < excessCount; i++) {
-            extraItems.push({
-              barCode: requirement.barCode,
-              productName: requirement.productName
-            });
-          }
+        // Only items beyond required_qty become extras
+        for (let i = 0; i < extraCount; i++) {
+          extraItems.push({
+            barCode: requirement.barCode,
+            productName: requirement.productName
+          });
         }
       }
     });
@@ -565,6 +594,7 @@ export default function CheckCountPage() {
                             style={{
                               '--progress-background': 
                                 progress.isComplete ? '#10b981' : 
+                                progress.discrepancyType === 'recovered' ? '#3b82f6' :
                                 progress.discrepancyType === 'excess' ? '#f97316' : 
                                 progress.discrepancyType === 'shortage' ? '#ef4444' : '#3b82f6'
                             } as any}
@@ -579,12 +609,17 @@ export default function CheckCountPage() {
                             Complete ✓
                           </Badge>
                         )}
+                        {progress.discrepancyType === 'recovered' && (
+                          <Badge variant="secondary" className="text-blue-700 bg-blue-50 border-blue-200">
+                            Recovered Items
+                          </Badge>
+                        )}
                         {progress.discrepancyType === 'excess' && progress.checkScannedQty > progress.originalScannedQty && (
                           <Badge variant="secondary" className="text-orange-700 bg-orange-50 border-orange-200">
                             Extra Items
                           </Badge>
                         )}
-                        {progress.discrepancyType === 'shortage' && progress.checkScannedQty > 0 && (
+                        {progress.discrepancyType === 'shortage' && (
                           <Badge variant="secondary" className="text-red-700 bg-red-50 border-red-200">
                             Shortage
                           </Badge>
@@ -611,19 +646,37 @@ export default function CheckCountPage() {
           </DialogHeader>
           
           <div className="space-y-4">
-            {discrepancyData && discrepancyData.map((item: any, index: number) => (
-              <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                <div className="text-sm font-medium">{item.productName}</div>
-                <div className="text-sm text-gray-600">
-                  Original: {item.originalScannedQty}, Check: {item.checkScannedQty}
-                  <span className={`ml-2 font-medium ${
-                    item.discrepancyType === 'excess' ? 'text-orange-600' : 'text-red-600'
-                  }`}>
-                    ({item.discrepancyType === 'excess' ? '+' : ''}{item.checkScannedQty - item.originalScannedQty})
-                  </span>
+            {discrepancyData && discrepancyData.map((item: any, index: number) => {
+              const allocation = Math.min(item.checkScannedQty, item.requiredQty || 0);
+              const extraCount = Math.max(0, item.checkScannedQty - (item.requiredQty || 0));
+              
+              return (
+                <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm font-medium">{item.productName}</div>
+                  <div className="text-sm text-gray-600">
+                    Original: {item.originalScannedQty}, Found: {item.checkScannedQty}
+                    <span className={`ml-2 font-medium ${
+                      item.discrepancyType === 'recovered' ? 'text-blue-600' :
+                      item.discrepancyType === 'excess' ? 'text-orange-600' : 'text-red-600'
+                    }`}>
+                      ({item.discrepancyType === 'recovered' ? 'Recovered' :
+                        item.discrepancyType === 'excess' ? '+' + (item.checkScannedQty - item.originalScannedQty) :
+                        item.checkScannedQty - item.originalScannedQty})
+                    </span>
+                  </div>
+                  {item.discrepancyType === 'recovered' && (
+                    <div className="text-xs text-blue-600 mt-1">
+                      → {allocation} items will be allocated to box
+                    </div>
+                  )}
+                  {item.discrepancyType === 'excess' && extraCount > 0 && (
+                    <div className="text-xs text-orange-600 mt-1">
+                      → {allocation} items to box, {extraCount} items to extras
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           
           <div className="flex space-x-2 pt-4">

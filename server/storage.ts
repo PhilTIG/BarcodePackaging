@@ -1901,11 +1901,16 @@ export class DatabaseStorage implements IStorage {
 
   async applyCheckCorrections(jobId: string, boxNumber: number, corrections: any[], sessionUserId: string, resolvedBy: string): Promise<void> {
     for (const correction of corrections) {
-      // Update box requirement with corrected quantity
+      // New allocation logic: 
+      // - correctedQty is already calculated to be min(checkQty, requiredQty) from frontend
+      // - This ensures only items up to required_qty are allocated to the box
+      // - Excess items beyond required_qty are handled as extras separately
+      
+      // Update box requirement with corrected quantity (capped at required_qty)
       await this.db
         .update(boxRequirements)
         .set({ 
-          scannedQty: correction.correctedQty,
+          scannedQty: correction.correctedQty, // Already capped at required_qty by frontend
           lastWorkerUserId: sessionUserId,
         })
         .where(and(
@@ -1914,14 +1919,18 @@ export class DatabaseStorage implements IStorage {
           eq(boxRequirements.barCode, correction.barCode)
         ));
 
-      // Create check result record for tracking
+      // Create check result record for tracking with enhanced notes
+      const allocationNotes = correction.checkQty > (correction.requiredQty || 0) 
+        ? `Original: ${correction.originalQty}, Checked: ${correction.checkQty}, Allocated to box: ${correction.correctedQty}, Excess: ${correction.checkQty - correction.correctedQty}`
+        : `Original: ${correction.originalQty}, Checked: ${correction.checkQty}, Applied: ${correction.correctedQty}`;
+        
       await this.db
         .insert(checkResults)
         .values({
           checkSessionId: correction.sessionId,
           boxRequirementId: correction.boxRequirementId,
           finalQty: correction.correctedQty,
-          discrepancyNotes: `Original: ${correction.originalQty}, Checked: ${correction.checkQty}, Applied: ${correction.correctedQty}`,
+          discrepancyNotes: allocationNotes,
           resolutionAction: 'correction_applied',
           resolvedBy: resolvedBy,
         });
