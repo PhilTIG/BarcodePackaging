@@ -123,6 +123,13 @@ export interface IStorage {
   getJobArchives(): Promise<JobArchive[]>;
   searchJobArchives(query: string): Promise<JobArchive[]>;
   deleteJobArchive(id: string): Promise<boolean>;
+
+  // Extra Items tracking methods (NEW)
+  getExtraItemsCount(jobId: string): Promise<number>;
+  getExtraItemsDetails(jobId: string): Promise<any[]>;
+
+  // Worker ID consistency analysis
+  analyzeWorkerIdConsistency(jobId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -344,12 +351,12 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get job with products
       const job = await this.getJobById(id);
-      
+
       // Use box requirements system (all jobs should have box requirements)
       const boxRequirements = await this.getBoxRequirementsByJobId(id);
       const totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
       const scannedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
-      
+
       // Transform to products format for compatibility with existing components
       const productMap = new Map();
       boxRequirements.forEach(req => {
@@ -375,7 +382,7 @@ export class DatabaseStorage implements IStorage {
 
       const sessions = await this.getScanSessionsByJobId(id);
       const assignments = await this.getJobAssignmentsWithUsers(id);
-      
+
       // Get extra items count and details (items scanned that are not in the original job)
       const extraItemsCount = await this.getExtraItemsCount(id);
       const extraItemsDetails = await this.getExtraItemsDetails(id);
@@ -440,7 +447,7 @@ export class DatabaseStorage implements IStorage {
           // Check if using new box requirements system or legacy products
           const boxRequirements = await this.getBoxRequirementsByJobId(job.id);
           const assignments = await this.getJobAssignmentsWithUsers(job.id);
-          
+
           let totalProducts = 0;
           let completedItems = 0;
           let products: any[] = [];
@@ -450,7 +457,7 @@ export class DatabaseStorage implements IStorage {
             // NEW SYSTEM: Use box requirements
             totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
             completedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
-            
+
             // Transform to products format for box completion calculation
             const productMap = new Map();
             boxRequirements.forEach(req => {
@@ -583,7 +590,7 @@ export class DatabaseStorage implements IStorage {
   // DEPRECATED: Legacy method for products table scanning - use box requirements system instead
   async updateProductScannedQty(barCode: string, jobId: string, increment: number, workerId?: string, workerColor?: string): Promise<Product | undefined> {
     console.warn('[DEPRECATED] updateProductScannedQty called - this method is deprecated, use box requirements system instead');
-    
+
     // This method is kept only for potential emergency fallback
     // All new jobs should use the box_requirements system via updateBoxRequirement()
     return undefined;
@@ -726,7 +733,7 @@ export class DatabaseStorage implements IStorage {
       let productName = null;
       let customerName = null;
       let targetBox = null;
-      
+
       // Get worker's assigned color from job assignments
       const workerAssignment = await this.checkExistingAssignment(session.jobId, session.userId);
       let workerColor = workerAssignment?.assignedColor || insertEvent.workerColor || 'blue'; // Use assigned color, fallback to provided or default
@@ -981,11 +988,11 @@ export class DatabaseStorage implements IStorage {
     // Calculate active scanning time (excluding breaks > 30 seconds)
     let activeScanningTime = 0;
     let lastScanTime = new Date(allEvents[0].scan_events.scanTime).getTime();
-    
+
     for (let i = 1; i < allEvents.length; i++) {
       const currentScanTime = new Date(allEvents[i].scan_events.scanTime).getTime();
       const timeDiff = currentScanTime - lastScanTime;
-      
+
       // Only count time gaps <= 30 seconds as active scanning
       if (timeDiff <= 30000) {
         activeScanningTime += timeDiff;
@@ -1013,7 +1020,7 @@ export class DatabaseStorage implements IStorage {
     // Combine speed and accuracy for final score
     const accuracyMultiplier = accuracy / 100;
     let score = speedScore * accuracyMultiplier;
-    
+
     // Apply penalties for undos
     score = Math.max(1, score - (undoEvents.length * 0.05));
     score = Math.min(10, Math.round(score * 10) / 10);
@@ -1181,7 +1188,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserPreferences(userId: string, updates: Partial<UserPreferences>): Promise<UserPreferences | undefined> {
     console.log('[Storage] Updating user preferences for:', userId, 'with:', updates);
-    
+
     const [result] = await this.db
       .update(userPreferences)
       .set({ 
@@ -1536,53 +1543,104 @@ export class DatabaseStorage implements IStorage {
     return result[0]?.count || 0;
   }
 
+  // Get extra items details with worker information
   async getExtraItemsDetails(jobId: string): Promise<any[]> {
-    const extraItems = await this.db
-      .select({
-        barCode: scanEvents.barCode,
-        productName: scanEvents.productName,
-        scanTime: scanEvents.scanTime,
-        workerColor: scanEvents.workerColor,
-        sessionId: scanEvents.sessionId,
-      })
-      .from(scanEvents)
-      .where(and(
-        eq(scanEvents.jobId, jobId),
-        eq(scanEvents.isExtraItem, true)
-      ))
-      .orderBy(desc(scanEvents.scanTime));
+    try {
+      const extraItems = await this.db
+        .select({
+          id: scanEvents.id,
+          barCode: scanEvents.barCode,
+          productName: scanEvents.productName,
+          scanTime: scanEvents.scanTime,
+          workerColor: scanEvents.workerColor,
+          sessionId: scanEvents.sessionId,
+          // Get worker info from session
+          workerId: scanSessions.userId,
+        })
+        .from(scanEvents)
+        .innerJoin(scanSessions, eq(scanEvents.sessionId, scanSessions.id))
+        .where(
+          and(
+            eq(scanEvents.jobId, jobId),
+            eq(scanEvents.isExtraItem, true)
+          )
+        )
+        .orderBy(desc(scanEvents.scanTime));
 
-    // Get worker info and group by barcode
-    const itemsWithWorkers = await Promise.all(
-      extraItems.map(async (item: any) => {
-        const session = await this.getScanSessionById(item.sessionId);
-        const worker = session ? await this.getUserById(session.userId) : null;
-        return {
-          ...item,
-          workerName: worker?.name || 'Unknown',
-          workerStaffId: worker?.staffId || 'Unknown',
-        };
-      })
-    );
+      // Get worker details for each extra item
+      const workerIds = [...new Set(extraItems.map(item => item.workerId))];
+      const workers = await Promise.all(
+        workerIds.map(id => this.getUserById(id))
+      );
+      const workerMap = new Map(workers.filter(Boolean).map(worker => [worker!.id, worker]));
 
-    // Group by barcode
-    const groupedItems = itemsWithWorkers.reduce((acc: any[], item: any) => {
-      const existing = acc.find((group: any) => group.barCode === item.barCode);
-      if (existing) {
-        existing.quantity += 1;
-        existing.scans.push(item);
-      } else {
-        acc.push({
-          barCode: item.barCode,
-          productName: item.productName,
-          quantity: 1,
-          scans: [item],
-        });
-      }
-      return acc;
-    }, [] as any[]);
+      // Enhance extra items with worker information
+      const enhancedExtraItems = extraItems.map(item => ({
+        ...item,
+        workerName: workerMap.get(item.workerId)?.name || 'Unknown',
+        workerStaffId: workerMap.get(item.workerId)?.staffId || 'Unknown'
+      }));
 
-    return groupedItems;
+      return enhancedExtraItems;
+    } catch (error) {
+      console.error('Error fetching extra items details:', error);
+      throw error;
+    }
+  }
+
+  // Diagnostic method to investigate worker ID consistency
+  async analyzeWorkerIdConsistency(jobId: string) {
+    try {
+      // Get all data sources that reference worker IDs
+      const [boxRequirements, scanSessions, scanEvents, jobAssignments] = await Promise.all([
+        this.getBoxRequirementsByJobId(jobId),
+        this.getScanSessionsByJobId(jobId),
+        this.db.select().from(scanEvents).where(eq(scanEvents.jobId, jobId)),
+        this.getJobAssignmentsWithUsers(jobId)
+      ]);
+
+      // Extract worker IDs from each source
+      const boxReqWorkerIds = [...new Set(boxRequirements
+        .filter(req => req.lastWorkerUserId)
+        .map(req => req.lastWorkerUserId!))]
+        .filter(Boolean);
+
+      const sessionWorkerIds = [...new Set(scanSessions.map(session => session.userId))];
+
+      const eventWorkerIds = [...new Set(scanEvents
+        .map(event => event.sessionId)
+        .filter(Boolean))];
+
+      const assignmentWorkerIds = jobAssignments.map(assignment => assignment.userId);
+
+      // Get all actual workers
+      const allWorkers = await this.getUsersByRole('worker');
+      const validWorkerIds = allWorkers.map(w => w.id);
+
+      return {
+        sources: {
+          boxRequirements: { count: boxReqWorkerIds.length, ids: boxReqWorkerIds },
+          scanSessions: { count: sessionWorkerIds.length, ids: sessionWorkerIds },
+          scanEvents: { count: eventWorkerIds.length, ids: eventWorkerIds },
+          jobAssignments: { count: assignmentWorkerIds.length, ids: assignmentWorkerIds }
+        },
+        validWorkers: { count: validWorkerIds.length, ids: validWorkerIds },
+        mismatches: {
+          boxReqMissing: boxReqWorkerIds.filter(id => !validWorkerIds.includes(id)),
+          sessionMissing: sessionWorkerIds.filter(id => !validWorkerIds.includes(id)),
+          assignmentMissing: assignmentWorkerIds.filter(id => !validWorkerIds.includes(id))
+        },
+        idFormats: {
+          boxReqIdLengths: boxReqWorkerIds.map(id => id.length),
+          validWorkerIdLengths: validWorkerIds.map(id => id.length),
+          exampleBoxReqIds: boxReqWorkerIds.slice(0, 3),
+          exampleValidIds: validWorkerIds.slice(0, 3)
+        }
+      };
+    } catch (error) {
+      console.error('Error analyzing worker ID consistency:', error);
+      throw error;
+    }
   }
 
   // PHASE 4: Session snapshot methods removed (unused dead code)
