@@ -66,7 +66,16 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
   // Query for check sessions to show completion status
   const { data: checkSessions } = useQuery({
     queryKey: ["/api/check-sessions", jobId],
-    queryFn: () => fetch(`/api/check-sessions?jobId=${jobId}`).then(r => r.json()).then(d => d.sessions),
+    queryFn: async () => {
+      const response = await fetch(`/api/check-sessions?jobId=${jobId}`, {
+        credentials: 'include' // Include session cookies for authentication
+      });
+      if (!response.ok) {
+        return []; // Return empty array if unauthorized or error
+      }
+      const data = await response.json();
+      return data.sessions || [];
+    },
     enabled: !!jobId,
     refetchInterval: 10000, // Refresh every 10 seconds
   });
