@@ -18,8 +18,11 @@ interface CheckCountProgress {
     expectedQty: number;
     originalScannedQty: number;
     checkScannedQty: number;
-    discrepancyType: 'match' | 'shortage' | 'excess';
+    discrepancyType: 'match' | 'shortage' | 'excess' | 'recovered';
     isComplete: boolean;
+    requiredQty: number; // Add required quantity for allocation logic
+    barCode: string;
+    productName: string;
   };
 }
 
@@ -521,8 +524,9 @@ export default function CheckCountPage() {
                 const originalProgress = progress.originalScannedQty > 0 ? 
                   (progress.originalScannedQty / progress.expectedQty) * 100 : 0;
                 
-                const checkProgress_pct = progress.originalScannedQty > 0 ? 
-                  (progress.checkScannedQty / progress.originalScannedQty) * 100 : 0;
+                // Check Progress: Only count items that will be allocated to the box (up to required qty)
+                const allocatedToBox = Math.min(progress.checkScannedQty, progress.requiredQty);
+                const checkProgress_pct = (allocatedToBox / progress.requiredQty) * 100;
 
                 const statusIcon = progress.isComplete ? (
                   <CheckCircle className="h-5 w-5 text-green-500" />
@@ -614,7 +618,7 @@ export default function CheckCountPage() {
                             Recovered Items
                           </Badge>
                         )}
-                        {progress.discrepancyType === 'excess' && progress.checkScannedQty > progress.originalScannedQty && (
+                        {progress.discrepancyType === 'excess' && progress.checkScannedQty > progress.requiredQty && (
                           <Badge variant="secondary" className="text-orange-700 bg-orange-50 border-orange-200">
                             Extra Items
                           </Badge>
