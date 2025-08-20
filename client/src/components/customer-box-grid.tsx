@@ -6,6 +6,7 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useBoxHighlighting } from "@/hooks/use-box-highlighting";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { BoxDetailsModal } from "./box-details-modal";
+import { useQuery } from "@tanstack/react-query";
 
 interface Product {
   id: string;
@@ -61,6 +62,29 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
 
   // Connect to WebSocket only for supervisor view
   useWebSocket(supervisorView ? jobId : undefined, supervisorView ? handleWebSocketUpdate : undefined);
+
+  // Query for check sessions to show completion status
+  const { data: checkSessions } = useQuery({
+    queryKey: ["/api/check-sessions", jobId],
+    queryFn: () => fetch(`/api/check-sessions?jobId=${jobId}`).then(r => r.json()).then(d => d.sessions),
+    enabled: !!jobId,
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  // Function to get check status for a box
+  const getCheckStatus = (boxNumber: number): 'completed' | 'rejected' | null => {
+    if (!checkSessions) return null;
+    
+    const boxSession = checkSessions.find((s: any) => s.boxNumber === boxNumber && s.status === 'completed');
+    if (!boxSession) return null;
+    
+    // If discrepancies were found and corrections were NOT applied, show as rejected (red cross)
+    // If no discrepancies OR corrections were applied, show as completed (green check)
+    if (boxSession.discrepanciesFound > 0 && !boxSession.correctionsApplied) {
+      return 'rejected';
+    }
+    return 'completed';
+  };
   
   const boxData = useMemo(() => {
     const boxes: { [key: number]: {
@@ -233,6 +257,25 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
               >
                 {box.boxNumber}
               </div>
+              
+              {/* Check status indicator under box number */}
+              {getCheckStatus(box.boxNumber) && (
+                <div className="absolute top-14 left-1/2 transform -translate-x-1/2" data-testid={`check-status-${box.boxNumber}`}>
+                  {getCheckStatus(box.boxNumber) === 'completed' ? (
+                    <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  ) : getCheckStatus(box.boxNumber) === 'rejected' ? (
+                    <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             {/* Quantity fraction - Left side at same height as box number */}

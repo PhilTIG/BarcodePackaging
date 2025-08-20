@@ -195,6 +195,7 @@ export const checkSessions = pgTable("check_sessions", {
   totalItemsExpected: integer("total_items_expected").notNull(),
   totalItemsScanned: integer("total_items_scanned").default(0),
   discrepanciesFound: integer("discrepancies_found").default(0),
+  correctionsApplied: boolean("corrections_applied").default(false), // NEW: Track if corrections were applied
   isComplete: boolean("is_complete").default(false),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -434,9 +435,6 @@ export const insertCheckResultSchema = createInsertSchema(checkResults).omit({
   id: true,
   createdAt: true,
 });
-
-export type CheckResult = typeof checkResults.$inferSelect;
-export type InsertCheckResult = z.infer<typeof insertCheckResultSchema>;
 
 // New table insert schemas
 export const insertJobTypeSchema = createInsertSchema(jobTypes).omit({

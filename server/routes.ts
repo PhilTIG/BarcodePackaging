@@ -967,6 +967,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/check-sessions', requireAuth, async (req, res) => {
+    try {
+      const { jobId } = req.query;
+      if (!jobId) {
+        return res.status(400).json({ message: 'jobId query parameter required' });
+      }
+      
+      const sessions = await storage.getCheckSessionsByJobId(jobId as string);
+      res.json({ sessions });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch check sessions' });
+    }
+  });
+
   app.patch('/api/check-sessions/:id', requireAuth, async (req, res) => {
     try {
       const { status } = req.body;
@@ -984,19 +998,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/check-sessions/:id/complete', requireAuth, async (req, res) => {
     try {
-      const { discrepanciesFound } = req.body;
+      const { discrepanciesFound, applyCorrections, corrections, extraItems } = req.body;
       const session = await storage.completeCheckSession(
         req.params.id,
         new Date(),
-        parseInt(discrepanciesFound) || 0
+        parseInt(discrepanciesFound) || 0,
+        applyCorrections
       );
       
       if (!session) {
         return res.status(404).json({ message: 'Check session not found' });
       }
 
+      // If corrections are being applied, update box requirements and create check results
+      if (applyCorrections && corrections && corrections.length > 0) {
+        await storage.applyCheckCorrections(session.jobId, session.boxNumber, corrections, session.userId, (req as AuthenticatedRequest).user!.id);
+      }
+
+      // If extra items found, create them as scan events for the job
+      if (extraItems && extraItems.length > 0) {
+        await storage.createExtraItemsFromCheck(session.jobId, extraItems, session.userId);
+      }
+
       res.json({ session });
     } catch (error) {
+      console.error('Failed to complete check session:', error);
       res.status(500).json({ message: 'Failed to complete check session' });
     }
   });

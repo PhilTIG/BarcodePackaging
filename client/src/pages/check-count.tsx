@@ -136,7 +136,7 @@ export default function CheckCountPage() {
 
   // Complete session mutation
   const completeSessionMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: { applyCorrections?: boolean; corrections?: any[]; extraItems?: any[] } = {}) => {
       if (!currentSession) return;
       
       const discrepancies = Object.values(checkProgress).filter(
@@ -144,7 +144,10 @@ export default function CheckCountPage() {
       ).length;
       
       const response = await apiRequest("POST", `/api/check-sessions/${currentSession.id}/complete`, {
-        discrepanciesFound: discrepancies
+        discrepanciesFound: discrepancies,
+        applyCorrections: data.applyCorrections || false,
+        corrections: data.corrections || [],
+        extraItems: data.extraItems || []
       });
       return response.json();
     },
@@ -292,13 +295,48 @@ export default function CheckCountPage() {
 
   const handleKeepOriginal = () => {
     setShowDiscrepancyDialog(false);
-    completeSessionMutation.mutate();
+    // Complete without applying corrections - creates check result with rejected status
+    completeSessionMutation.mutate({ applyCorrections: false });
   };
 
   const handleApplyCorrections = () => {
-    // Apply corrections logic would go here
     setShowDiscrepancyDialog(false);
-    completeSessionMutation.mutate();
+    
+    // Prepare correction data and extra items
+    const corrections: any[] = [];
+    const extraItems: any[] = [];
+    
+    boxRequirements.forEach(requirement => {
+      const progress = checkProgress[requirement.barCode];
+      if (progress && progress.discrepancyType !== 'match') {
+        // Create correction record
+        corrections.push({
+          sessionId: currentSession?.id,
+          boxRequirementId: requirement.id,
+          barCode: requirement.barCode,
+          originalQty: progress.originalScannedQty,
+          checkQty: progress.checkScannedQty,
+          correctedQty: progress.checkScannedQty, // Use check count as correction
+        });
+        
+        // If excess items found, add them as extra items
+        if (progress.discrepancyType === 'excess') {
+          const excessCount = progress.checkScannedQty - progress.originalScannedQty;
+          for (let i = 0; i < excessCount; i++) {
+            extraItems.push({
+              barCode: requirement.barCode,
+              productName: requirement.productName
+            });
+          }
+        }
+      }
+    });
+    
+    completeSessionMutation.mutate({ 
+      applyCorrections: true, 
+      corrections, 
+      extraItems 
+    });
   };
 
   if (isLoading) {

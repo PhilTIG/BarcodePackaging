@@ -143,7 +143,7 @@ export interface IStorage {
   getCheckSessionsByJobId(jobId: string): Promise<CheckSession[]>;
   getCheckSessionsByBoxNumber(jobId: string, boxNumber: number): Promise<CheckSession[]>;
   updateCheckSessionStatus(id: string, status: string): Promise<CheckSession | undefined>;
-  completeCheckSession(id: string, endTime: Date, discrepanciesFound: number): Promise<CheckSession | undefined>;
+  completeCheckSession(id: string, endTime: Date, discrepanciesFound: number, correctionsApplied?: boolean): Promise<CheckSession | undefined>;
 
   // Check event methods
   createCheckEvent(event: InsertCheckEvent): Promise<CheckEvent>;
@@ -153,6 +153,10 @@ export interface IStorage {
   createCheckResult(result: InsertCheckResult): Promise<CheckResult>;
   getCheckResultsBySessionId(sessionId: string): Promise<CheckResult[]>;
   updateCheckResult(id: string, updates: Partial<InsertCheckResult>): Promise<CheckResult | undefined>;
+  
+  // Check correction methods
+  applyCheckCorrections(jobId: string, boxNumber: number, corrections: any[], sessionUserId: string, resolvedBy: string): Promise<void>;
+  createExtraItemsFromCheck(jobId: string, extraItems: any[], sessionUserId: string): Promise<void>;
   
   // QA reporting methods
   getJobQAReport(jobId: string): Promise<any>;
@@ -1754,13 +1758,14 @@ export class DatabaseStorage implements IStorage {
     return session || undefined;
   }
 
-  async completeCheckSession(id: string, endTime: Date, discrepanciesFound: number): Promise<CheckSession | undefined> {
+  async completeCheckSession(id: string, endTime: Date, discrepanciesFound: number, correctionsApplied?: boolean): Promise<CheckSession | undefined> {
     const [session] = await this.db
       .update(checkSessions)
       .set({ 
         status: 'completed',
         endTime,
         discrepanciesFound,
+        correctionsApplied: correctionsApplied || false,
         isComplete: true 
       })
       .where(eq(checkSessions.id, id))
@@ -1879,6 +1884,80 @@ export class DatabaseStorage implements IStorage {
       totalDiscrepancies: discrepancies.length,
       discrepancies
     };
+  }
+
+  async applyCheckCorrections(jobId: string, boxNumber: number, corrections: any[], sessionUserId: string, resolvedBy: string): Promise<void> {
+    for (const correction of corrections) {
+      // Update box requirement with corrected quantity
+      await this.db
+        .update(boxRequirements)
+        .set({ 
+          scannedQty: correction.correctedQty,
+          lastWorkerUserId: sessionUserId,
+        })
+        .where(and(
+          eq(boxRequirements.jobId, jobId),
+          eq(boxRequirements.boxNumber, boxNumber),
+          eq(boxRequirements.barCode, correction.barCode)
+        ));
+
+      // Create check result record for tracking
+      await this.db
+        .insert(checkResults)
+        .values({
+          checkSessionId: correction.sessionId,
+          boxRequirementId: correction.boxRequirementId,
+          finalQty: correction.correctedQty,
+          discrepancyNotes: `Original: ${correction.originalQty}, Checked: ${correction.checkQty}, Applied: ${correction.correctedQty}`,
+          resolutionAction: 'correction_applied',
+          resolvedBy: resolvedBy,
+        });
+    }
+  }
+
+  async createExtraItemsFromCheck(jobId: string, extraItems: any[], sessionUserId: string): Promise<void> {
+    // Get an active scan session for this user to attach extra items
+    const activeSession = await this.db
+      .select()
+      .from(scanSessions)
+      .where(and(
+        eq(scanSessions.userId, sessionUserId),
+        eq(scanSessions.jobId, jobId),
+        eq(scanSessions.isPaused, false)
+      ))
+      .limit(1);
+
+    let sessionId = activeSession.length > 0 ? activeSession[0].id : null;
+
+    // If no active session, create one for extra items
+    if (!sessionId) {
+      const newSession = await this.db
+        .insert(scanSessions)
+        .values({
+          userId: sessionUserId,
+          jobId: jobId,
+          isPaused: false,
+          startTime: new Date(),
+        })
+        .returning();
+      sessionId = newSession[0].id;
+    }
+
+    // Create scan events for extra items
+    for (const extraItem of extraItems) {
+      await this.db
+        .insert(scanEvents)
+        .values({
+          sessionId: sessionId,
+          barCode: extraItem.barCode,
+          productName: extraItem.productName || 'Unknown',
+          customerName: 'Unassigned',
+          boxNumber: null,
+          eventType: 'extra_item',
+          isExtraItem: true,
+          scanTime: new Date(),
+        });
+    }
   }
 }
 
