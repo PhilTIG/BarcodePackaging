@@ -1853,12 +1853,10 @@ export class DatabaseStorage implements IStorage {
         sessionId: checkResults.checkSessionId,
         boxNumber: checkSessions.boxNumber,
         boxRequirementId: checkResults.boxRequirementId,
-        originalQty: checkResults.originalQty,
-        checkedQty: checkResults.checkedQty,
-        adjustedQty: checkResults.adjustedQty,
-        discrepancyType: checkResults.discrepancyType,
-        correctionApplied: checkResults.correctionApplied,
-        notes: checkResults.notes,
+        finalQty: checkResults.finalQty,
+        discrepancyNotes: checkResults.discrepancyNotes,
+        resolutionAction: checkResults.resolutionAction,
+        resolvedBy: checkResults.resolvedBy,
         createdAt: checkResults.createdAt,
         userName: users.name,
         userStaffId: users.staffId,
@@ -1872,7 +1870,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(boxRequirements, eq(checkResults.boxRequirementId, boxRequirements.id))
       .where(and(
         eq(checkSessions.jobId, jobId),
-        sql`${checkResults.discrepancyType} != 'match'`
+        sql`${checkResults.discrepancyNotes} IS NOT NULL`
       ))
       .orderBy(desc(checkResults.createdAt));
 

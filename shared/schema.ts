@@ -215,12 +215,10 @@ export const checkResults = pgTable("check_results", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   checkSessionId: varchar("check_session_id").notNull().references(() => checkSessions.id, { onDelete: 'cascade' }),
   boxRequirementId: varchar("box_requirement_id").notNull().references(() => boxRequirements.id),
-  originalQty: integer("original_qty").notNull(),
-  checkedQty: integer("checked_qty").notNull(),
-  adjustedQty: integer("adjusted_qty"),
-  discrepancyType: text("discrepancy_type").notNull(), // 'match', 'shortage', 'excess'
-  correctionApplied: boolean("correction_applied").default(false),
-  notes: text("notes"),
+  finalQty: integer("final_qty").notNull(),
+  discrepancyNotes: text("discrepancy_notes"),
+  resolutionAction: text("resolution_action"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -436,6 +434,9 @@ export const insertCheckResultSchema = createInsertSchema(checkResults).omit({
   id: true,
   createdAt: true,
 });
+
+export type CheckResult = typeof checkResults.$inferSelect;
+export type InsertCheckResult = z.infer<typeof insertCheckResultSchema>;
 
 // New table insert schemas
 export const insertJobTypeSchema = createInsertSchema(jobTypes).omit({

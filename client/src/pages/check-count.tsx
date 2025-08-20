@@ -1,6 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -74,10 +74,12 @@ export default function CheckCountPage() {
     enabled: !!jobId && !!user,
   });
 
-  // Get box requirements filtered by box number
-  const boxRequirements: BoxRequirement[] = (boxRequirementsData as any)?.boxRequirements?.filter(
-    (req: BoxRequirement) => req.boxNumber === parseInt(boxNumber!)
-  ) || [];
+  // Get box requirements filtered by box number (with useMemo to prevent re-creation)
+  const boxRequirements: BoxRequirement[] = useMemo(() => {
+    return (boxRequirementsData as any)?.boxRequirements?.filter(
+      (req: BoxRequirement) => req.boxNumber === parseInt(boxNumber!)
+    ) || [];
+  }, [boxRequirementsData, boxNumber]);
 
   const customerName = boxRequirements.length > 0 ? boxRequirements[0].customerName : `Box ${boxNumber}`;
 
@@ -179,6 +181,40 @@ export default function CheckCountPage() {
       });
       return response.json();
     },
+    onSuccess: (data, variables) => {
+      // Update the check progress state after successful scan
+      setCheckProgress(prev => {
+        const updated = { ...prev };
+        if (updated[variables.barCode]) {
+          updated[variables.barCode] = {
+            ...updated[variables.barCode],
+            checkScannedQty: updated[variables.barCode].checkScannedQty + 1,
+            discrepancyType: variables.scannedQty === variables.expectedQty ? 'match' : 
+                           variables.scannedQty > variables.expectedQty ? 'excess' : 'shortage',
+            isComplete: updated[variables.barCode].checkScannedQty + 1 >= variables.expectedQty
+          };
+        }
+        return updated;
+      });
+      
+      // Update session scan count
+      setCurrentSession(prev => prev ? {
+        ...prev,
+        totalItemsScanned: prev.totalItemsScanned + 1
+      } : null);
+      
+      toast({
+        title: "Item scanned",
+        description: `${variables.productName} recorded successfully`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Scan failed",
+        description: error.message || "Failed to record scan",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleStartSession = () => {
@@ -220,7 +256,7 @@ export default function CheckCountPage() {
       return;
     }
 
-    // Update check progress
+    // Get current progress for this barcode
     const currentProgress = checkProgress[barCode] || {
       expectedQty: requirement.requiredQty,
       originalScannedQty: requirement.scannedQty || 0,
@@ -230,22 +266,8 @@ export default function CheckCountPage() {
     };
 
     const newCheckScanned = currentProgress.checkScannedQty + 1;
-    const newDiscrepancyType: 'match' | 'shortage' | 'excess' = newCheckScanned === currentProgress.originalScannedQty ? 'match' :
-                              newCheckScanned > currentProgress.originalScannedQty ? 'excess' : 'shortage';
 
-    const updatedProgress = {
-      ...currentProgress,
-      checkScannedQty: newCheckScanned,
-      discrepancyType: newDiscrepancyType,
-      isComplete: newCheckScanned === currentProgress.originalScannedQty && newDiscrepancyType === 'match'
-    };
-
-    setCheckProgress(prev => ({
-      ...prev,
-      [barCode]: updatedProgress
-    }));
-
-    // Record the event
+    // Record the event (state update will happen in onSuccess)
     recordEventMutation.mutate({
       barCode,
       productName: requirement.productName,
