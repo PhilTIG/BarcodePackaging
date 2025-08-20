@@ -2,8 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, XCircle, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CheckCircle, XCircle, Users, ClipboardCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/use-auth';
+import { useUserPreferences } from '@/hooks/use-user-preferences';
 
 interface BoxDetailsModalProps {
   isOpen: boolean;
@@ -15,6 +18,7 @@ interface BoxDetailsModalProps {
   scannedQty: number;
   isComplete: boolean;
   lastWorkerColor?: string;
+  onCheckCount?: (boxNumber: number, jobId: string) => void;
 }
 
 interface BoxRequirement {
@@ -47,8 +51,12 @@ export function BoxDetailsModal({
   totalQty,
   scannedQty,
   isComplete,
-  lastWorkerColor
+  lastWorkerColor,
+  onCheckCount
 }: BoxDetailsModalProps) {
+  // User authentication and preferences
+  const { user } = useAuth();
+  const { preferences } = useUserPreferences();
   // Fetch box requirements for this specific box using the default query function
   const { data: boxRequirementsResponse, isLoading } = useQuery({
     queryKey: [`/api/jobs/${jobId}/box-requirements`],
@@ -146,6 +154,47 @@ export function BoxDetailsModal({
     contribution: worker.totalContribution
   })));
 
+  // Check if user can perform CheckCount
+  const canCheckCount = () => {
+    if (!user) return false;
+    
+    // Managers and supervisors can always perform checks
+    if (user.role === 'manager' || user.role === 'supervisor') {
+      return true;
+    }
+    
+    // Workers need the checkBoxEnabled preference
+    if (user.role === 'worker') {
+      return preferences.checkBoxEnabled;
+    }
+    
+    return false;
+  };
+
+  // Handle CheckCount button click
+  const handleCheckCount = () => {
+    if (!boxNumber || !canCheckCount()) return;
+    
+    if (onCheckCount) {
+      onCheckCount(boxNumber, jobId);
+    } else {
+      console.warn('CheckCount handler not provided');
+    }
+  };
+
+  // Get theme color for button styling
+  const getThemeColor = () => {
+    const themeColorMap: Record<string, string> = {
+      blue: '#3b82f6',
+      green: '#10b981',
+      orange: '#f97316',
+      teal: '#14b8a6',
+      red: '#ef4444',
+      dark: '#374151'
+    };
+    return themeColorMap[preferences.theme] || themeColorMap.blue;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" data-testid="box-details-modal">
@@ -184,6 +233,21 @@ export function BoxDetailsModal({
                 <span className="text-sm font-medium text-green-700 dark:text-green-400">
                   Box Complete
                 </span>
+              </div>
+            )}
+
+            {/* CheckCount Button */}
+            {canCheckCount() && (
+              <div className="flex justify-center pt-2">
+                <Button
+                  onClick={handleCheckCount}
+                  className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: getThemeColor() }}
+                  data-testid="check-count-button"
+                >
+                  <ClipboardCheck className="w-4 h-4" />
+                  Check Count
+                </Button>
               </div>
             )}
           </CardContent>

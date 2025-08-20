@@ -1108,6 +1108,10 @@ export default function WorkerScanner() {
                 // POC-style single box highlighting - only one box highlighted at a time
                 setLastScannedBoxNumber(boxNumber);
               }}
+              onCheckCount={(boxNumber, jobId) => {
+                // TODO: Sub-Task 2.3 - Open full-screen CheckCount interface
+                console.log(`CheckCount requested for Box ${boxNumber} in Job ${jobId}`);
+              }}
             />
           </CardContent>
         </Card>

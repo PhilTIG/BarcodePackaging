@@ -25,9 +25,10 @@ interface CustomerBoxGridProps {
   supervisorView?: boolean;
   lastScannedBoxNumber?: number | null; // For POC-style single box highlighting
   onBoxScanUpdate?: (boxNumber: number, workerId?: string, workerColor?: string, workerStaffId?: string) => void;
+  onCheckCount?: (boxNumber: number, jobId: string) => void;
 }
 
-export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate }: CustomerBoxGridProps) {
+export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount }: CustomerBoxGridProps) {
   // State for box details modal
   const [selectedBox, setSelectedBox] = useState<{
     boxNumber: number;
@@ -286,6 +287,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
         scannedQty={selectedBox?.scannedQty || 0}
         isComplete={selectedBox?.isComplete || false}
         lastWorkerColor={selectedBox?.lastWorkerColor}
+        onCheckCount={onCheckCount}
       />
     </div>
   );

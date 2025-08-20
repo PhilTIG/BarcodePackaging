@@ -14,6 +14,7 @@ interface UserPreferences {
   mobileModePreference: boolean;
   singleBoxMode: boolean;
   theme: string;
+  checkBoxEnabled: boolean;
 }
 
 interface UserPreferencesContextType {
@@ -36,6 +37,7 @@ const defaultPreferences: UserPreferences = {
   mobileModePreference: false,
   singleBoxMode: false,
   theme: "blue",
+  checkBoxEnabled: false,
 };
 
 export function UserPreferencesProvider({ children }: { children: ReactNode }) {
