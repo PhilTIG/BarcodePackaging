@@ -1109,8 +1109,8 @@ export default function WorkerScanner() {
                 setLastScannedBoxNumber(boxNumber);
               }}
               onCheckCount={(boxNumber, jobId) => {
-                // TODO: Sub-Task 2.3 - Open full-screen CheckCount interface
-                console.log(`CheckCount requested for Box ${boxNumber} in Job ${jobId}`);
+                // Navigate to dedicated CheckCount page
+                setLocation(`/check-count/${jobId}/${boxNumber}`);
               }}
             />
           </CardContent>
