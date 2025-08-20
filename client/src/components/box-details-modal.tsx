@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +8,8 @@ import { CheckCircle, XCircle, Users, ClipboardCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
+import { CheckCountModal } from '@/components/check-count-modal';
+import type { BoxRequirement as SchemaBoxRequirement } from '@shared/schema';
 
 interface BoxDetailsModalProps {
   isOpen: boolean;
@@ -54,6 +57,9 @@ export function BoxDetailsModal({
   lastWorkerColor,
   onCheckCount
 }: BoxDetailsModalProps) {
+  // CheckCount modal state
+  const [isCheckCountModalOpen, setIsCheckCountModalOpen] = useState(false);
+  
   // User authentication and preferences
   const { user } = useAuth();
   const { preferences } = useUserPreferences();
@@ -175,11 +181,9 @@ export function BoxDetailsModal({
   const handleCheckCount = () => {
     if (!boxNumber || !canCheckCount()) return;
     
-    if (onCheckCount) {
-      onCheckCount(boxNumber, jobId);
-    } else {
-      console.warn('CheckCount handler not provided');
-    }
+    // Close the box modal and open CheckCount modal
+    onClose();
+    setIsCheckCountModalOpen(true);
   };
 
   // Get theme color for button styling
@@ -196,6 +200,7 @@ export function BoxDetailsModal({
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" data-testid="box-details-modal">
         
@@ -340,5 +345,18 @@ export function BoxDetailsModal({
         )}
       </DialogContent>
     </Dialog>
+    
+    {/* CheckCount Modal */}
+    {boxNumber && (
+      <CheckCountModal
+        isOpen={isCheckCountModalOpen}
+        onClose={() => setIsCheckCountModalOpen(false)}
+        boxNumber={boxNumber}
+        customerName={customerName}
+        jobId={jobId}
+        boxRequirements={boxRequirements as SchemaBoxRequirement[]}
+      />
+    )}
+    </>
   );
 }
