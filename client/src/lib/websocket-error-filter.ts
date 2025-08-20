@@ -8,8 +8,9 @@
 // Store original console.error
 const originalConsoleError = console.error;
 
-// Development tool error patterns to filter out
+// Development tool error patterns to filter out (Vite HMR WebSocket errors)
 const FILTERED_ERROR_PATTERNS = [
+  // Vite HMR WebSocket connection failures
   /WebSocket connection.*failed.*client:\d+/,
   /setupWebSocket.*client:\d+/,
   /fallback.*client:\d+/,
@@ -20,6 +21,13 @@ const FILTERED_ERROR_PATTERNS = [
   /at setupWebSocket.*client:/,
   /at fallback.*client:/,
   /The URL.*localhost:undefined.*is invalid/,
+  // Additional Vite HMR patterns
+  /WebSocket connection to.*failed.*Error during WebSocket handshake.*Unexpected response code.*400/,
+  /WebSocket connection to.*token=.*failed/,
+  /Error during WebSocket handshake.*Unexpected response code.*400/,
+  /client:\d+.*WebSocket connection.*failed/,
+  /client:\d+.*setupWebSocket/,
+  /client:\d+.*fallback/,
 ];
 
 /**

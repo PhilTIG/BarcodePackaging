@@ -1,0 +1,37 @@
+client:536  WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/?token=_RCDzU3ZwusJ' failed: Error during WebSocket handshake: Unexpected response code: 400
+setupWebSocket @ client:536
+(anonymous) @ client:531
+client:536  Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=_RCDzU3ZwusJ' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+react-dom.development.js:29895 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+websocket-error-filter.ts:50 [WebSocket Error Filter] Development tool WebSocket error suppression enabled
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 8f10341f-a136-46b7-b476-d4daea696d98
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job a764c040-912f-4b5f-8cd6-d5b5a7781a3c
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: 'l4ao9v', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: 'l4ao9v', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: '8f10341f-a136-46b7-b476-d4daea696d98'}
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: 'kw65kd', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: 'kw65kd', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: 'a764c040-912f-4b5f-8cd6-d5b5a7781a3c'}
