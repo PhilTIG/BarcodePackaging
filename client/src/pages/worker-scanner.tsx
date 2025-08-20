@@ -14,6 +14,7 @@ import { Settings, LogOut, Package, Undo, RotateCcw, Save, Check, Camera } from 
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { BarcodeScanner } from "@/components/barcode-scanner";
 import { MobileScannerInterface } from "@/components/mobile-scanner-interface";
+import { JobSwitcher } from "@/components/job-switcher";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export default function WorkerScanner() {
@@ -106,9 +107,9 @@ export default function WorkerScanner() {
     }
   }, [user, isLoading, setLocation]);
 
-  // Handle job selection logic for workers
+  // Handle job selection logic for workers - UPDATED FOR MULTI-JOB SUPPORT
   useEffect(() => {
-    if (!user || user.role !== "worker" || !assignmentsData || jobId) return;
+    if (!user || user.role !== "worker" || !assignmentsData) return;
 
     const assignments = (assignmentsData as any)?.assignments || [];
 
@@ -116,13 +117,14 @@ export default function WorkerScanner() {
       // No assignments - stay on scanner page and show no assignments message
       setShowJobSelector(false);
       return;
-    } else if (assignments.length === 1) {
-      // Only one assignment - auto-redirect to that job
+    } else if (assignments.length === 1 && !jobId) {
+      // Only one assignment and no current job - auto-redirect to that job
       setLocation(`/scanner/${assignments[0].jobId}`);
-    } else {
-      // Multiple assignments - show job selector
+    } else if (assignments.length > 1 && !jobId) {
+      // Multiple assignments but no current job - show job selector
       setShowJobSelector(true);
     }
+    // If jobId is set, let the worker stay in current job (multi-job support)
   }, [user, assignmentsData, jobId, setLocation]);
 
   // Create scan session mutation
@@ -396,7 +398,7 @@ export default function WorkerScanner() {
 
   // Auto-start session when entering a job
   useEffect(() => {
-    if (jobId && user && !activeSession && !sessionData?.session) {
+    if (jobId && user && !activeSession && !(sessionData as any)?.session) {
       console.log('[WorkerScanner] Auto-creating session for W002:', { jobId, user: user?.staffId, activeSession, sessionData });
       autoCreateSessionMutation.mutate();
     }
@@ -680,16 +682,18 @@ export default function WorkerScanner() {
         completedBoxes={getCompletedBoxes()}
         currentBoxProgress={getCurrentBoxProgress()}
         scanStats={{
-          totalScans: jobPerformanceData?.performance?.totalScans || 0,
-          scansPerHour: jobPerformanceData?.performance?.scansPerHour || 0,
-          accuracy: jobPerformanceData?.performance?.accuracy || 100,
-          score: jobPerformanceData?.performance?.score || 0,
+          totalScans: (jobPerformanceData as any)?.performance?.totalScans || 0,
+          scansPerHour: (jobPerformanceData as any)?.performance?.scansPerHour || 0,
+          accuracy: (jobPerformanceData as any)?.performance?.accuracy || 100,
+          score: (jobPerformanceData as any)?.performance?.score || 0,
         }}
+        assignments={(assignmentsData as any)?.assignments || []}
+        currentJobId={jobId}
         lastScanEvent={lastScanEvent}
         onScan={handleBarcodeSubmit}
         onUndo={() => undoMutation.mutate(1)}
         onSwitchSession={() => setLocation('/scanner')}
-        isUndoAvailable={(jobPerformanceData?.performance?.totalScans || 0) > 0}
+        isUndoAvailable={((jobPerformanceData as any)?.performance?.totalScans || 0) > 0}
         isConnected={isConnected}
         scanError={scanError}
         scanResult={scanResult}
@@ -806,6 +810,15 @@ export default function WorkerScanner() {
           </Card>
         )}
 
+        {/* Job Switcher - Always visible for multi-job workers */}
+        {(assignmentsData as any)?.assignments && (assignmentsData as any).assignments.length > 1 && (
+          <JobSwitcher
+            assignments={(assignmentsData as any).assignments}
+            currentJobId={jobId}
+            className="mb-4"
+          />
+        )}
+
         {/* Top Three Panels - Responsive Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Job Performance Panel */}
@@ -817,25 +830,25 @@ export default function WorkerScanner() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <div className="text-xl font-bold text-primary-600" data-testid="stat-items-scanned">
-                    {jobPerformanceData?.performance?.totalScans || 0}
+                    {(jobPerformanceData as any)?.performance?.totalScans || 0}
                   </div>
                   <p className="text-xs text-gray-600">Items Scanned</p>
                 </div>
                 <div className="text-center">
                   <div className="text-xl font-bold text-primary-600" data-testid="stat-scans-per-hour">
-                    {jobPerformanceData?.performance?.scansPerHour || 0}
+                    {(jobPerformanceData as any)?.performance?.scansPerHour || 0}
                   </div>
                   <p className="text-xs text-gray-600">Scans/Hour</p>
                 </div>
                 <div className="text-center">
                   <div className="text-xl font-bold text-success-600" data-testid="stat-accuracy">
-                    {jobPerformanceData?.performance?.accuracy || 100}%
+                    {(jobPerformanceData as any)?.performance?.accuracy || 100}%
                   </div>
                   <p className="text-xs text-gray-600">Accuracy</p>
                 </div>
                 <div className="text-center">
                   <div className="text-xl font-bold text-primary-600" data-testid="stat-score">
-                    {jobPerformanceData?.performance?.score?.toFixed(1) || '0.0'}
+                    {((jobPerformanceData as any)?.performance?.score || 0).toFixed(1)}
                   </div>
                   <p className="text-xs text-gray-600">Score (1-10)</p>
                 </div>
