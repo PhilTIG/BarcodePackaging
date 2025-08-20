@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Package, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, AlertTriangle, Search, Scan, Package } from "lucide-react";
 import type { BoxRequirement } from "@shared/schema";
 
 interface CheckCountProgress {
@@ -18,6 +19,7 @@ interface CheckCountProgress {
     originalScannedQty: number;
     checkScannedQty: number;
     discrepancyType: 'match' | 'shortage' | 'excess';
+    isComplete: boolean;
   };
 }
 
@@ -43,6 +45,8 @@ export default function CheckCountPage() {
   const [checkProgress, setCheckProgress] = useState<CheckCountProgress>({});
   const [currentSession, setCurrentSession] = useState<CheckCountSession | null>(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const [showDiscrepancyDialog, setShowDiscrepancyDialog] = useState(false);
+  const [discrepancyData, setDiscrepancyData] = useState<any>(null);
   
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -59,10 +63,10 @@ export default function CheckCountPage() {
 
   // Focus on barcode input when component mounts
   useEffect(() => {
-    if (inputRef.current) {
+    if (inputRef.current && isSessionActive) {
       inputRef.current.focus();
     }
-  }, []);
+  }, [isSessionActive]);
 
   // Fetch box requirements for this specific box
   const { data: boxRequirementsData } = useQuery({
@@ -86,7 +90,8 @@ export default function CheckCountPage() {
           expectedQty: req.requiredQty,
           originalScannedQty: req.scannedQty || 0,
           checkScannedQty: 0,
-          discrepancyType: 'match'
+          discrepancyType: 'match',
+          isComplete: false
         };
       });
       setCheckProgress(initialProgress);
@@ -111,6 +116,12 @@ export default function CheckCountPage() {
         title: "Check session started",
         description: `Started verification for ${customerName}`,
       });
+      // Focus input after session starts
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
     },
     onError: (error: any) => {
       toast({
@@ -214,7 +225,8 @@ export default function CheckCountPage() {
       expectedQty: requirement.requiredQty,
       originalScannedQty: requirement.scannedQty || 0,
       checkScannedQty: 0,
-      discrepancyType: 'match' as const
+      discrepancyType: 'match' as const,
+      isComplete: false
     };
 
     const newCheckScanned = currentProgress.checkScannedQty + 1;
@@ -224,7 +236,8 @@ export default function CheckCountPage() {
     const updatedProgress = {
       ...currentProgress,
       checkScannedQty: newCheckScanned,
-      discrepancyType: newDiscrepancyType
+      discrepancyType: newDiscrepancyType,
+      isComplete: newCheckScanned === currentProgress.originalScannedQty && newDiscrepancyType === 'match'
     };
 
     setCheckProgress(prev => ({
@@ -244,21 +257,31 @@ export default function CheckCountPage() {
     inputRef.current?.focus();
   };
 
-  const calculateProgressPercentages = () => {
-    const totalOriginalScanned = Object.values(checkProgress).reduce((sum, p) => sum + p.originalScannedQty, 0);
-    const totalCheckScanned = Object.values(checkProgress).reduce((sum, p) => sum + p.checkScannedQty, 0);
+  const handleScanComplete = () => {
+    const discrepancies = Object.values(checkProgress).filter(p => p.discrepancyType !== 'match');
     
-    const originalProgress = totalOriginalScanned > 0 ? 100 : 0; // Original scanning is complete
-    const checkProgress_pct = totalOriginalScanned > 0 ? (totalCheckScanned / totalOriginalScanned) * 100 : 0;
-    
-    return { originalProgress, checkProgress: checkProgress_pct };
+    if (discrepancies.length > 0) {
+      setDiscrepancyData(discrepancies);
+      setShowDiscrepancyDialog(true);
+    } else {
+      completeSessionMutation.mutate();
+    }
   };
 
-  const { originalProgress, checkProgress: checkProgressPct } = calculateProgressPercentages();
+  const handleKeepOriginal = () => {
+    setShowDiscrepancyDialog(false);
+    completeSessionMutation.mutate();
+  };
+
+  const handleApplyCorrections = () => {
+    // Apply corrections logic would go here
+    setShowDiscrepancyDialog(false);
+    completeSessionMutation.mutate();
+  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading check details...</p>
@@ -272,10 +295,10 @@ export default function CheckCountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between max-w-6xl mx-auto">
+    <div className="fixed inset-0 bg-white z-50 flex flex-col">
+      {/* Header with Scanner */}
+      <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
             <Button 
               variant="ghost" 
@@ -286,16 +309,30 @@ export default function CheckCountPage() {
               Back
             </Button>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">Check Count</h1>
-              <p className="text-sm text-gray-600">
-                {customerName} • Box {boxNumber}
-              </p>
+              <h1 className="text-lg font-semibold text-gray-900">Check Count - {customerName}</h1>
+              <p className="text-sm text-gray-600">Box {boxNumber}</p>
             </div>
           </div>
           
-          {/* Barcode Scanner Input */}
           {isSessionActive && (
-            <form onSubmit={handleBarCodeScan} className="flex-1 max-w-md mx-8">
+            <Button 
+              onClick={handleScanComplete}
+              variant="outline"
+              data-testid="button-scan-complete"
+            >
+              Scan Complete
+            </Button>
+          )}
+        </div>
+        
+        {/* Barcode Scanner Input */}
+        {isSessionActive && (
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <Scan className="h-5 w-5 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Barcode Scanner</span>
+            </div>
+            <form onSubmit={handleBarCodeScan}>
               <Input
                 ref={inputRef}
                 type="text"
@@ -306,94 +343,69 @@ export default function CheckCountPage() {
                 data-testid="input-barcode"
               />
             </form>
-          )}
-          
-          <div className="flex items-center space-x-2">
-            <Package className="h-5 w-5 text-gray-400" />
-            <span className="text-sm text-gray-600">
-              {Object.keys(checkProgress).length} items
-            </span>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6">
         {!isSessionActive ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Start Box Verification</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Ready to verify {customerName}</h3>
-                <p className="text-gray-600 mb-6">
-                  This will start a quality check session for {boxRequirements.length} items
-                </p>
-                <Button 
-                  onClick={handleStartSession}
-                  disabled={createSessionMutation.isPending || boxRequirements.length === 0}
-                  data-testid="button-start-check"
-                >
-                  {createSessionMutation.isPending ? "Starting..." : "Start Check Session"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {/* Progress Bars */}
+          <div className="max-w-md mx-auto">
             <Card>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700">Original Scan Progress</span>
-                      <span className="text-sm text-gray-500">{originalProgress.toFixed(0)}%</span>
-                    </div>
-                    <Progress value={originalProgress} className="h-2" />
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700">Check Progress</span>
-                      <span className="text-sm text-gray-500">{checkProgressPct.toFixed(0)}%</span>
-                    </div>
-                    <Progress value={checkProgressPct} className="h-2" />
-                  </div>
+              <CardHeader>
+                <CardTitle>Start Box Verification</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Ready to verify {customerName}</h3>
+                  <p className="text-gray-600 mb-6">
+                    This will start a quality check session for {boxRequirements.length} items
+                  </p>
+                  <Button 
+                    onClick={handleStartSession}
+                    disabled={createSessionMutation.isPending || boxRequirements.length === 0}
+                    data-testid="button-start-check"
+                  >
+                    {createSessionMutation.isPending ? "Starting..." : "Start Check Session"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Items Grid */}
+          </div>
+        ) : (
+          <div className="max-w-6xl mx-auto">
+            {/* Products Grid - Same as Box Modal */}
             <div className="grid gap-4">
               {boxRequirements.map((requirement) => {
                 const progress = checkProgress[requirement.barCode] || {
                   expectedQty: requirement.requiredQty,
                   originalScannedQty: requirement.scannedQty || 0,
                   checkScannedQty: 0,
-                  discrepancyType: 'match' as const
+                  discrepancyType: 'match' as const,
+                  isComplete: false
                 };
 
-                const statusIcon = progress.discrepancyType === 'match' ? (
+                const originalProgress = progress.originalScannedQty > 0 ? 
+                  (progress.originalScannedQty / progress.expectedQty) * 100 : 0;
+                
+                const checkProgress_pct = progress.originalScannedQty > 0 ? 
+                  (progress.checkScannedQty / progress.originalScannedQty) * 100 : 0;
+
+                const statusIcon = progress.isComplete ? (
                   <CheckCircle className="h-5 w-5 text-green-500" />
                 ) : progress.discrepancyType === 'excess' ? (
                   <AlertTriangle className="h-5 w-5 text-orange-500" />
-                ) : (
+                ) : progress.discrepancyType === 'shortage' && progress.checkScannedQty > 0 ? (
                   <XCircle className="h-5 w-5 text-red-500" />
-                );
-
-                const statusColor = progress.discrepancyType === 'match' ? 'bg-green-50 border-green-200' :
-                                  progress.discrepancyType === 'excess' ? 'bg-orange-50 border-orange-200' :
-                                  'bg-red-50 border-red-200';
+                ) : null;
 
                 return (
-                  <Card key={requirement.barCode} className={`${statusColor}`} data-testid={`item-${requirement.barCode}`}>
+                  <Card key={requirement.barCode} className="border-gray-200" data-testid={`item-${requirement.barCode}`}>
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-3 mb-2">
                             {statusIcon}
                             <div>
                               <h4 className="font-medium text-gray-900">{requirement.productName}</h4>
@@ -402,45 +414,132 @@ export default function CheckCountPage() {
                           </div>
                         </div>
                         
-                        <div className="text-right space-y-1">
+                        <div className="text-right">
                           <div className="text-sm text-gray-600">
-                            Original: {progress.originalScannedQty} / {progress.expectedQty}
+                            Required: {progress.expectedQty}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Original: {progress.originalScannedQty}
                           </div>
                           <div className="text-sm font-medium">
-                            Check: <span className={progress.discrepancyType === 'match' ? 'text-green-600' : 
-                                                  progress.discrepancyType === 'excess' ? 'text-orange-600' : 'text-red-600'}>
+                            Check: <span className={
+                              progress.isComplete ? 'text-green-600' : 
+                              progress.discrepancyType === 'excess' ? 'text-orange-600' : 
+                              progress.discrepancyType === 'shortage' ? 'text-red-600' : 'text-blue-600'
+                            }>
                               {progress.checkScannedQty}
-                            </span> / {progress.originalScannedQty}
+                            </span>
                           </div>
-                          {progress.discrepancyType !== 'match' && (
-                            <Badge variant="outline" className={progress.discrepancyType === 'excess' ? 'text-orange-700' : 'text-red-700'}>
-                              {progress.discrepancyType === 'excess' ? 'Excess' : 'Shortage'}
-                            </Badge>
-                          )}
                         </div>
+                      </div>
+                      
+                      {/* Dual Progress Bars */}
+                      <div className="space-y-3">
+                        {/* Original Progress Bar */}
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-medium text-gray-700">Original Progress</span>
+                            <span className="text-xs text-gray-500">{Math.round(originalProgress)}%</span>
+                          </div>
+                          <Progress 
+                            value={originalProgress} 
+                            className="h-2" 
+                            style={{
+                              '--progress-background': progress.isComplete ? '#10b981' : '#3b82f6'
+                            } as any}
+                          />
+                        </div>
+                        
+                        {/* Check Progress Bar */}
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-medium text-gray-700">Check Progress</span>
+                            <span className="text-xs text-gray-500">{Math.round(checkProgress_pct)}%</span>
+                          </div>
+                          <Progress 
+                            value={checkProgress_pct} 
+                            className="h-2"
+                            style={{
+                              '--progress-background': 
+                                progress.isComplete ? '#10b981' : 
+                                progress.discrepancyType === 'excess' ? '#f97316' : 
+                                progress.discrepancyType === 'shortage' ? '#ef4444' : '#3b82f6'
+                            } as any}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Status Badges */}
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {progress.isComplete && (
+                          <Badge variant="secondary" className="text-green-700 bg-green-50 border-green-200">
+                            Complete ✓
+                          </Badge>
+                        )}
+                        {progress.discrepancyType === 'excess' && progress.checkScannedQty > progress.originalScannedQty && (
+                          <Badge variant="secondary" className="text-orange-700 bg-orange-50 border-orange-200">
+                            Extra Items
+                          </Badge>
+                        )}
+                        {progress.discrepancyType === 'shortage' && progress.checkScannedQty > 0 && (
+                          <Badge variant="secondary" className="text-red-700 bg-red-50 border-red-200">
+                            Shortage
+                          </Badge>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
                 );
               })}
             </div>
-
-            {/* Complete Button */}
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Button 
-                  onClick={() => completeSessionMutation.mutate()}
-                  disabled={completeSessionMutation.isPending}
-                  size="lg"
-                  data-testid="button-complete-check"
-                >
-                  {completeSessionMutation.isPending ? "Completing..." : "Complete Check Session"}
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         )}
       </div>
+
+      {/* Discrepancy Dialog */}
+      <Dialog open={showDiscrepancyDialog} onOpenChange={setShowDiscrepancyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Discrepancies Found</DialogTitle>
+            <DialogDescription>
+              There are quantity differences between the original scan and your check. 
+              What would you like to do?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {discrepancyData && discrepancyData.map((item: any, index: number) => (
+              <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                <div className="text-sm font-medium">{item.productName}</div>
+                <div className="text-sm text-gray-600">
+                  Original: {item.originalScannedQty}, Check: {item.checkScannedQty}
+                  <span className={`ml-2 font-medium ${
+                    item.discrepancyType === 'excess' ? 'text-orange-600' : 'text-red-600'
+                  }`}>
+                    ({item.discrepancyType === 'excess' ? '+' : ''}{item.checkScannedQty - item.originalScannedQty})
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="flex space-x-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={handleKeepOriginal}
+              className="flex-1"
+            >
+              Keep Original
+            </Button>
+            <Button 
+              onClick={handleApplyCorrections}
+              className="flex-1"
+            >
+              Apply Corrections
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
