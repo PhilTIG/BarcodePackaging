@@ -113,7 +113,6 @@ export interface IStorage {
   getUserPreferences(userId: string): Promise<UserPreferences | undefined>;
   updateUserPreferences(userId: string, preferences: Partial<UserPreferences>): Promise<UserPreferences | undefined>;
   createUserPreferences(insertPrefs: InsertUserPreferences): Promise<UserPreferences>;
-  getAllUserPreferences(): Promise<Record<string, UserPreferences>>;
 
   // Job types methods
   createJobType(jobType: InsertJobType): Promise<JobType>;
@@ -1251,38 +1250,6 @@ export class DatabaseStorage implements IStorage {
       singleBoxMode: result.singleBoxMode || false,
       checkBoxEnabled: result.checkBoxEnabled || false,
     };
-  }
-
-  async getAllUserPreferences(): Promise<Record<string, UserPreferences>> {
-    const results = await this.db
-      .select()
-      .from(userPreferences);
-
-    const allPreferences: Record<string, UserPreferences> = {};
-
-    results.forEach((result: any) => {
-      allPreferences[result.userId] = {
-        maxBoxesPerRow: result.maxBoxesPerRow || 12,
-        autoClearInput: result.autoClearInput || true,
-        soundFeedback: result.soundFeedback || true,
-        vibrationFeedback: result.vibrationFeedback || false,
-        scannerType: (result.scannerType as "camera" | "hid") || "camera",
-        targetScansPerHour: result.targetScansPerHour || 71,
-        autoSaveSessions: result.autoSaveSessions || true,
-        showRealtimeStats: result.showRealtimeStats || true,
-        theme: (result.theme as "blue" | "green" | "orange" | "teal" | "red" | "dark") || "blue",
-        compactMode: result.compactMode || false,
-        showHelpTips: result.showHelpTips || true,
-        enableAutoUndo: result.enableAutoUndo || false,
-        undoTimeLimit: result.undoTimeLimit || 30,
-        batchScanMode: result.batchScanMode || false,
-        mobileModePreference: result.mobileModePreference || false,
-        singleBoxMode: result.singleBoxMode || false,
-        checkBoxEnabled: result.checkBoxEnabled || false,
-      };
-    });
-
-    return allPreferences;
   }
 
   async getRoleDefaults(role: string): Promise<any | undefined> {

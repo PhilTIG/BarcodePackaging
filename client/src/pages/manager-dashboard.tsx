@@ -19,9 +19,8 @@ import { useErrorContext } from "@/lib/error-context";
 import { ErrorDialog } from "@/components/ui/error-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2, CheckSquare } from "lucide-react";
+import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2 } from "lucide-react";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
-import { ManagerSettingsModal } from "@/components/manager-settings-modal";
 import { z } from "zod";
 import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPattern } from "../../../lib/worker-allocation";
 
@@ -197,7 +196,6 @@ export default function ManagerDashboard() {
   const [extraItemsJobId, setExtraItemsJobId] = useState<string | null>(null);
   const [isCompletedBoxesModalOpen, setIsCompletedBoxesModalOpen] = useState(false);
   const [completedBoxesJobId, setCompletedBoxesJobId] = useState<string | null>(null);
-  const [isManagerSettingsModalOpen, setIsManagerSettingsModalOpen] = useState(false);
 
   // Assignment form state
   const [assignForm, setAssignForm] = useState({
@@ -526,15 +524,6 @@ export default function ManagerDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsManagerSettingsModalOpen(true)}
-                data-testid="button-checkbox-settings"
-                title="CheckBox Settings"
-              >
-                <CheckSquare className="h-4 w-4" />
-              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -1119,12 +1108,6 @@ export default function ManagerDashboard() {
           jobId={completedBoxesJobId}
         />
       )}
-
-      {/* Manager Settings Modal */}
-      <ManagerSettingsModal
-        isOpen={isManagerSettingsModalOpen}
-        onClose={() => setIsManagerSettingsModalOpen(false)}
-      />
     </div>
   );
 }
