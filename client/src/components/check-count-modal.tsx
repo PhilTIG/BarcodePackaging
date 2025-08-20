@@ -285,7 +285,16 @@ export function CheckCountModal({
     return "bg-blue-500"; // Default progress color
   };
 
-  if (!isOpen) return null;
+  console.log('[DEBUG CheckCountModal] isOpen:', isOpen);
+  console.log('[DEBUG CheckCountModal] boxNumber:', boxNumber);
+  console.log('[DEBUG CheckCountModal] checkSession:', checkSession);
+  
+  if (!isOpen) {
+    console.log('[DEBUG CheckCountModal] Modal not open, returning null');
+    return null;
+  }
+  
+  console.log('[DEBUG CheckCountModal] Modal is open, rendering...');
 
   return (
     <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900">

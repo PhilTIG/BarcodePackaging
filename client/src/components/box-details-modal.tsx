@@ -179,10 +179,21 @@ export function BoxDetailsModal({
 
   // Handle CheckCount button click
   const handleCheckCount = () => {
-    if (!boxNumber || !canCheckCount()) return;
+    console.log('[DEBUG] CheckCount button clicked!');
+    console.log('[DEBUG] boxNumber:', boxNumber);
+    console.log('[DEBUG] canCheckCount():', canCheckCount());
+    console.log('[DEBUG] user:', user);
+    console.log('[DEBUG] preferences:', preferences);
     
-    // Open CheckCount modal without closing box modal
+    if (!boxNumber || !canCheckCount()) {
+      console.log('[DEBUG] Early return - missing boxNumber or no permission');
+      return;
+    }
+    
+    console.log('[DEBUG] Setting isCheckCountModalOpen to true');
     setIsCheckCountModalOpen(true);
+    
+    console.log('[DEBUG] isCheckCountModalOpen after set:', true);
   };
 
   // Get theme color for button styling
