@@ -177,16 +177,15 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
         ].filter(Boolean).join(" ");
 
         const handleBoxClick = () => {
-          if (supervisorView) {
-            setSelectedBox({
-              boxNumber: box.boxNumber,
-              customerName: box.customerName,
-              totalQty: box.totalQty,
-              scannedQty: box.scannedQty,
-              isComplete: box.isComplete,
-              lastWorkerColor: box.lastWorkerColor
-            });
-          }
+          // Allow all users to click boxes and view details
+          setSelectedBox({
+            boxNumber: box.boxNumber,
+            customerName: box.customerName,
+            totalQty: box.totalQty,
+            scannedQty: box.scannedQty,
+            isComplete: box.isComplete,
+            lastWorkerColor: box.lastWorkerColor
+          });
         };
 
         return (
