@@ -38,12 +38,14 @@ The application incorporates sophisticated performance tracking, including a sco
 - **Phase 1 Complete**: Database foundation, API infrastructure, and core storage interface
 - **Phase 2 Complete**: Full-screen CheckCount interface functional with barcode scanning, session management, and progress tracking
 - **Phase 3 Complete**: Intelligent item allocation logic - items found above original scan but within required_qty are allocated to box instead of Extra Items
+- **WebSocket Integration Complete**: Real-time `check_count_update` messages broadcast to all monitoring interfaces
 - **Database**: check_sessions, check_events, check_results tables with proper indexing and allocation tracking
 - **API**: 12 CheckCount endpoints with role-based permissions and intelligent allocation logic
-- **UI**: CheckCount page with dual progress bars, enhanced visual feedback showing "Recovered Items" vs "Extra Items", and detailed correction dialogs
+- **UI**: CheckCount page at `/check-count/:jobId/:boxNumber` with dual progress bars, enhanced visual feedback showing "Recovered Items" vs "Extra Items", and detailed correction dialogs
 - **Allocation Logic**: Only items beyond required_qty become Extra Items; items within limits increase box count and update scanned_qty
 - **Permissions**: Workers require manager-enabled `checkBoxEnabled`, managers/supervisors always have access
 - **Visual Feedback**: Color-coded progress bars and badges distinguish between recovered items (blue), excess items (orange), and shortages (red)
+- **Box Status Indicators**: Green check/red cross icons under box numbers showing CheckCount verification status (separate from completion lock icons)
 
 ### Mobile and Hardware Support
 

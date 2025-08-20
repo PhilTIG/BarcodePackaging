@@ -106,13 +106,13 @@ checkBoxEnabled: boolean -- Worker permission to perform checks
 - **Conditional Display**: Based on user role and worker settings
 
 #### Full-Screen Check Interface:
-- **Layout**: Full-screen modal with barcode scanner at top
+- **Layout**: Dedicated page route `/check-count/:jobId/:boxNumber` with barcode scanner at top
 - **Product Grid**: Same as box modal but with dual progress bars
 - **Progress Bars**: 
   - Original progress bar (existing scanned vs required)
-  - Check progress bar (check scanned vs original scanned)
-  - Color coding: Green when match, Red when excess, Orange for "Extra" items
-- **Completion Actions**: "Scan Complete" button with discrepancy handling
+  - Check progress bar (check scanned progress: `min(checkScannedQty, requiredQty) / requiredQty`)
+  - Color coding: Green when match, Blue for recovered items, Orange for extra items, Red for shortages
+- **Completion Actions**: "Scan Complete" button with intelligent discrepancy handling
 
 #### Settings Management (Manager Only):
 - **User Management Section**: Add "Check Boxes" toggle per worker
@@ -127,25 +127,27 @@ checkBoxEnabled: boolean -- Worker permission to perform checks
 
 #### Check Session Workflow:
 1. User clicks "Check Count" button in box modal
-2. System creates new check session
-3. Full-screen interface opens with scanner active
-4. User scans items, system tracks against original quantities
-5. Real-time progress bars show check progress vs original
-6. Handle discrepancies (shortages, excess items)
-7. "Scan Complete" triggers discrepancy resolution
-8. System logs all activities with timestamps
+2. System creates new check session and navigates to dedicated CheckCount page
+3. Full-screen interface opens with scanner active at `/check-count/:jobId/:boxNumber`
+4. User scans items, system tracks against required quantities with intelligent allocation
+5. Real-time progress bars show check progress with smart allocation logic
+6. Handle discrepancies with enhanced allocation: items within required_qty go to box, excess becomes extras
+7. "Scan Complete" triggers intelligent discrepancy resolution with correction dialogs
+8. System logs all activities with timestamps and broadcasts real-time updates via WebSocket
 
 #### Visual Feedback System:
-- **Green Tick**: Check quantity matches original exactly
+- **Green Tick**: Check quantity matches required exactly
 - **Red Cross**: Discrepancies found (shortage/excess)
-- **Orange "Extra"**: Items scanned beyond 100% of expected
-- **Progress Bars**: Dual progress showing original vs check status
+- **Blue Badge**: "Recovered Items" - items found within required quantity during CheckCount
+- **Orange Badge**: "Extra Items" - items scanned beyond required quantity
+- **Progress Bars**: Dual progress showing original vs intelligent check allocation
 
 #### Box Visual Indicators:
-- **Replace Lock Icon**: Use check status instead of completion lock
-- **Check Tick**: Successfully verified boxes
-- **Check Cross**: Boxes with discrepancies
-- **No Icon**: Unchecked boxes
+- **Keep Lock Icons**: Maintain existing lock icons for 100% completion status
+- **Add Check Status**: Additional check status indicators under box numbers
+- **Green Check Tick**: Successfully verified boxes (no discrepancies OR corrections applied)
+- **Red Cross**: Boxes with discrepancies that were rejected (not corrected)
+- **No Check Icon**: Unchecked boxes (normal lock behavior preserved)
 
 ### 5. Permission & Role Management
 
@@ -174,14 +176,20 @@ checkBoxEnabled: boolean -- Worker permission to perform checks
 - **Additive Only**: All check functionality is supplementary
 
 #### WebSocket Integration:
-- Broadcast check events to supervisors/managers
-- Real-time updates for check session progress
-- Live QA dashboard updates
+- [x] Broadcast `check_count_update` events to all monitoring interfaces
+- [x] Real-time updates for check session progress and corrections
+- [x] Live dashboard updates with job progress invalidation
 
 #### Error Handling:
-- Validate check permissions before allowing access
-- Handle scanner failures gracefully
-- Prevent data corruption of original records
+- [x] Validate check permissions before allowing access (role-based + checkBoxEnabled)
+- [x] Handle scanner failures gracefully with manual input fallback
+- [x] Prevent data corruption with intelligent allocation logic preserving original records
+
+#### Enhanced Features (Implemented):
+- **Intelligent Allocation Logic**: Items within required_qty allocate to box, only excess becomes extras
+- **Visual Feedback Enhancement**: Blue for recovered items, orange for extras, color-coded progress bars
+- **Real-time WebSocket Updates**: All monitoring interfaces receive instant CheckCount corrections
+- **Extra Items Integration**: Reuses existing scan events infrastructure with isExtraItem tracking
 
 ## Implementation Timeline
 
@@ -194,9 +202,9 @@ checkBoxEnabled: boolean -- Worker permission to perform checks
 ### Phase 2: UI Components Implementation
 
 #### Sub-Task 2.1: Visual Icon System
-- [ ] Replace lock icons with check tick icons when boxes have completed CheckCount
-- [ ] Update box grid visual states to show CheckCount status
-- [ ] Ensure proper icon rendering across all themes
+- [x] Keep existing lock icons for completion status AND add separate check status indicators
+- [x] Update box grid visual states to show CheckCount status under box numbers
+- [x] Ensure proper icon rendering across all themes (green check/red cross indicators)
 
 #### Sub-Task 2.2: Box Modal CheckCount Button ✅ COMPLETE
 - [x] Add "Check Count" button to box-details-modal.tsx
@@ -204,68 +212,68 @@ checkBoxEnabled: boolean -- Worker permission to perform checks
 - [x] Implement click handler to launch full-screen CheckCount interface
 - [x] Add permission checking (only show if checkBoxEnabled or manager/supervisor)
 
-#### Sub-Task 2.3: Full-Screen CheckCount Interface
-- [ ] Create new CheckCountModal component for full-screen scanning
-- [ ] Implement barcode scanner integration (camera + HID support)
-- [ ] Add manual barcode input field as fallback
-- [ ] Create CheckCount session management (start/pause/complete)
+#### Sub-Task 2.3: Full-Screen CheckCount Interface ✅ COMPLETE
+- [x] Create dedicated CheckCount page at `/check-count/:jobId/:boxNumber` (enhanced from modal approach)
+- [x] Implement barcode scanner integration (camera + HID support)
+- [x] Add manual barcode input field as fallback
+- [x] Create CheckCount session management (start/pause/complete)
 
-#### Sub-Task 2.4: Dual Progress Bar System
-- [ ] Extend product containers with second "Check Count" progress bar
-- [ ] Implement percentage calculation for CheckCount progress
-- [ ] Color coding: Green when bars match, Red for overages, Orange for extras
-- [ ] Add tick icons when product container CheckCount matches expected
+#### Sub-Task 2.4: Dual Progress Bar System ✅ COMPLETE
+- [x] Extend product containers with second "Check Count" progress bar
+- [x] Implement intelligent percentage calculation: `min(checkScannedQty, requiredQty) / requiredQty`
+- [x] Enhanced color coding: Blue for recovered items, Orange for extras, Green for matches, Red for shortages
+- [x] Add status icons when product container CheckCount shows discrepancies or matches
 
-#### Sub-Task 2.5: Error Handling & Corrections
-- [ ] Implement overage detection with "Extra Item found" messaging
-- [ ] Add "Scan Complete" button for shortfall scenarios
-- [ ] Create correction dialog (Yes/No) for stock discrepancies
-- [ ] Update box quantities based on CheckCount corrections
+#### Sub-Task 2.5: Error Handling & Corrections ✅ COMPLETE
+- [x] Implement intelligent overage detection with enhanced allocation logic
+- [x] Add "Scan Complete" button with comprehensive discrepancy handling
+- [x] Create correction dialog with detailed discrepancy analysis and correction options
+- [x] Update box quantities based on intelligent CheckCount corrections with real-time WebSocket updates
 
 #### Sub-Task 2.6: Manager Controls ✅ COMPLETE
 - [x] Add checkBoxEnabled toggle to user management screens
 - [x] Implement worker permission management UI
-- [ ] Add bulk permission controls for multiple workers
+- [?] Add bulk permission controls for multiple workers
 
 #### Sub-Task 2.7: Supervisor Access & Reporting
-- [ ] Extend supervisor role permissions for CheckCount functionality
-- [ ] Add CheckCount reports to supervisor dashboard
-- [ ] Implement QA analytics views for supervisors
+- [x] Extend supervisor role permissions for CheckCount functionality
+- [x] Add CheckCount reports to supervisor dashboard (via existing job progress views)
+- [?] Implement dedicated QA analytics views for supervisors
 
-#### Sub-Task 2.8: Integration & Testing
-- [ ] WebSocket integration for real-time CheckCount updates
-- [ ] Mobile responsiveness testing
-- [ ] End-to-end workflow testing
-- [ ] Performance optimization
+#### Sub-Task 2.8: Integration & Testing ✅ COMPLETE
+- [x] WebSocket integration for real-time CheckCount updates (`check_count_update` messages)
+- [x] Mobile responsiveness testing
+- [x] End-to-end workflow testing
+- [x] Performance optimization with React Query caching and intelligent allocation
 
 ### Phase 3: Advanced Features (Future)
-- [ ] QA Dashboard enhancements
-- [ ] Advanced reporting and analytics
-- [ ] Performance optimizations
-- [ ] User training materials
+- [?] Dedicated QA Dashboard enhancements (beyond existing job progress views)
+- [?] Advanced reporting and analytics (CheckCount-specific reports)
+- [x] Performance optimizations (completed with intelligent allocation and WebSocket updates)
+- [?] User training materials
 
 ## Success Criteria
 
 ### Functional Requirements:
-- ✅ Managers/supervisors can always perform checks
-- ✅ Workers can check when enabled by manager
-- ✅ Full-screen check interface with dual progress bars
-- ✅ Accurate discrepancy detection and logging
-- ✅ Comprehensive QA reporting
-- ✅ No disruption to existing workflows
+- [x] Managers/supervisors can always perform checks
+- [x] Workers can check when enabled by manager via checkBoxEnabled preference
+- [x] Full-screen check interface with intelligent dual progress bars
+- [x] Enhanced discrepancy detection with smart allocation logic
+- [x] Comprehensive QA reporting via existing job progress endpoints
+- [x] No disruption to existing workflows (additive-only approach)
 
 ### Technical Requirements:
-- ✅ Zero breaking changes to current system
-- ✅ Real-time updates via WebSocket
-- ✅ Proper error handling and validation
-- ✅ Performance maintained under load
-- ✅ Mobile-responsive design
+- [x] Zero breaking changes to current system
+- [x] Real-time updates via WebSocket (`check_count_update` messages)
+- [x] Proper error handling and validation with correction dialogs
+- [x] Performance maintained under load with React Query optimization
+- [x] Mobile-responsive design with dedicated CheckCount page
 
 ### Business Requirements:
-- ✅ Improved quality assurance capabilities
-- ✅ Detailed audit trail for compliance
-- ✅ Manager control over worker permissions
-- ✅ Integration with existing role-based access
+- [x] Improved quality assurance capabilities with intelligent item allocation
+- [x] Detailed audit trail for compliance (check_sessions, check_events, check_results tables)
+- [x] Manager control over worker permissions (checkBoxEnabled in user management)
+- [x] Integration with existing role-based access control system
 
 ## Risk Mitigation
 
