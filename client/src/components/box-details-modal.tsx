@@ -181,8 +181,7 @@ export function BoxDetailsModal({
   const handleCheckCount = () => {
     if (!boxNumber || !canCheckCount()) return;
     
-    // Close the box modal and open CheckCount modal
-    onClose();
+    // Open CheckCount modal without closing box modal
     setIsCheckCountModalOpen(true);
   };
 
@@ -355,6 +354,7 @@ export function BoxDetailsModal({
         customerName={customerName}
         jobId={jobId}
         boxRequirements={boxRequirements as SchemaBoxRequirement[]}
+        onBoxModalClose={onClose}
       />
     )}
     </>

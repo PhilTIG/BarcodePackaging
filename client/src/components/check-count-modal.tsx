@@ -16,6 +16,7 @@ interface CheckCountModalProps {
   customerName: string;
   jobId: string;
   boxRequirements: BoxRequirement[];
+  onBoxModalClose?: () => void; // Optional callback to close the parent box modal
 }
 
 interface CheckCountSession {
@@ -46,7 +47,8 @@ export function CheckCountModal({
   boxNumber,
   customerName,
   jobId,
-  boxRequirements
+  boxRequirements,
+  onBoxModalClose
 }: CheckCountModalProps) {
   const [manualBarcode, setManualBarcode] = useState("");
   const [checkSession, setCheckSession] = useState<CheckCountSession | null>(null);
@@ -153,10 +155,14 @@ export function CheckCountModal({
     },
   });
 
-  // Start session when modal opens
+  // Start session when modal opens and close box modal
   useEffect(() => {
     if (isOpen && !checkSession) {
       startCheckSessionMutation.mutate();
+      // Close the parent box modal when CheckCount modal opens
+      if (onBoxModalClose) {
+        onBoxModalClose();
+      }
     }
   }, [isOpen]);
 
