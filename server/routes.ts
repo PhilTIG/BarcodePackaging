@@ -360,6 +360,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.createProducts(products);
 
+      // PHASE 3: Auto-migrate to box requirements system for new jobs
+      await storage.migrateProductsToBoxRequirements(job.id);
+
       res.status(201).json({ 
         job, 
         products: products,
