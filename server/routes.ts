@@ -1010,7 +1010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Check session not found' });
       }
 
-      // Create check results for ALL discrepancies (whether applied or rejected)
+      // Create check results for ALL discrepancies (whether applied or rejected)  
       if (corrections && corrections.length > 0) {
         if (applyCorrections) {
           // Apply corrections and update box requirements
@@ -1018,6 +1018,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // Create check results for rejected corrections
           await storage.createRejectedCheckResults(session.id, corrections, (req as AuthenticatedRequest).user!.id);
+        }
+      } else if (discrepanciesFound === 0) {
+        // No discrepancies found - create success check result for this box
+        const boxReqs = await storage.getBoxRequirementsByBoxNumber(session.jobId, session.boxNumber);
+        for (const boxReq of boxReqs) {
+          await storage.createCheckResult({
+            checkSessionId: session.id,
+            boxRequirementId: boxReq.id,
+            finalQty: boxReq.scannedQty || 0,
+            discrepancyNotes: 'No discrepancies found - verified successfully',
+            resolutionAction: 'verified_complete',
+            resolvedBy: (req as AuthenticatedRequest).user!.id
+          });
         }
       }
 

@@ -83,6 +83,7 @@ export interface IStorage {
   // Box requirement methods - NEW SCANNING LOGIC
   createBoxRequirements(requirements: InsertBoxRequirement[]): Promise<BoxRequirement[]>;
   getBoxRequirementsByJobId(jobId: string): Promise<BoxRequirement[]>;
+  getBoxRequirementsByBoxNumber(jobId: string, boxNumber: number): Promise<BoxRequirement[]>;
   findNextTargetBox(barCode: string, jobId: string, workerId: string): Promise<number | null>;
   updateBoxRequirementScannedQty(boxNumber: number, barCode: string, jobId: string, workerId: string, workerColor: string): Promise<BoxRequirement | undefined>;
   migrateProductsToBoxRequirements(jobId: string): Promise<void>;
@@ -1401,6 +1402,17 @@ export class DatabaseStorage implements IStorage {
       .orderBy(boxRequirements.boxNumber, boxRequirements.barCode);
   }
 
+  async getBoxRequirementsByBoxNumber(jobId: string, boxNumber: number): Promise<BoxRequirement[]> {
+    return await this.db
+      .select()
+      .from(boxRequirements)
+      .where(and(
+        eq(boxRequirements.jobId, jobId),
+        eq(boxRequirements.boxNumber, boxNumber)
+      ))
+      .orderBy(boxRequirements.barCode);
+  }
+
   /**
    * Find the next target box for a scanned item based on worker allocation pattern
    * Logic: Find lowest numbered box that has this item in requirement list AND still needs more of this item
@@ -1940,7 +1952,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(scanSessions.userId, sessionUserId),
         eq(scanSessions.jobId, jobId),
-        eq(scanSessions.isActive, true)
+        eq(scanSessions.status, 'active')
       ))
       .limit(1);
 
@@ -1953,7 +1965,7 @@ export class DatabaseStorage implements IStorage {
         .values({
           userId: sessionUserId,
           jobId: jobId,
-          isPaused: false,
+          status: 'active',
           startTime: new Date(),
         })
         .returning();

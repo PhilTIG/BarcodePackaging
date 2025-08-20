@@ -291,7 +291,6 @@ export default function CheckCountPage() {
     } else {
       // No discrepancies - complete normally
       completeSessionMutation.mutate({
-        discrepanciesFound: 0,
         applyCorrections: false,
         corrections: [],
         extraItems: []
@@ -302,9 +301,7 @@ export default function CheckCountPage() {
   const handleKeepOriginal = () => {
     setShowDiscrepancyDialog(false);
     // Complete without applying corrections - creates check result with rejected status
-    const discrepancyCount = Object.values(checkProgress).filter(p => p.discrepancyType !== 'match').length;
     completeSessionMutation.mutate({ 
-      discrepanciesFound: discrepancyCount,
       applyCorrections: false,
       corrections: [],
       extraItems: []
@@ -345,7 +342,6 @@ export default function CheckCountPage() {
     });
     
     completeSessionMutation.mutate({ 
-      discrepanciesFound: corrections.length,
       applyCorrections: true, 
       corrections, 
       extraItems 
