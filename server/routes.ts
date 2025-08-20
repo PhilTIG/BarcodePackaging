@@ -363,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json({ 
         job, 
         products: products,
-        productsCount: products.length,
+        productsCount: jobData.totalProducts, // Use total quantity sum, not CSV row count
         customersCount: jobData.totalCustomers,
         message: 'CSV uploaded and job created successfully' 
       });

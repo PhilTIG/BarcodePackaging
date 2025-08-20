@@ -220,7 +220,7 @@ export default function ManagerDashboard() {
 
   // Fetch users for assignment
   const { data: workersData } = useQuery({
-    queryKey: ["/api/users", { role: "worker" }],
+    queryKey: ["/api/users?role=worker"],
     enabled: !!user,
   });
 
