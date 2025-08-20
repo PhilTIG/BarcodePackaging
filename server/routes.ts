@@ -1010,9 +1010,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Check session not found' });
       }
 
-      // If corrections are being applied, update box requirements and create check results
-      if (applyCorrections && corrections && corrections.length > 0) {
-        await storage.applyCheckCorrections(session.jobId, session.boxNumber, corrections, session.userId, (req as AuthenticatedRequest).user!.id);
+      // Create check results for ALL discrepancies (whether applied or rejected)
+      if (corrections && corrections.length > 0) {
+        if (applyCorrections) {
+          // Apply corrections and update box requirements
+          await storage.applyCheckCorrections(session.jobId, session.boxNumber, corrections, session.userId, (req as AuthenticatedRequest).user!.id);
+        } else {
+          // Create check results for rejected corrections
+          await storage.createRejectedCheckResults(session.id, corrections, (req as AuthenticatedRequest).user!.id);
+        }
       }
 
       // If extra items found, create them as scan events for the job

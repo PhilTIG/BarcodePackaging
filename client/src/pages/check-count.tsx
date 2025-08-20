@@ -289,14 +289,26 @@ export default function CheckCountPage() {
       setDiscrepancyData(discrepancies);
       setShowDiscrepancyDialog(true);
     } else {
-      completeSessionMutation.mutate();
+      // No discrepancies - complete normally
+      completeSessionMutation.mutate({
+        discrepanciesFound: 0,
+        applyCorrections: false,
+        corrections: [],
+        extraItems: []
+      });
     }
   };
 
   const handleKeepOriginal = () => {
     setShowDiscrepancyDialog(false);
     // Complete without applying corrections - creates check result with rejected status
-    completeSessionMutation.mutate({ applyCorrections: false });
+    const discrepancyCount = Object.values(checkProgress).filter(p => p.discrepancyType !== 'match').length;
+    completeSessionMutation.mutate({ 
+      discrepanciesFound: discrepancyCount,
+      applyCorrections: false,
+      corrections: [],
+      extraItems: []
+    });
   };
 
   const handleApplyCorrections = () => {
@@ -333,6 +345,7 @@ export default function CheckCountPage() {
     });
     
     completeSessionMutation.mutate({ 
+      discrepanciesFound: corrections.length,
       applyCorrections: true, 
       corrections, 
       extraItems 

@@ -87,9 +87,12 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
     const boxSession = checkSessions.find((s: any) => s.boxNumber === boxNumber && s.status === 'completed');
     if (!boxSession) return null;
     
-    // If discrepancies were found and corrections were NOT applied, show as rejected (red cross)
-    // If no discrepancies OR corrections were applied, show as completed (green check)
-    if (boxSession.discrepanciesFound > 0 && !boxSession.correctionsApplied) {
+    // Visual indicator logic:
+    // - Green check: No discrepancies found OR corrections were applied 
+    // - Red cross: Discrepancies found AND corrections were NOT applied (rejected)
+    console.log(`[CheckStatus] Box ${boxNumber}: discrepancies=${boxSession.discrepanciesFound}, corrections=${boxSession.correctionsApplied}`);
+    
+    if (boxSession.discrepanciesFound > 0 && boxSession.correctionsApplied === false) {
       return 'rejected';
     }
     return 'completed';

@@ -156,6 +156,7 @@ export interface IStorage {
   
   // Check correction methods
   applyCheckCorrections(jobId: string, boxNumber: number, corrections: any[], sessionUserId: string, resolvedBy: string): Promise<void>;
+  createRejectedCheckResults(checkSessionId: string, corrections: any[], resolvedBy: string): Promise<void>;
   createExtraItemsFromCheck(jobId: string, extraItems: any[], sessionUserId: string): Promise<void>;
   
   // QA reporting methods
@@ -1915,6 +1916,22 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async createRejectedCheckResults(checkSessionId: string, corrections: any[], resolvedBy: string): Promise<void> {
+    // Create check results for rejected corrections
+    for (const correction of corrections) {
+      await this.db
+        .insert(checkResults)
+        .values({
+          checkSessionId: checkSessionId,
+          boxRequirementId: correction.boxRequirementId,
+          finalQty: correction.originalQty, // Keep original quantity since corrections were rejected
+          discrepancyNotes: `Original: ${correction.originalQty}, Checked: ${correction.checkQty}, Status: REJECTED`,
+          resolutionAction: 'correction_rejected',
+          resolvedBy: resolvedBy,
+        });
+    }
+  }
+
   async createExtraItemsFromCheck(jobId: string, extraItems: any[], sessionUserId: string): Promise<void> {
     // Get an active scan session for this user to attach extra items
     const activeSession = await this.db
@@ -1923,7 +1940,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(scanSessions.userId, sessionUserId),
         eq(scanSessions.jobId, jobId),
-        eq(scanSessions.isPaused, false)
+        eq(scanSessions.isActive, true)
       ))
       .limit(1);
 
