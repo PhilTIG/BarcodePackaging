@@ -134,6 +134,7 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       form.reset();
       setEditingUser(null);
+      setIsCreateDialogOpen(false);
       toast({
         title: "User updated successfully",
         description: "User information has been updated",
