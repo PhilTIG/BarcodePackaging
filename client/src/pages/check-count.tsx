@@ -293,7 +293,7 @@ export default function CheckCountPage() {
     let zeroScanDiscrepancies: any[] = [];
     if (hasZeroScans) {
       boxRequirements.forEach(requirement => {
-        if (requirement.scannedQty > 0) {
+        if ((requirement.scannedQty || 0) > 0) {
           // Product was previously scanned but not found during CheckCount = discrepancy
           zeroScanDiscrepancies.push({
             barCode: requirement.barCode,

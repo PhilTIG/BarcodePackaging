@@ -15,6 +15,11 @@ const FILTERED_ERROR_PATTERNS = [
   /fallback.*client:\d+/,
   /Failed to construct 'WebSocket'.*localhost:undefined/,
   /WebSocket.*token=.*failed/,
+  /Uncaught.*SyntaxError.*Failed to construct 'WebSocket'.*localhost:undefined/,
+  /wss:\/\/localhost:undefined/,
+  /at setupWebSocket.*client:/,
+  /at fallback.*client:/,
+  /The URL.*localhost:undefined.*is invalid/,
 ];
 
 /**
