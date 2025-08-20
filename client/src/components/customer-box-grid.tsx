@@ -263,7 +263,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
               
               {/* Check status indicator under box number */}
               {getCheckStatus(box.boxNumber) && (
-                <div className="absolute top-14 left-1/2 transform -translate-x-1/2" data-testid={`check-status-${box.boxNumber}`}>
+                <div className="absolute top-14 right-2" data-testid={`check-status-${box.boxNumber}`}>
                   {getCheckStatus(box.boxNumber) === 'completed' ? (
                     <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
                       <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
