@@ -909,11 +909,16 @@ export default function ManagerDashboard() {
           </CardContent>
         </Card>
 
-        {/* QA Summary Panel */}
-        <QASummaryPanel />
+        {/* QA Summary Panel and Worker Status - Side by Side on Desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* QA Summary Panel */}
+          <div className="h-full">
+            <QASummaryPanel />
+          </div>
 
-        {/* Workers Status */}
-        <Card data-testid="workers-status">
+          {/* Workers Status */}
+          <div className="h-full">
+            <Card data-testid="workers-status" className="h-full">
           <CardHeader>
             <CardTitle>Worker Status</CardTitle>
           </CardHeader>
@@ -945,7 +950,9 @@ export default function ManagerDashboard() {
               )}
             </div>
           </CardContent>
-        </Card>
+            </Card>
+          </div>
+        </div>
       </div>
 
       {/* Error Details Dialog */}
