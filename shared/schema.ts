@@ -122,9 +122,48 @@ export const workerBoxAssignments = pgTable("worker_box_assignments", {
 export const jobArchives = pgTable("job_archives", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   originalJobId: varchar("original_job_id").notNull(),
-  jobData: jsonb("job_data").notNull(),
+  
+  // Job snapshot data
+  jobName: varchar("job_name").notNull(),
+  totalItems: integer("total_items").notNull(),
+  totalBoxes: integer("total_boxes").notNull(),
+  managerName: varchar("manager_name").notNull(), // User who created the job
+  managerId: varchar("manager_id").notNull().references(() => users.id),
+  
+  // CheckCount statistics
+  totalExtrasFound: integer("total_extras_found").default(0),
+  totalItemsChecked: integer("total_items_checked").default(0),
+  totalCorrectChecks: integer("total_correct_checks").default(0),
+  overallCheckAccuracy: decimal("overall_check_accuracy", { precision: 5, scale: 2 }).default("0.00"),
+  
+  // Archive metadata
   archivedBy: varchar("archived_by").notNull().references(() => users.id),
   archivedAt: timestamp("archived_at").default(sql`now()`),
+  isPurged: boolean("is_purged").default(false), // True if live data has been deleted
+  
+  // Full snapshot for restore capability (when not purged)
+  jobDataSnapshot: jsonb("job_data_snapshot"), // Complete job data for restore
+});
+
+// Archive worker statistics - tracks individual worker performance for each archive
+export const archiveWorkerStats = pgTable("archive_worker_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  archiveId: varchar("archive_id").notNull().references(() => jobArchives.id, { onDelete: 'cascade' }),
+  workerId: varchar("worker_id").notNull().references(() => users.id),
+  workerName: varchar("worker_name").notNull(),
+  
+  // Scanning statistics
+  totalScans: integer("total_scans").default(0),
+  totalSessionTime: integer("total_session_time").default(0), // in minutes
+  
+  // CheckCount statistics per worker
+  itemsChecked: integer("items_checked").default(0),
+  correctChecks: integer("correct_checks").default(0),
+  checkAccuracy: decimal("check_accuracy", { precision: 5, scale: 2 }).default("0.00"),
+  extrasFound: integer("extras_found").default(0), // Extras found by this worker during CheckCount
+  errorsCaused: integer("errors_caused").default(0), // Items this worker scanned incorrectly (found during CheckCount)
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
 });
 
 export const userPreferences = pgTable("user_preferences", {
@@ -258,12 +297,7 @@ export const workerBoxAssignmentsRelations = relations(workerBoxAssignments, ({ 
 
 // PHASE 4: Removed sessionSnapshotsRelations (table removed)
 
-export const jobArchivesRelations = relations(jobArchives, ({ one }) => ({
-  archivedBy: one(users, {
-    fields: [jobArchives.archivedBy],
-    references: [users.id],
-  }),
-}));
+// Archive relations moved to proper location below
 
 export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
   user: one(users, {
@@ -385,6 +419,32 @@ export const checkResultsRelations = relations(checkResults, ({ one }) => ({
   }),
 }));
 
+// Archive relations
+export const jobArchivesRelations = relations(jobArchives, ({ one, many }) => ({
+  manager: one(users, {
+    fields: [jobArchives.managerId],
+    references: [users.id],
+    relationName: "manager",
+  }),
+  archivedBy: one(users, {
+    fields: [jobArchives.archivedBy],
+    references: [users.id],
+    relationName: "archiver",
+  }),
+  workerStats: many(archiveWorkerStats),
+}));
+
+export const archiveWorkerStatsRelations = relations(archiveWorkerStats, ({ one }) => ({
+  archive: one(jobArchives, {
+    fields: [archiveWorkerStats.archiveId],
+    references: [jobArchives.id],
+  }),
+  worker: one(users, {
+    fields: [archiveWorkerStats.workerId],
+    references: [users.id],
+  }),
+}));
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -462,6 +522,17 @@ export const insertJobArchiveSchema = createInsertSchema(jobArchives).omit({
   id: true,
   archivedAt: true,
 });
+
+// Archive worker stats schemas
+export const insertArchiveWorkerStatsSchema = createInsertSchema(archiveWorkerStats).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertJobArchive = z.infer<typeof insertJobArchiveSchema>;
+export type JobArchive = typeof jobArchives.$inferSelect;
+export type InsertArchiveWorkerStats = z.infer<typeof insertArchiveWorkerStatsSchema>;
+export type ArchiveWorkerStats = typeof archiveWorkerStats.$inferSelect;
 
 // User Preferences Schema
 export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
@@ -570,7 +641,7 @@ export type InsertJobType = z.infer<typeof insertJobTypeSchema>;
 export type WorkerBoxAssignment = typeof workerBoxAssignments.$inferSelect;
 export type InsertWorkerBoxAssignment = z.infer<typeof insertWorkerBoxAssignmentSchema>;
 // PHASE 4: Removed SessionSnapshot types (table removed)
-export type JobArchive = typeof jobArchives.$inferSelect;
+// JobArchive type moved to archive section
 
 // NEW CheckCount Types
 export type CheckSession = typeof checkSessions.$inferSelect;
@@ -579,7 +650,7 @@ export type CheckEvent = typeof checkEvents.$inferSelect;
 export type InsertCheckEvent = z.infer<typeof insertCheckEventSchema>;
 export type CheckResult = typeof checkResults.$inferSelect;
 export type InsertCheckResult = z.infer<typeof insertCheckResultSchema>;
-export type InsertJobArchive = z.infer<typeof insertJobArchiveSchema>;
+// InsertJobArchive moved to archive section
 export type BoxRequirement = typeof boxRequirements.$inferSelect;
 export type InsertBoxRequirement = z.infer<typeof insertBoxRequirementSchema>;
 

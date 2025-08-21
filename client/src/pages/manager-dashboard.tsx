@@ -19,7 +19,7 @@ import { useErrorContext } from "@/lib/error-context";
 import { ErrorDialog } from "@/components/ui/error-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2 } from "lucide-react";
+import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2, Archive } from "lucide-react";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
 import { QASummaryPanel } from "@/components/qa-summary-panel";
 import { z } from "zod";
@@ -429,6 +429,35 @@ export default function ManagerDashboard() {
     }
   };
 
+  // Handle job archiving
+  const archiveJobMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const response = await apiRequest(`/api/jobs/${jobId}/archive`, 'POST');
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/archives'] });
+      toast({
+        title: "Success",
+        description: "Job archived successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to archive job",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleArchiveJob = (jobId: string) => {
+    if (confirm("Are you sure you want to archive this job? It will be moved to the archives with a comprehensive summary.")) {
+      archiveJobMutation.mutate(jobId);
+    }
+  };
+
   // Handle assignment form submission
   const handleAssignWorker = () => {
     if (!selectedJobId || !assignForm.userId) {
@@ -523,6 +552,14 @@ export default function ManagerDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/archives")}
+                data-testid="button-archives"
+              >
+                <Archive className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -788,7 +825,7 @@ export default function ManagerDashboard() {
                         <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                           <span>Progress - {progressPercentage}% complete</span>
                           <div className="flex flex-col items-end">
-                            {progressPercentage === 0 && (
+                            {progressPercentage === 0 ? (
                               <Button
                                 variant="destructive"
                                 size="sm"
@@ -800,6 +837,20 @@ export default function ManagerDashboard() {
                                 data-testid={`button-remove-${job.id}`}
                               >
                                 Remove Job
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleArchiveJob(job.id);
+                                }}
+                                data-testid={`button-archive-${job.id}`}
+                              >
+                                <Archive className="h-3 w-3 mr-1" />
+                                Archive
                               </Button>
                             )}
                           </div>

@@ -12,6 +12,7 @@ import {
   workerBoxAssignments,
   // PHASE 4: sessionSnapshots removed
   jobArchives,
+  archiveWorkerStats,
   // NEW CheckCount tables
   checkSessions,
   checkEvents,
@@ -38,9 +39,11 @@ import {
   type InsertJobType,
   type WorkerBoxAssignment,
   type InsertWorkerBoxAssignment,
-  // PHASE 4: SessionSnapshot types removed
+  // Archive types
   type JobArchive,
   type InsertJobArchive,
+  type ArchiveWorkerStats,
+  type InsertArchiveWorkerStats,
   // NEW CheckCount types
   type CheckSession,
   type InsertCheckSession,
@@ -154,8 +157,17 @@ export interface IStorage {
   // Job archive methods
   createJobArchive(archive: InsertJobArchive): Promise<JobArchive>;
   getJobArchives(): Promise<JobArchive[]>;
-  searchJobArchives(query: string): Promise<JobArchive[]>;
+  getJobArchiveById(id: string): Promise<JobArchive | undefined>;
   deleteJobArchive(id: string): Promise<boolean>;
+  
+  // Archive worker stats methods
+  createArchiveWorkerStats(stats: InsertArchiveWorkerStats[]): Promise<ArchiveWorkerStats[]>;
+  getArchiveWorkerStatsByArchiveId(archiveId: string): Promise<ArchiveWorkerStats[]>;
+  
+  // Advanced archiving methods
+  archiveJob(jobId: string, archivedBy: string): Promise<JobArchive>;
+  unarchiveJob(archiveId: string): Promise<boolean>;
+  purgeJobData(archiveId: string): Promise<boolean>;
 
   // NEW CheckCount methods
   // Check session methods
@@ -1781,15 +1793,13 @@ export class DatabaseStorage implements IStorage {
       // 9. Delete products (legacy table, references jobs)
       await this.db.delete(products);
 
-      // 10. Delete job archives
-      await this.db.delete(jobArchives);
-
-      // 11. Finally delete jobs (parent table)
+      // 10. Finally delete jobs (parent table)
+      // NOTE: job_archives is preserved to maintain historical summaries
       await this.db.delete(jobs);
 
       return {
         deletedJobs: jobCount.length,
-        message: `Successfully deleted ${jobCount.length} jobs and all associated data including CheckCount QA records. User accounts, job types, and settings preserved.`
+        message: `Successfully deleted ${jobCount.length} jobs and all associated data including CheckCount QA records. User accounts, job types, settings, and job archives preserved.`
       };
     } catch (error) {
       console.error('Error deleting all job data:', error);
@@ -2360,6 +2370,264 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error generating QA summary:', error);
       throw error;
+    }
+  }
+
+  // ========================
+  // JOB ARCHIVING METHODS
+  // ========================
+
+  async createJobArchive(archive: InsertJobArchive): Promise<JobArchive> {
+    const [result] = await this.db
+      .insert(jobArchives)
+      .values(archive)
+      .returning();
+    return result;
+  }
+
+  async getJobArchives(): Promise<JobArchive[]> {
+    return await this.db
+      .select()
+      .from(jobArchives)
+      .orderBy(desc(jobArchives.archivedAt));
+  }
+
+  async getJobArchiveById(id: string): Promise<JobArchive | undefined> {
+    const [archive] = await this.db
+      .select()
+      .from(jobArchives)
+      .where(eq(jobArchives.id, id));
+    return archive || undefined;
+  }
+
+  async deleteJobArchive(id: string): Promise<boolean> {
+    try {
+      // First delete worker stats
+      await this.db
+        .delete(archiveWorkerStats)
+        .where(eq(archiveWorkerStats.archiveId, id));
+      
+      // Then delete the archive
+      const result = await this.db
+        .delete(jobArchives)
+        .where(eq(jobArchives.id, id));
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error('Error deleting job archive:', error);
+      return false;
+    }
+  }
+
+  async createArchiveWorkerStats(stats: InsertArchiveWorkerStats[]): Promise<ArchiveWorkerStats[]> {
+    if (stats.length === 0) return [];
+    
+    const results = await this.db
+      .insert(archiveWorkerStats)
+      .values(stats)
+      .returning();
+    return results;
+  }
+
+  async getArchiveWorkerStatsByArchiveId(archiveId: string): Promise<ArchiveWorkerStats[]> {
+    return await this.db
+      .select()
+      .from(archiveWorkerStats)
+      .where(eq(archiveWorkerStats.archiveId, archiveId))
+      .orderBy(desc(archiveWorkerStats.accuracy));
+  }
+
+  async archiveJob(jobId: string, archivedBy: string): Promise<JobArchive> {
+    try {
+      // Get job details
+      const [job] = await this.db
+        .select()
+        .from(jobs)
+        .where(eq(jobs.id, jobId));
+      
+      if (!job) {
+        throw new Error('Job not found');
+      }
+
+      // Get manager details
+      const [manager] = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.id, job.createdBy));
+
+      // Calculate totals
+      const boxRequirements = await this.getBoxRequirementsByJobId(jobId);
+      const totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
+      const totalBoxes = new Set(boxRequirements.map(req => req.boxNumber)).size;
+
+      // Calculate CheckCount statistics
+      const checkSessions = await this.getCheckSessionsByJobId(jobId);
+      const completedSessions = checkSessions.filter(session => session.status === 'completed');
+      
+      // Get extras from scan events (items marked as extra)
+      const extraItems = await this.db
+        .select()
+        .from(scanEvents)
+        .where(and(
+          eq(scanEvents.jobId, jobId),
+          eq(scanEvents.isExtraItem, true)
+        ));
+
+      const totalExtrasFound = extraItems.length;
+      const totalItemsChecked = completedSessions.reduce((sum, session) => sum + (session.discrepanciesFound || 0), 0);
+      const totalCorrectChecks = completedSessions.filter(session => (session.discrepanciesFound || 0) === 0).length;
+      const overallCheckAccuracy = completedSessions.length > 0 ? (totalCorrectChecks / completedSessions.length) * 100 : 0;
+
+      // Get complete job data for snapshot
+      const jobDataSnapshot = {
+        job,
+        boxRequirements,
+        checkSessions: completedSessions,
+        extraItems,
+        assignments: await this.getJobAssignmentsWithUsers(jobId)
+      };
+
+      // Create archive
+      const archive = await this.createJobArchive({
+        originalJobId: jobId,
+        jobName: job.name || `Job ${job.id}`,
+        totalItems,
+        totalBoxes,
+        managerName: manager?.name || 'Unknown',
+        managerId: job.createdBy,
+        totalExtrasFound,
+        totalItemsChecked,
+        totalCorrectChecks,
+        overallCheckAccuracy: overallCheckAccuracy.toString(),
+        archivedBy,
+        jobDataSnapshot
+      });
+
+      // Calculate and create worker statistics
+      const workerStats = new Map();
+      
+      // Process CheckCount sessions for worker accuracy
+      checkSessions.forEach(session => {
+        if (session.status === 'completed' && session.userId) {
+          if (!workerStats.has(session.userId)) {
+            workerStats.set(session.userId, {
+              totalItemsChecked: 0,
+              correctChecks: 0,
+              discrepanciesFound: 0
+            });
+          }
+          const stats = workerStats.get(session.userId);
+          stats.totalItemsChecked++;
+          if ((session.discrepanciesFound || 0) === 0) {
+            stats.correctChecks++;
+          } else {
+            stats.discrepanciesFound += session.discrepanciesFound || 0;
+          }
+        }
+      });
+
+      // Create worker stats records
+      const workerStatsRecords: InsertArchiveWorkerStats[] = [];
+      for (const [workerId, stats] of workerStats.entries()) {
+        const [worker] = await this.db
+          .select()
+          .from(users)
+          .where(eq(users.id, workerId));
+        
+        if (worker) {
+          const accuracy = stats.totalItemsChecked > 0 ? (stats.correctChecks / stats.totalItemsChecked) * 100 : 0;
+          
+          workerStatsRecords.push({
+            archiveId: archive.id,
+            workerId,
+            workerName: worker.name,
+            workerStaffId: worker.staffId,
+            totalItemsChecked: stats.totalItemsChecked,
+            correctChecks: stats.correctChecks,
+            discrepanciesFound: stats.discrepanciesFound,
+            accuracy: accuracy.toString()
+          });
+        }
+      }
+
+      if (workerStatsRecords.length > 0) {
+        await this.createArchiveWorkerStats(workerStatsRecords);
+      }
+
+      return archive;
+    } catch (error) {
+      console.error('Error archiving job:', error);
+      throw new Error('Failed to archive job: ' + (error as Error).message);
+    }
+  }
+
+  async unarchiveJob(archiveId: string): Promise<boolean> {
+    try {
+      const archive = await this.getJobArchiveById(archiveId);
+      if (!archive || !archive.jobDataSnapshot) {
+        throw new Error('Archive not found or missing snapshot data');
+      }
+
+      const snapshot = archive.jobDataSnapshot as any;
+      
+      // Restore job
+      const [restoredJob] = await this.db
+        .insert(jobs)
+        .values({
+          ...snapshot.job,
+          id: archive.originalJobId // Restore original ID
+        })
+        .returning();
+
+      // Restore box requirements
+      if (snapshot.boxRequirements?.length > 0) {
+        await this.db
+          .insert(boxRequirements)
+          .values(snapshot.boxRequirements);
+      }
+
+      // Restore job assignments
+      if (snapshot.assignments?.length > 0) {
+        const assignments = snapshot.assignments.map((a: any) => ({
+          jobId: archive.originalJobId,
+          assigneeId: a.assigneeId,
+          assignerId: a.assignerId,
+          role: a.role,
+          assignedAt: a.assignedAt
+        }));
+        await this.db
+          .insert(jobAssignments)
+          .values(assignments);
+      }
+
+      // Mark archive as un-purged
+      await this.db
+        .update(jobArchives)
+        .set({ isPurged: false })
+        .where(eq(jobArchives.id, archiveId));
+
+      return true;
+    } catch (error) {
+      console.error('Error unarchiving job:', error);
+      throw new Error('Failed to unarchive job: ' + (error as Error).message);
+    }
+  }
+
+  async purgeJobData(archiveId: string): Promise<boolean> {
+    try {
+      // Mark archive as purged and clear snapshot data
+      const result = await this.db
+        .update(jobArchives)
+        .set({ 
+          isPurged: true,
+          jobDataSnapshot: null
+        })
+        .where(eq(jobArchives.id, archiveId));
+
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error('Error purging job data:', error);
+      return false;
     }
   }
 }

@@ -1523,5 +1523,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========================
+  // JOB ARCHIVE ROUTES
+  // ========================
+  
+  // Get all job archives
+  app.get('/api/archives', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const archives = await storage.getJobArchives();
+      
+      // Include worker stats for each archive
+      const archivesWithStats = await Promise.all(
+        archives.map(async (archive) => {
+          const workerStats = await storage.getArchiveWorkerStatsByArchiveId(archive.id);
+          return {
+            ...archive,
+            workerStats
+          };
+        })
+      );
+      
+      res.json({ archives: archivesWithStats });
+    } catch (error) {
+      console.error('Failed to fetch job archives:', error);
+      res.status(500).json({ message: 'Failed to fetch job archives' });
+    }
+  });
+
+  // Get single job archive with details
+  app.get('/api/archives/:id', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const archive = await storage.getJobArchiveById(req.params.id);
+      if (!archive) {
+        return res.status(404).json({ message: 'Archive not found' });
+      }
+
+      const workerStats = await storage.getArchiveWorkerStatsByArchiveId(archive.id);
+      
+      res.json({ 
+        archive: {
+          ...archive,
+          workerStats
+        }
+      });
+    } catch (error) {
+      console.error('Failed to fetch job archive:', error);
+      res.status(500).json({ message: 'Failed to fetch job archive' });
+    }
+  });
+
+  // Archive a job manually
+  app.post('/api/jobs/:jobId/archive', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId } = req.params;
+      
+      // Check if job exists
+      const job = await storage.getJobById(jobId);
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Create archive with comprehensive data
+      const archive = await storage.archiveJob(jobId, req.user!.id);
+      
+      res.status(201).json({ 
+        archive,
+        message: 'Job archived successfully'
+      });
+    } catch (error: any) {
+      console.error('Failed to archive job:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to archive job'
+      });
+    }
+  });
+
+  // Unarchive a job (restore to active jobs)
+  app.post('/api/archives/:id/unarchive', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const archiveId = req.params.id;
+      
+      const success = await storage.unarchiveJob(archiveId);
+      
+      if (!success) {
+        return res.status(400).json({ message: 'Failed to unarchive job. Archive may be purged or missing snapshot data.' });
+      }
+
+      res.json({ message: 'Job unarchived successfully' });
+    } catch (error: any) {
+      console.error('Failed to unarchive job:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to unarchive job'
+      });
+    }
+  });
+
+  // Purge job data (remove snapshot, keep summary)
+  app.delete('/api/archives/:id/purge', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const archiveId = req.params.id;
+      
+      const success = await storage.purgeJobData(archiveId);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Archive not found' });
+      }
+
+      res.json({ message: 'Job data purged successfully. Summary retained.' });
+    } catch (error) {
+      console.error('Failed to purge job data:', error);
+      res.status(500).json({ message: 'Failed to purge job data' });
+    }
+  });
+
+  // Delete archive completely
+  app.delete('/api/archives/:id', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const archiveId = req.params.id;
+      
+      const success = await storage.deleteJobArchive(archiveId);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Archive not found' });
+      }
+
+      res.json({ message: 'Archive deleted successfully' });
+    } catch (error) {
+      console.error('Failed to delete archive:', error);
+      res.status(500).json({ message: 'Failed to delete archive' });
+    }
+  });
+
   return httpServer;
 }
