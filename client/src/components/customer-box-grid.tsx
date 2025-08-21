@@ -129,38 +129,28 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
       }
     });
 
-    // Fill in empty boxes up to maxBoxesPerRow * 2 (to allow for multiple rows)
-    const maxBoxes = Math.min(preferences.maxBoxesPerRow * 2, 16);
-    for (let i = 1; i <= maxBoxes; i++) {
-      if (!boxes[i]) {
-        boxes[i] = {
-          boxNumber: i,
-          customerName: "Unassigned",
-          totalQty: 0,
-          scannedQty: 0,
-          isComplete: false,
-        };
-      }
-    }
+    // Only show actual boxes from CSV data - no artificial empty boxes
 
     return Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
   }, [products, preferences.maxBoxesPerRow]);
 
-  // Create responsive grid classes based on user preference
+  // Create responsive grid classes based on actual box count and user preference
   const getGridClasses = () => {
+    const actualBoxCount = boxData.length;
     const maxCols = preferences.maxBoxesPerRow;
     
     // Base classes for mobile (always 2 columns)
     let gridClasses = "grid grid-cols-2 gap-3";
     
-    // Tablet and desktop responsive classes based on maxBoxesPerRow
-    if (maxCols <= 4) {
+    // Tablet and desktop responsive classes based on maxBoxesPerRow preference
+    // but limited by actual box count for optimal display
+    if (maxCols <= 4 || actualBoxCount <= 4) {
       gridClasses += " md:grid-cols-4";
-    } else if (maxCols <= 6) {
+    } else if (maxCols <= 6 || actualBoxCount <= 6) {
       gridClasses += " md:grid-cols-4 lg:grid-cols-6";
-    } else if (maxCols <= 8) {
+    } else if (maxCols <= 8 || actualBoxCount <= 8) {
       gridClasses += " md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8";
-    } else if (maxCols <= 12) {
+    } else if (maxCols <= 12 || actualBoxCount <= 12) {
       gridClasses += " md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12";
     } else {
       gridClasses += " md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 2xl:grid-cols-16";
