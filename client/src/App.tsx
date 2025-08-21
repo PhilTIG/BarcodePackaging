@@ -13,6 +13,7 @@ import ManagerDashboard from "@/pages/manager-dashboard";
 import SupervisorView from "@/pages/supervisor-view";
 import WorkerScanner from "@/pages/worker-scanner";
 import CheckCountPage from "@/pages/check-count";
+import QADashboard from "@/pages/qa-dashboard";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/supervisor/:jobId?" component={SupervisorView} />
       <Route path="/scanner/:jobId?" component={WorkerScanner} />
       <Route path="/check-count/:jobId/:boxNumber" component={CheckCountPage} />
+      <Route path="/qa-dashboard/:jobId?" component={QADashboard} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
