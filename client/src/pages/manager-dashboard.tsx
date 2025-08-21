@@ -21,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2 } from "lucide-react";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
+import { QASummaryPanel } from "@/components/qa-summary-panel";
 import { z } from "zod";
 import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPattern } from "../../../lib/worker-allocation";
 
@@ -907,6 +908,9 @@ export default function ManagerDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* QA Summary Panel */}
+        <QASummaryPanel />
 
         {/* Workers Status */}
         <Card data-testid="workers-status">
