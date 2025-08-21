@@ -1998,6 +1998,139 @@ export class DatabaseStorage implements IStorage {
         });
     }
   }
+
+  // QA Dashboard Summary Methods
+  async getQASummary(): Promise<any> {
+    try {
+      // Get all active jobs
+      const activeJobs = await this.db
+        .select()
+        .from(jobs)
+        .where(eq(jobs.status, 'active'));
+
+      // Calculate QA metrics for each active job
+      const jobSummaries = await Promise.all(
+        activeJobs.map(async (job: any) => {
+          // Get CheckCount sessions for this job (last 7 days)
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+          const sessionsData = await this.db
+            .select({
+              id: checkSessions.id,
+              boxNumber: checkSessions.boxNumber,
+              status: checkSessions.status,
+              startTime: checkSessions.startTime,
+              endTime: checkSessions.endTime,
+              discrepanciesFound: checkSessions.discrepanciesFound,
+              isComplete: checkSessions.isComplete,
+              userId: checkSessions.userId,
+            })
+            .from(checkSessions)
+            .where(and(
+              eq(checkSessions.jobId, job.id),
+              sql`${checkSessions.startTime} >= ${sevenDaysAgo}`
+            ));
+
+          // Get total boxes for verification rate calculation
+          const boxRequirements = await this.getBoxRequirementsByJobId(job.id);
+          const totalBoxes = new Set(boxRequirements.map(req => req.boxNumber)).size;
+
+          // Get boxes with completed CheckCount sessions
+          const verifiedBoxes = new Set(
+            sessionsData
+              .filter((session: any) => session.status === 'completed')
+              .map((session: any) => session.boxNumber)
+          ).size;
+
+          // Calculate verification rate
+          const verificationRate = totalBoxes > 0 ? (verifiedBoxes / totalBoxes) * 100 : 0;
+
+          // Calculate accuracy score (sessions with 0 discrepancies / total completed sessions)
+          const completedSessions = sessionsData.filter((session: any) => session.status === 'completed');
+          const accurateSessions = completedSessions.filter((session: any) => (session.discrepanciesFound || 0) === 0);
+          const accuracyScore = completedSessions.length > 0 ? (accurateSessions.length / completedSessions.length) * 100 : 0;
+
+          // Get recent activity (last 5 CheckCount completions)
+          const recentSessions = sessionsData
+            .filter((session: any) => session.status === 'completed')
+            .sort((a: any, b: any) => new Date(b.endTime || b.startTime).getTime() - new Date(a.endTime || a.startTime).getTime())
+            .slice(0, 5);
+
+          // Get worker QA performance summary
+          const workerStats = new Map();
+          sessionsData.forEach((session: any) => {
+            if (!workerStats.has(session.userId)) {
+              workerStats.set(session.userId, {
+                totalSessions: 0,
+                accurateSessions: 0,
+                totalDiscrepancies: 0
+              });
+            }
+            const stats = workerStats.get(session.userId);
+            if (session.status === 'completed') {
+              stats.totalSessions++;
+              if ((session.discrepanciesFound || 0) === 0) {
+                stats.accurateSessions++;
+              }
+              stats.totalDiscrepancies += (session.discrepanciesFound || 0);
+            }
+          });
+
+          const topWorkers = Array.from(workerStats.entries())
+            .map(([userId, stats]) => ({
+              userId,
+              accuracy: stats.totalSessions > 0 ? (stats.accurateSessions / stats.totalSessions) * 100 : 0,
+              totalSessions: stats.totalSessions,
+              totalDiscrepancies: stats.totalDiscrepancies
+            }))
+            .sort((a, b) => b.accuracy - a.accuracy)
+            .slice(0, 3);
+
+          return {
+            jobId: job.id,
+            jobName: job.name,
+            verificationRate: Math.round(verificationRate * 100) / 100,
+            accuracyScore: Math.round(accuracyScore * 100) / 100,
+            totalSessions: sessionsData.length,
+            completedSessions: completedSessions.length,
+            totalDiscrepancies: sessionsData.reduce((sum: number, session: any) => sum + (session.discrepanciesFound || 0), 0),
+            recentActivity: recentSessions,
+            topWorkers
+          };
+        })
+      );
+
+      // Calculate overall aggregated metrics
+      const totalSessions = jobSummaries.reduce((sum, job) => sum + job.totalSessions, 0);
+      const totalCompletedSessions = jobSummaries.reduce((sum, job) => sum + job.completedSessions, 0);
+      const totalDiscrepancies = jobSummaries.reduce((sum, job) => sum + job.totalDiscrepancies, 0);
+      
+      const overallVerificationRate = jobSummaries.length > 0 
+        ? jobSummaries.reduce((sum, job) => sum + job.verificationRate, 0) / jobSummaries.length 
+        : 0;
+      
+      const overallAccuracyScore = jobSummaries.length > 0
+        ? jobSummaries.reduce((sum, job) => sum + job.accuracyScore, 0) / jobSummaries.length
+        : 0;
+
+      return {
+        summary: {
+          totalActiveJobs: activeJobs.length,
+          overallVerificationRate: Math.round(overallVerificationRate * 100) / 100,
+          overallAccuracyScore: Math.round(overallAccuracyScore * 100) / 100,
+          totalSessions,
+          totalCompletedSessions,
+          totalDiscrepancies,
+          dataTimestamp: new Date().toISOString()
+        },
+        jobs: jobSummaries
+      };
+    } catch (error) {
+      console.error('Error generating QA summary:', error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage(db);

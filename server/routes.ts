@@ -1113,6 +1113,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // QA Reporting endpoints
+  app.get('/api/qa/summary', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const summary = await storage.getQASummary();
+      res.json(summary);
+    } catch (error) {
+      console.error('Failed to generate QA summary:', error);
+      res.status(500).json({ message: 'Failed to generate QA summary' });
+    }
+  });
+
   app.get('/api/jobs/:id/qa-report', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
     try {
       const report = await storage.getJobQAReport(req.params.id);
