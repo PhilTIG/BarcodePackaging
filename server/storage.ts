@@ -52,6 +52,26 @@ import {
 import { db } from "./db";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
+/**
+ * Utility function to normalize barcodes by converting scientific notation to full numeric strings
+ * Handles cases where CSV imports contain barcodes in scientific notation format (e.g., "9.32579E+12")
+ */
+function normalizeBarcodeFormat(barCode: string): string {
+  // Check if the barcode is in scientific notation format
+  if (/^\d+\.\d+[eE][+-]?\d+$/.test(barCode)) {
+    try {
+      // Convert scientific notation to full numeric string
+      const numericValue = parseFloat(barCode);
+      // Convert back to string without scientific notation
+      return numericValue.toString();
+    } catch (error) {
+      console.warn(`Failed to normalize barcode: ${barCode}`, error);
+      return barCode; // Return original if conversion fails
+    }
+  }
+  return barCode; // Return as-is if not scientific notation
+}
+
 export interface IStorage {
   // User methods
   getUserById(id: string): Promise<User | undefined>;
@@ -1436,13 +1456,17 @@ export class DatabaseStorage implements IStorage {
 
     const workerPattern = jobAssignment[0].allocationPattern as 'ascending' | 'descending' | 'middle_up' | 'middle_down';
 
+    // BARCODE FIX: Normalize barcode format for comparison
+    const normalizedBarCode = normalizeBarcodeFormat(barCode);
+
     // Get all box requirements for this item that still need more items
+    // Try both original and normalized barcode formats for maximum compatibility
     const availableBoxes = await this.db
       .select()
       .from(boxRequirements)
       .where(and(
         eq(boxRequirements.jobId, jobId),
-        eq(boxRequirements.barCode, barCode),
+        sql`(${boxRequirements.barCode} = ${barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`,
         sql`${boxRequirements.scannedQty} < ${boxRequirements.requiredQty}`
       ))
       .orderBy(boxRequirements.boxNumber);
@@ -1492,13 +1516,16 @@ export class DatabaseStorage implements IStorage {
     workerId: string, 
     workerColor: string
   ): Promise<BoxRequirement | undefined> {
-    // Find the specific box requirement
+    // BARCODE FIX: Normalize barcode format for comparison
+    const normalizedBarCode = normalizeBarcodeFormat(barCode);
+
+    // Find the specific box requirement with both original and normalized barcode formats
     const requirement = await this.db
       .select()
       .from(boxRequirements)
       .where(and(
         eq(boxRequirements.jobId, jobId),
-        eq(boxRequirements.barCode, barCode),
+        sql`(${boxRequirements.barCode} = ${barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`,
         eq(boxRequirements.boxNumber, boxNumber)
       ))
       .limit(1);

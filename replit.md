@@ -47,6 +47,15 @@ The application incorporates sophisticated performance tracking, including a sco
 - **Visual Feedback**: Color-coded progress bars and badges distinguish between recovered items (blue), excess items (orange), and shortages (red)
 - **Box Status Indicators**: Green check/red cross icons under box numbers showing CheckCount verification status (separate from completion lock icons)
 
+**Barcode Scientific Notation Fix (August 2025)**:
+- **Critical Issue Resolved**: Fixed barcode scanning failures caused by scientific notation storage (e.g., "9.32579E+12" instead of "9325790000000")
+- **Root Cause**: CSV imports from Excel/spreadsheets converted large 13+ digit barcodes to scientific notation format
+- **Solution Implementation**: Triple-layer fix with runtime normalization, database correction, and future prevention
+- **Database Correction**: Updated 167 existing scientific notation barcodes to full numeric format across products and box_requirements tables
+- **Runtime Conversion**: Added `normalizeBarcodeFormat()` utility with dual-format matching in `findNextTargetBox()` and `updateBoxRequirementScannedQty()`
+- **CSV Import Prevention**: Integrated barcode normalization during CSV upload to prevent future scientific notation imports
+- **Compatibility**: System now handles both original and normalized barcode formats for maximum scanning reliability
+
 **QA Reporting Dashboard (August 2025)**: 
 - **Business Requirement**: Comprehensive quality assurance analytics system extending CheckCount functionality
 - **Architecture**: Main dashboard QA summary panel + dedicated QA dashboard with job-specific routing

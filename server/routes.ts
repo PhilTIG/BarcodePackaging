@@ -347,10 +347,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // BARCODE FIX: Normalize barcodes during CSV import to prevent scientific notation issues
+      const normalizeBarcodeFormat = (barCode: string): string => {
+        // Check if the barcode is in scientific notation format
+        if (/^\d+\.\d+[eE][+-]?\d+$/.test(barCode)) {
+          try {
+            // Convert scientific notation to full numeric string
+            const numericValue = parseFloat(barCode);
+            return numericValue.toString();
+          } catch (error) {
+            console.warn(`Failed to normalize barcode during import: ${barCode}`, error);
+            return barCode;
+          }
+        }
+        return barCode;
+      };
+
       // Create products with POC-compliant box assignments
       const products = csvData.map((row) => ({
         jobId: job.id,
-        barCode: row.BarCode,
+        barCode: normalizeBarcodeFormat(row.BarCode), // Normalize barcode format
         productName: row['Product Name'],
         qty: row.Qty,
         customerName: row.CustomName,
