@@ -1828,6 +1828,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobQAReport(jobId: string): Promise<any> {
+    // Get job information first
+    const job = await this.getJobById(jobId);
+    if (!job) {
+      throw new Error(`Job not found: ${jobId}`);
+    }
+
     // Get all check sessions for this job with user info
     const sessions = await this.db
       .select({
@@ -1849,18 +1855,172 @@ export class DatabaseStorage implements IStorage {
       .where(eq(checkSessions.jobId, jobId))
       .orderBy(desc(checkSessions.startTime));
 
-    // Get total discrepancies and completion rate
+    // Get total box count for the job
+    const boxesQuery = await this.db
+      .select({ boxNumber: boxRequirements.boxNumber })
+      .from(boxRequirements)
+      .where(eq(boxRequirements.jobId, jobId));
+    
+    const uniqueBoxes = new Set(boxesQuery.map((b: any) => b.boxNumber));
+    const totalBoxes = uniqueBoxes.size;
+
+    // Get verified boxes (boxes that have at least one completed CheckCount session)
+    const verifiedBoxes = new Set(
+      sessions
+        .filter((s: any) => s.status === 'completed')
+        .map((s: any) => s.boxNumber)
+    ).size;
+
+    // Calculate basic metrics
     const totalSessions = sessions.length;
     const completedSessions = sessions.filter((s: any) => s.status === 'completed').length;
     const totalDiscrepancies = sessions.reduce((sum: number, s: any) => sum + (s.discrepanciesFound || 0), 0);
+    
+    // Calculate verification rate (percentage of boxes verified)
+    const verificationRate = totalBoxes > 0 ? (verifiedBoxes / totalBoxes) * 100 : 0;
+    
+    // Calculate accuracy score (percentage of sessions with zero discrepancies)
+    const accuracySessions = sessions.filter((s: any) => s.discrepanciesFound === 0).length;
+    const accuracyScore = totalSessions > 0 ? (accuracySessions / totalSessions) * 100 : 0;
+
+    // Calculate discrepancy rate
+    const discrepancyRate = totalSessions > 0 ? (totalDiscrepancies / totalSessions) * 100 : 0;
+
+    // Get detailed discrepancy analysis
+    const discrepancyReport = await this.getDiscrepancyReport(jobId);
+    
+    // Analyze common issues from discrepancy notes
+    const commonIssues: Array<{ type: string; count: number; percentage: number }> = [];
+    const issueTypes = new Map<string, number>();
+    
+    discrepancyReport.discrepancies.forEach((d: any) => {
+      if (d.discrepancyNotes) {
+        const notes = d.discrepancyNotes.toLowerCase();
+        if (notes.includes('shortage') || notes.includes('missing')) {
+          issueTypes.set('Item Shortage', (issueTypes.get('Item Shortage') || 0) + 1);
+        } else if (notes.includes('excess') || notes.includes('extra')) {
+          issueTypes.set('Excess Items', (issueTypes.get('Excess Items') || 0) + 1);
+        } else if (notes.includes('wrong') || notes.includes('incorrect')) {
+          issueTypes.set('Wrong Item', (issueTypes.get('Wrong Item') || 0) + 1);
+        } else if (notes.includes('damage') || notes.includes('broken')) {
+          issueTypes.set('Damaged Item', (issueTypes.get('Damaged Item') || 0) + 1);
+        } else {
+          issueTypes.set('Other', (issueTypes.get('Other') || 0) + 1);
+        }
+      }
+    });
+
+    issueTypes.forEach((count, type) => {
+      commonIssues.push({
+        type,
+        count,
+        percentage: totalDiscrepancies > 0 ? (count / totalDiscrepancies) * 100 : 0
+      });
+    });
+
+    // Calculate worker performance
+    const workerPerformance: Array<{
+      userId: string;
+      staffId: string;
+      name: string;
+      totalSessions: number;
+      accuracySessions: number;
+      accuracyRate: number;
+      totalDiscrepancies: number;
+      avgDiscrepanciesPerSession: number;
+    }> = [];
+
+    const workerMap = new Map<string, any>();
+    sessions.forEach((session: any) => {
+      if (!session.userId) return;
+      
+      if (!workerMap.has(session.userId)) {
+        workerMap.set(session.userId, {
+          userId: session.userId,
+          staffId: session.userStaffId,
+          name: session.userName,
+          totalSessions: 0,
+          accuracySessions: 0,
+          totalDiscrepancies: 0
+        });
+      }
+      
+      const worker = workerMap.get(session.userId);
+      worker.totalSessions++;
+      worker.totalDiscrepancies += session.discrepanciesFound || 0;
+      if ((session.discrepanciesFound || 0) === 0) {
+        worker.accuracySessions++;
+      }
+    });
+
+    workerMap.forEach((worker) => {
+      workerPerformance.push({
+        ...worker,
+        accuracyRate: worker.totalSessions > 0 ? (worker.accuracySessions / worker.totalSessions) * 100 : 0,
+        avgDiscrepanciesPerSession: worker.totalSessions > 0 ? worker.totalDiscrepancies / worker.totalSessions : 0
+      });
+    });
+
+    // Sort workers by accuracy rate descending
+    workerPerformance.sort((a, b) => b.accuracyRate - a.accuracyRate);
+
+    // Calculate timeline data (daily aggregation)
+    const timeline: Array<{
+      date: string;
+      sessionsCompleted: number;
+      discrepanciesFound: number;
+      accuracyRate: number;
+    }> = [];
+
+    const dailyMap = new Map<string, any>();
+    sessions.forEach((session: any) => {
+      if (session.status !== 'completed') return;
+      
+      const date = new Date(session.startTime).toISOString().split('T')[0];
+      if (!dailyMap.has(date)) {
+        dailyMap.set(date, {
+          date,
+          sessionsCompleted: 0,
+          discrepanciesFound: 0,
+          accurateSessions: 0
+        });
+      }
+      
+      const day = dailyMap.get(date);
+      day.sessionsCompleted++;
+      day.discrepanciesFound += session.discrepanciesFound || 0;
+      if ((session.discrepanciesFound || 0) === 0) {
+        day.accurateSessions++;
+      }
+    });
+
+    dailyMap.forEach((day) => {
+      timeline.push({
+        ...day,
+        accuracyRate: day.sessionsCompleted > 0 ? (day.accurateSessions / day.sessionsCompleted) * 100 : 0
+      });
+    });
+
+    // Sort timeline by date ascending
+    timeline.sort((a, b) => a.date.localeCompare(b.date));
 
     return {
-      jobId,
-      totalSessions,
-      completedSessions,
-      completionRate: totalSessions > 0 ? (completedSessions / totalSessions) * 100 : 0,
-      totalDiscrepancies,
-      sessions
+      jobInfo: {
+        id: job.id,
+        name: job.name || `Job ${job.id}`,
+        status: job.status,
+        totalBoxes,
+        verifiedBoxes
+      },
+      verificationRate,
+      accuracyScore,
+      discrepancyAnalysis: {
+        totalDiscrepancies,
+        discrepancyRate,
+        commonIssues
+      },
+      workerPerformance,
+      timeline
     };
   }
 
