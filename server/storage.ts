@@ -1746,7 +1746,7 @@ export class DatabaseStorage implements IStorage {
     return await this.db
       .select()
       .from(jobArchives)
-      .where(sql`job_data::text ILIKE ${`%${query}%`}`)
+      .where(sql`job_data_snapshot::text ILIKE ${`%${query}%`}`)
       .orderBy(sql`archived_at DESC`);
   }
 
@@ -2528,7 +2528,7 @@ export class DatabaseStorage implements IStorage {
 
       // Create worker stats records
       const workerStatsRecords: InsertArchiveWorkerStats[] = [];
-      for (const [workerId, stats] of workerStats.entries()) {
+      for (const [workerId, stats] of Array.from(workerStats.entries())) {
         const [worker] = await this.db
           .select()
           .from(users)
@@ -2541,11 +2541,13 @@ export class DatabaseStorage implements IStorage {
             archiveId: archive.id,
             workerId,
             workerName: worker.name,
-            workerStaffId: worker.staffId,
-            totalItemsChecked: stats.totalItemsChecked,
+            totalScans: 0, // Default value
+            totalSessionTime: 0, // Default value
+            itemsChecked: stats.totalItemsChecked,
             correctChecks: stats.correctChecks,
-            discrepanciesFound: stats.discrepanciesFound,
-            accuracy: accuracy.toString()
+            checkAccuracy: accuracy.toString(),
+            extrasFound: 0, // Default value
+            errorsCaused: stats.discrepanciesFound
           });
         }
       }

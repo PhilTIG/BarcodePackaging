@@ -432,7 +432,7 @@ export default function ManagerDashboard() {
   // Handle job archiving
   const archiveJobMutation = useMutation({
     mutationFn: async (jobId: string) => {
-      const response = await apiRequest(`/api/jobs/${jobId}/archive`, 'POST');
+      const response = await apiRequest('POST', `/api/jobs/${jobId}/archive`);
       return response;
     },
     onSuccess: () => {
