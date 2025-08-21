@@ -35,12 +35,12 @@ const uploadFormSchema = z.object({
 type UploadForm = z.infer<typeof uploadFormSchema>;
 
 // Component for Extra Items and Boxes Complete buttons
-function ExtraItemsAndBoxesButtons({ 
-  jobId, 
-  onExtraItemsClick, 
-  onBoxesCompleteClick 
-}: { 
-  jobId: string; 
+function ExtraItemsAndBoxesButtons({
+  jobId,
+  onExtraItemsClick,
+  onBoxesCompleteClick
+}: {
+  jobId: string;
   onExtraItemsClick: () => void;
   onBoxesCompleteClick: () => void;
 }) {
@@ -72,7 +72,7 @@ function ExtraItemsAndBoxesButtons({
         <Package className="mr-1 h-4 w-4" />
         {extraItemsCount} Extra Items
       </Button>
-      
+
       {/* Boxes Complete Button */}
       <Button
         variant="outline"
@@ -88,14 +88,14 @@ function ExtraItemsAndBoxesButtons({
 }
 
 // Component for Completed Boxes Modal
-function CompletedBoxesModal({ 
-  isOpen, 
-  onClose, 
-  jobId 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  jobId: string | null; 
+function CompletedBoxesModal({
+  isOpen,
+  onClose,
+  jobId
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  jobId: string | null;
 }) {
   // Use same real-time progress endpoint as Job Monitoring
   const { data: progressData } = useQuery({
@@ -106,16 +106,16 @@ function CompletedBoxesModal({
 
   // Get completed boxes from progress data - now includes products array
   const products = (progressData as any)?.products || [];
-  
+
   // Group by customer and check if all items in customer's box are complete
-  const boxMap = new Map<string, { 
-    customerName: string; 
-    boxNumber: number; 
-    totalQty: number; 
-    scannedQty: number; 
-    isComplete: boolean; 
+  const boxMap = new Map<string, {
+    customerName: string;
+    boxNumber: number;
+    totalQty: number;
+    scannedQty: number;
+    isComplete: boolean;
   }>();
-  
+
   products.forEach((product: any) => {
     const key = `${product.customerName}-${product.boxNumber}`;
     if (!boxMap.has(key)) {
@@ -132,7 +132,7 @@ function CompletedBoxesModal({
     box.scannedQty += product.scannedQty;
     box.isComplete = box.isComplete && product.isComplete;
   });
-  
+
   const completedBoxes = Array.from(boxMap.values()).filter(box => box.isComplete);
 
   return (
@@ -144,7 +144,7 @@ function CompletedBoxesModal({
             List of all completed boxes showing item counts
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="mt-4">
           {completedBoxes.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
@@ -155,17 +155,17 @@ function CompletedBoxesModal({
               {completedBoxes
                 .sort((a: any, b: any) => a.boxNumber - b.boxNumber)
                 .map((box: any, index: number) => (
-                <div key={`${box.customerName}-${box.boxNumber}`} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-green-50">
-                  <div>
-                    <div className="font-medium">Box {box.boxNumber}</div>
-                    <div className="text-sm text-gray-600">{box.customerName}</div>
+                  <div key={`${box.customerName}-${box.boxNumber}`} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-green-50">
+                    <div>
+                      <div className="font-medium">Box {box.boxNumber}</div>
+                      <div className="text-sm text-gray-600">{box.customerName}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-green-600">{box.scannedQty}/{box.totalQty} items</div>
+                      <div className="text-xs text-gray-500">100% Complete</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold text-green-600">{box.scannedQty}/{box.totalQty} items</div>
-                    <div className="text-xs text-gray-500">100% Complete</div>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </div>
@@ -277,8 +277,8 @@ export default function ManagerDashboard() {
           description: formattedMessage,
           variant: "destructive",
           action: (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="outline"
               onClick={() => setErrorDialogOpen(true)}
               data-testid="button-more-errors"
@@ -587,138 +587,138 @@ export default function ManagerDashboard() {
                 <CardTitle>Upload New Job</CardTitle>
               </CardHeader>
               <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Form Fields Row - Responsive */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Job Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Enter job name" data-testid="input-job-name" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Form Fields Row - Responsive */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Job Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Enter job name" data-testid="input-job-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  <FormField
-                    control={form.control}
-                    name="jobTypeId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Job Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-job-type">
-                              <SelectValue placeholder="Select a job type..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {(jobTypesData as any)?.jobTypes?.map((jobType: any) => (
-                              <SelectItem key={jobType.id} value={jobType.id}>
-                                {jobType.name} ({jobType.benchmarkItemsPerHour} items/hr)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      <FormField
+                        control={form.control}
+                        name="jobTypeId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Job Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-job-type">
+                                  <SelectValue placeholder="Select a job type..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {(jobTypesData as any)?.jobTypes?.map((jobType: any) => (
+                                  <SelectItem key={jobType.id} value={jobType.id}>
+                                    {jobType.name} ({jobType.benchmarkItemsPerHour} items/hr)
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  <div className="md:col-span-2">
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description (Optional)</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Enter job description" data-testid="input-job-description" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* File Selection and CSV Format Requirements Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <input
-                      type="file"
-                      accept=".csv"
-                      className="hidden"
-                      id="csv-upload"
-                      data-testid="input-csv-file"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        setSelectedFile(file || null);
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => document.getElementById("csv-upload")?.click()}
-                      data-testid="button-select-file"
-                      className="w-full md:w-auto"
-                    >
-                      <CloudUpload className="mr-2 h-4 w-4" />
-                      {selectedFile ? selectedFile.name : "Select File"}
-                    </Button>
-                    {selectedFile && (
-                      <p className="text-xs text-green-600">
-                        ✓ {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
-                      </p>
-                    )}
-                  </div>
-
-                  {/* CSV Format Guide - Collapsible */}
-                  <div>
-                    <Collapsible defaultOpen={false}>
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <CollapsibleTrigger className="w-full">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium text-blue-900">CSV Format Requirements</h4>
-                            <ChevronDown className="h-4 w-4 text-blue-600 transition-transform duration-200 data-[state=open]:rotate-180" />
-                          </div>
-                        </CollapsibleTrigger>
-
-                        <CollapsibleContent className="mt-2">
-                          <p className="text-blue-800 text-sm mb-3">Your CSV file must contain these exact column headers:</p>
-                          <div className="bg-white border border-blue-200 rounded text-xs p-2 font-mono mb-3">
-                            BarCode,Product Name,Qty,CustomName,Group
-                          </div>
-                          <div className="text-blue-700 text-sm space-y-1">
-                            <p><strong>BarCode:</strong> Product barcode (required)</p>
-                            <p><strong>Product Name:</strong> Name of the product (required)</p>
-                            <p><strong>Qty:</strong> Quantity as a positive number (required)</p>
-                            <p><strong>CustomName:</strong> Customer destination name (required)</p>
-                            <p><strong>Group:</strong> Product grouping (optional)</p>
-                          </div>
-                        </CollapsibleContent>
+                      <div className="md:col-span-2">
+                        <FormField
+                          control={form.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description (Optional)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Enter job description" data-testid="input-job-description" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
-                    </Collapsible>
-                  </div>
-                </div>
+                    </div>
+
+                    {/* File Selection and CSV Format Requirements Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <input
+                          type="file"
+                          accept=".csv"
+                          className="hidden"
+                          id="csv-upload"
+                          data-testid="input-csv-file"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            setSelectedFile(file || null);
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById("csv-upload")?.click()}
+                          data-testid="button-select-file"
+                          className="w-full md:w-auto"
+                        >
+                          <CloudUpload className="mr-2 h-4 w-4" />
+                          {selectedFile ? selectedFile.name : "Select File"}
+                        </Button>
+                        {selectedFile && (
+                          <p className="text-xs text-green-600">
+                            ✓ {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                          </p>
+                        )}
+                      </div>
+
+                      {/* CSV Format Guide - Collapsible */}
+                      <div>
+                        <Collapsible defaultOpen={false}>
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <CollapsibleTrigger className="w-full">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-blue-900">CSV Format Requirements</h4>
+                                <ChevronDown className="h-4 w-4 text-blue-600 transition-transform duration-200 data-[state=open]:rotate-180" />
+                              </div>
+                            </CollapsibleTrigger>
+
+                            <CollapsibleContent className="mt-2">
+                              <p className="text-blue-800 text-sm mb-3">Your CSV file must contain these exact column headers:</p>
+                              <div className="bg-white border border-blue-200 rounded text-xs p-2 font-mono mb-3">
+                                BarCode,Product Name,Qty,CustomName,Group
+                              </div>
+                              <div className="text-blue-700 text-sm space-y-1">
+                                <p><strong>BarCode:</strong> Product barcode (required)</p>
+                                <p><strong>Product Name:</strong> Name of the product (required)</p>
+                                <p><strong>Qty:</strong> Quantity as a positive number (required)</p>
+                                <p><strong>CustomName:</strong> Customer destination name (required)</p>
+                                <p><strong>Group:</strong> Product grouping (optional)</p>
+                              </div>
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                      </div>
+                    </div>
 
 
 
-                <Button
-                  type="submit"
-                  disabled={uploadMutation.isPending}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  data-testid="button-upload"
-                >
-                  {uploadMutation.isPending ? "Uploading..." : "Create Job"}
-                </Button>
-              </form>
-            </Form>
+                    <Button
+                      type="submit"
+                      disabled={uploadMutation.isPending}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                      data-testid="button-upload"
+                    >
+                      {uploadMutation.isPending ? "Uploading..." : "Create Job"}
+                    </Button>
+                  </form>
+                </Form>
               </CardContent>
             </>
           )}
@@ -747,9 +747,9 @@ export default function ManagerDashboard() {
                   const isCompleted = progressPercentage === 100;
 
                   return (
-                    <div 
-                      key={job.id} 
-                      className={`border border-gray-200 rounded-lg p-4 relative ${isCompleted ? 'bg-green-50 border-green-200' : ''}`} 
+                    <div
+                      key={job.id}
+                      className={`border border-gray-200 rounded-lg p-4 relative ${isCompleted ? 'bg-green-50 border-green-200' : ''}`}
                       data-testid={`job-card-${job.id}`}
                     >
                       <div className="flex items-center justify-between mb-3">
@@ -814,7 +814,7 @@ export default function ManagerDashboard() {
                       {/* Extra Items and Boxes Complete - Bottom Right Vertical Stack */}
                       <div className="absolute bottom-4 right-4 space-y-2">
                         {/* Get extra items count and progress data */}
-                        <ExtraItemsAndBoxesButtons jobId={job.id} 
+                        <ExtraItemsAndBoxesButtons jobId={job.id}
                           onExtraItemsClick={() => {
                             setExtraItemsJobId(job.id);
                             setIsExtraItemsModalOpen(true);
@@ -822,7 +822,7 @@ export default function ManagerDashboard() {
                           onBoxesCompleteClick={() => {
                             setCompletedBoxesJobId(job.id);
                             setIsCompletedBoxesModalOpen(true);
-                          }} 
+                          }}
                         />
                       </div>
 
@@ -835,14 +835,14 @@ export default function ManagerDashboard() {
                               const pattern = assignWorkerPattern(index);
                               const patternLabels = {
                                 'ascending': '↗ Asc',
-                                'descending': '↙ Desc', 
+                                'descending': '↙ Desc',
                                 'middle_up': '↑ Mid+',
                                 'middle_down': '↓ Mid-'
                               };
 
                               return (
                                 <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1 group">
-                                  <div 
+                                  <div
                                     className="w-3 h-3 rounded-full border border-gray-300"
                                     style={{ backgroundColor: assignment.assignedColor || '#3B82F6' }}
                                     data-testid={`worker-color-${assignment.assignee.id}`}
@@ -883,9 +883,9 @@ export default function ManagerDashboard() {
                           <Eye className="mr-1 h-4 w-4" />
                           Monitor
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => {
                             setSelectedJobId(job.id);
                             setAssignDialogOpen(true);
@@ -925,37 +925,37 @@ export default function ManagerDashboard() {
           {/* Workers Status */}
           <div className="h-full">
             <Card data-testid="workers-status" className="h-full">
-          <CardHeader>
-            <CardTitle>Worker Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(workersData as any)?.workers?.map((worker: any) => (
-                <div key={worker.id} className="border border-gray-200 rounded-lg p-4" data-testid={`worker-card-${worker.id}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-gray-900">{worker.name}</h3>
-                    <div className="flex items-center">
-                      <div className={`w-2 h-2 rounded-full mr-2 ${worker.isActive ? 'bg-success-500' : 'bg-gray-400'}`}></div>
-                      <span className={`text-sm font-medium ${worker.isActive ? 'text-success-600' : 'text-gray-600'}`}>
-                        {worker.isActive ? 'Active' : 'Offline'}
-                      </span>
+              <CardHeader>
+                <CardTitle>Worker Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {(workersData as any)?.workers?.map((worker: any) => (
+                    <div key={worker.id} className="border border-gray-200 rounded-lg p-4" data-testid={`worker-card-${worker.id}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-medium text-gray-900">{worker.name}</h3>
+                        <div className="flex items-center">
+                          <div className={`w-2 h-2 rounded-full mr-2 ${worker.isActive ? 'bg-success-500' : 'bg-gray-400'}`}></div>
+                          <span className={`text-sm font-medium ${worker.isActive ? 'text-success-600' : 'text-gray-600'}`}>
+                            {worker.isActive ? 'Active' : 'Offline'}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">Staff ID: {worker.staffId}</p>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Role: {worker.role}</span>
+                        <span className="text-gray-600">Last active: 2h ago</span>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-3">Staff ID: {worker.staffId}</p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Role: {worker.role}</span>
-                    <span className="text-gray-600">Last active: 2h ago</span>
-                  </div>
-                </div>
-              ))}
+                  ))}
 
-              {!(workersData as any)?.workers?.length && (
-                <div className="col-span-full text-center py-8 text-gray-500">
-                  No workers found.
+                  {!(workersData as any)?.workers?.length && (
+                    <div className="col-span-full text-center py-8 text-gray-500">
+                      No workers found.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </CardContent>
+              </CardContent>
             </Card>
           </div>
         </div>
@@ -983,7 +983,7 @@ export default function ManagerDashboard() {
             {/* Worker Selection */}
             <div>
               <Label htmlFor="worker-select">Select Worker</Label>
-              <Select 
+              <Select
                 value={assignForm.userId}
                 onValueChange={(value) => setAssignForm(prev => ({ ...prev, userId: value }))}
               >
@@ -1044,14 +1044,14 @@ export default function ManagerDashboard() {
 
                     const patternDescriptions = {
                       'ascending': 'Ascending: Boxes 1, 2, 3, 4... (Worker 1)',
-                      'descending': 'Descending: Boxes 100, 99, 98, 97... (Worker 2)', 
+                      'descending': 'Descending: Boxes 100, 99, 98, 97... (Worker 2)',
                       'middle_up': 'Middle Up: Boxes 50, 51, 52, 53... (Worker 3)',
                       'middle_down': 'Middle Down: Boxes 49, 48, 47, 46... (Worker 4)'
                     };
 
                     return (
                       <div className="flex items-center space-x-2 text-sm text-gray-700">
-                        <div 
+                        <div
                           className="w-4 h-4 rounded-full border"
                           style={{ backgroundColor: assignForm.assignedColor }}
                         />
@@ -1072,7 +1072,7 @@ export default function ManagerDashboard() {
             <div className="border border-gray-200 rounded-lg p-3">
               <Label className="text-sm font-medium">Preview</Label>
               <div className="flex items-center space-x-2 mt-2">
-                <div 
+                <div
                   className="w-4 h-4 rounded-full border"
                   style={{ backgroundColor: assignForm.assignedColor }}
                 ></div>
@@ -1104,7 +1104,7 @@ export default function ManagerDashboard() {
 
       {/* Extra Items Modal */}
       {extraItemsJobId && (
-        <ExtraItemsModal 
+        <ExtraItemsModal
           isOpen={isExtraItemsModalOpen}
           onClose={() => {
             setIsExtraItemsModalOpen(false);
