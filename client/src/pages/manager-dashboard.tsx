@@ -64,9 +64,8 @@ function ExtraItemsAndBoxesButtons({
       {/* Extra Items Button */}
       <Button
         variant="outline"
-        size="sm"
         onClick={onExtraItemsClick}
-        className="w-full px-2"
+        className="w-full h-9 px-2"
         data-testid={`button-extra-items-${jobId}`}
       >
         <Package className="mr-1 h-4 w-4" />
@@ -76,9 +75,8 @@ function ExtraItemsAndBoxesButtons({
       {/* Boxes Complete Button */}
       <Button
         variant="outline"
-        size="sm"
         onClick={onBoxesCompleteClick}
-        className="w-full px-2"
+        className="w-full h-9 px-2"
         data-testid={`button-boxes-complete-${jobId}`}
       >
         {completedBoxes}/{totalBoxes} Boxes
