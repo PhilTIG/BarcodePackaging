@@ -197,40 +197,67 @@ export default function Settings() {
     }
   };
 
-  // New handler for deleting all job data
+  // New handler for deleting all job data with enhanced safety
   const handleDeleteAllJobs = async () => {
-    if (window.confirm("Are you sure you want to delete all job data? This action cannot be undone.")) {
-      try {
-        const response = await fetch('/api/jobs/all-data', {
-          method: 'DELETE',
-          credentials: 'include',
-        });
+    // First confirmation
+    const firstConfirm = window.confirm(
+      "⚠️ DANGER: This will permanently delete ALL job data including:\n" +
+      "• All jobs and scan data\n" +
+      "• CheckCount QA records\n" +
+      "• Worker assignments\n" +
+      "• Box requirements\n\n" +
+      "User accounts and settings will be preserved.\n\n" +
+      "Do you want to continue?"
+    );
 
-        if (!response.ok) {
-          throw new Error(`Failed to delete job data: ${response.statusText}`);
-        }
+    if (!firstConfirm) return;
 
-        const result = await response.json();
-        
+    // Second confirmation requiring text input
+    const confirmText = window.prompt(
+      "⚠️ FINAL CONFIRMATION\n\n" +
+      "Type 'DELETE' (in capital letters) to confirm this destructive action:"
+    );
+
+    if (confirmText !== "DELETE") {
+      if (confirmText !== null) { // User didn't cancel
         toast({
-          title: "Job data deleted successfully",
-          description: result.message,
-          variant: "destructive",
-        });
-
-        // Refresh the page to clear any cached data
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-
-      } catch (error: any) {
-        console.error('Error deleting job data:', error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to delete job data",
-          variant: "destructive",
+          title: "Deletion cancelled",
+          description: "You must type 'DELETE' exactly to confirm.",
+          variant: "default",
         });
       }
+      return;
+    }
+
+    try {
+      const response = await apiRequest('DELETE', '/api/jobs/all-data');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to delete job data: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      toast({
+        title: "Job data deleted successfully",
+        description: result.message,
+        variant: "destructive",
+      });
+
+      // Invalidate queries and refresh the page after a delay
+      queryClient.invalidateQueries();
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('Error deleting job data:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete job data",
+        variant: "destructive",
+      });
     }
   };
 
