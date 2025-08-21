@@ -198,15 +198,39 @@ export default function Settings() {
   };
 
   // New handler for deleting all job data
-  const handleDeleteAllJobs = () => {
+  const handleDeleteAllJobs = async () => {
     if (window.confirm("Are you sure you want to delete all job data? This action cannot be undone.")) {
-      // Placeholder for the actual API call to delete all jobs
-      console.log("Deleting all job data...");
-      toast({
-        title: "All job data deleted",
-        description: "All job records have been removed.",
-        variant: "destructive",
-      });
+      try {
+        const response = await fetch('/api/jobs/all-data', {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete job data: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        
+        toast({
+          title: "Job data deleted successfully",
+          description: result.message,
+          variant: "destructive",
+        });
+
+        // Refresh the page to clear any cached data
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+
+      } catch (error: any) {
+        console.error('Error deleting job data:', error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to delete job data",
+          variant: "destructive",
+        });
+      }
     }
   };
 

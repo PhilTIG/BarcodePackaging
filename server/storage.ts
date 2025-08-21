@@ -385,6 +385,29 @@ export class DatabaseStorage implements IStorage {
             .where(eq(scanEvents.sessionId, session.id));
         }
 
+        // Delete CheckCount data (must be done before check sessions)
+        const jobCheckSessions = await tx
+          .select({ id: checkSessions.id })
+          .from(checkSessions)
+          .where(eq(checkSessions.jobId, jobId));
+
+        for (const checkSession of jobCheckSessions) {
+          // Delete check results first (references check sessions)
+          await tx
+            .delete(checkResults)
+            .where(eq(checkResults.checkSessionId, checkSession.id));
+          
+          // Delete check events (references check sessions)
+          await tx
+            .delete(checkEvents)
+            .where(eq(checkEvents.checkSessionId, checkSession.id));
+        }
+
+        // Delete check sessions
+        await tx
+          .delete(checkSessions)
+          .where(eq(checkSessions.jobId, jobId));
+
         // Delete scan sessions
         await tx
           .delete(scanSessions)
@@ -395,7 +418,17 @@ export class DatabaseStorage implements IStorage {
           .delete(jobAssignments)
           .where(eq(jobAssignments.jobId, jobId));
 
-        // Delete products
+        // Delete worker box assignments
+        await tx
+          .delete(workerBoxAssignments)
+          .where(eq(workerBoxAssignments.jobId, jobId));
+
+        // Delete box requirements (modern scanning system)
+        await tx
+          .delete(boxRequirements)
+          .where(eq(boxRequirements.jobId, jobId));
+
+        // Delete products (legacy table)
         await tx
           .delete(products)
           .where(eq(products.jobId, jobId));
@@ -1720,32 +1753,43 @@ export class DatabaseStorage implements IStorage {
       const jobCount = await this.db.select().from(jobs);
 
       // Delete in correct order due to foreign key constraints
-      // 1. Delete scan events first (references scan sessions)
+      
+      // 1. Delete CheckCount results first (references check sessions and box requirements)
+      await this.db.delete(checkResults);
+
+      // 2. Delete CheckCount events (references check sessions)
+      await this.db.delete(checkEvents);
+
+      // 3. Delete CheckCount sessions (references jobs)
+      await this.db.delete(checkSessions);
+
+      // 4. Delete scan events (references scan sessions)
       await this.db.delete(scanEvents);
 
-      // PHASE 4: session snapshots deletion removed (table no longer exists)
-
-      // 3. Delete scan sessions (references jobs and users)
+      // 5. Delete scan sessions (references jobs and users)
       await this.db.delete(scanSessions);
 
-      // 4. Delete worker box assignments (references jobs and users)
+      // 6. Delete worker box assignments (references jobs and users)
       await this.db.delete(workerBoxAssignments);
 
-      // 5. Delete job assignments (references jobs and users)
+      // 7. Delete job assignments (references jobs and users)
       await this.db.delete(jobAssignments);
 
-      // 6. Delete products (references jobs)
+      // 8. Delete box requirements (modern scanning system, references jobs)
+      await this.db.delete(boxRequirements);
+
+      // 9. Delete products (legacy table, references jobs)
       await this.db.delete(products);
 
-      // 7. Delete job archives
+      // 10. Delete job archives
       await this.db.delete(jobArchives);
 
-      // 8. Finally delete jobs (parent table)
+      // 11. Finally delete jobs (parent table)
       await this.db.delete(jobs);
 
       return {
         deletedJobs: jobCount.length,
-        message: `Successfully deleted ${jobCount.length} jobs and all associated data. User accounts and settings preserved.`
+        message: `Successfully deleted ${jobCount.length} jobs and all associated data including CheckCount QA records. User accounts, job types, and settings preserved.`
       };
     } catch (error) {
       console.error('Error deleting all job data:', error);
