@@ -735,7 +735,7 @@ export default function ManagerDashboard() {
                 ))}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(jobsData as any)?.jobs?.map((job: any) => {
                   const progressPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
                   const isCompleted = progressPercentage === 100;
