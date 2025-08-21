@@ -588,66 +588,68 @@ export default function ManagerDashboard() {
               </CardHeader>
               <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Job Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Enter job name" data-testid="input-job-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="jobTypeId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Job Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Form Fields Row - Responsive */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Job Name</FormLabel>
                         <FormControl>
-                          <SelectTrigger data-testid="select-job-type">
-                            <SelectValue placeholder="Select a job type..." />
-                          </SelectTrigger>
+                          <Input {...field} placeholder="Enter job name" data-testid="input-job-name" />
                         </FormControl>
-                        <SelectContent>
-                          {(jobTypesData as any)?.jobTypes?.map((jobType: any) => (
-                            <SelectItem key={jobType.id} value={jobType.id}>
-                              {jobType.name} ({jobType.benchmarkItemsPerHour} items/hr)
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description (Optional)</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Enter job description" data-testid="input-job-description" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="jobTypeId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Job Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-job-type">
+                              <SelectValue placeholder="Select a job type..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(jobTypesData as any)?.jobTypes?.map((jobType: any) => (
+                              <SelectItem key={jobType.id} value={jobType.id}>
+                                {jobType.name} ({jobType.benchmarkItemsPerHour} items/hr)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                    <div className="bg-primary-50 w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <CloudUpload className="text-primary-600 text-sm" />
-                    </div>
-                    <p className="text-gray-600 text-sm mb-2">Drop CSV file here or click to browse</p>
+                  <div className="md:col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description (Optional)</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter job description" data-testid="input-job-description" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* File Selection and CSV Format Requirements Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
                     <input
                       type="file"
                       accept=".csv"
@@ -661,44 +663,48 @@ export default function ManagerDashboard() {
                     />
                     <Button
                       type="button"
-                      size="sm"
+                      variant="outline"
                       onClick={() => document.getElementById("csv-upload")?.click()}
                       data-testid="button-select-file"
+                      className="w-full md:w-auto"
                     >
+                      <CloudUpload className="mr-2 h-4 w-4" />
                       {selectedFile ? selectedFile.name : "Select File"}
                     </Button>
                     {selectedFile && (
-                      <p className="text-xs text-green-600 mt-1">
+                      <p className="text-xs text-green-600">
                         ✓ {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
                       </p>
                     )}
                   </div>
 
                   {/* CSV Format Guide - Collapsible */}
-                  <Collapsible defaultOpen={false}>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <CollapsibleTrigger className="w-full">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-blue-900">CSV Format Requirements</h4>
-                          <ChevronDown className="h-4 w-4 text-blue-600 transition-transform duration-200 data-[state=open]:rotate-180" />
-                        </div>
-                      </CollapsibleTrigger>
+                  <div>
+                    <Collapsible defaultOpen={false}>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <CollapsibleTrigger className="w-full">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-blue-900">CSV Format Requirements</h4>
+                            <ChevronDown className="h-4 w-4 text-blue-600 transition-transform duration-200 data-[state=open]:rotate-180" />
+                          </div>
+                        </CollapsibleTrigger>
 
-                      <CollapsibleContent className="mt-2">
-                        <p className="text-blue-800 text-sm mb-3">Your CSV file must contain these exact column headers:</p>
-                        <div className="bg-white border border-blue-200 rounded text-xs p-2 font-mono mb-3">
-                          BarCode,Product Name,Qty,CustomName,Group
-                        </div>
-                        <div className="text-blue-700 text-sm space-y-1">
-                          <p><strong>BarCode:</strong> Product barcode (required)</p>
-                          <p><strong>Product Name:</strong> Name of the product (required)</p>
-                          <p><strong>Qty:</strong> Quantity as a positive number (required)</p>
-                          <p><strong>CustomName:</strong> Customer destination name (required)</p>
-                          <p><strong>Group:</strong> Product grouping (optional)</p>
-                        </div>
-                      </CollapsibleContent>
-                    </div>
-                  </Collapsible>
+                        <CollapsibleContent className="mt-2">
+                          <p className="text-blue-800 text-sm mb-3">Your CSV file must contain these exact column headers:</p>
+                          <div className="bg-white border border-blue-200 rounded text-xs p-2 font-mono mb-3">
+                            BarCode,Product Name,Qty,CustomName,Group
+                          </div>
+                          <div className="text-blue-700 text-sm space-y-1">
+                            <p><strong>BarCode:</strong> Product barcode (required)</p>
+                            <p><strong>Product Name:</strong> Name of the product (required)</p>
+                            <p><strong>Qty:</strong> Quantity as a positive number (required)</p>
+                            <p><strong>CustomName:</strong> Customer destination name (required)</p>
+                            <p><strong>Group:</strong> Product grouping (optional)</p>
+                          </div>
+                        </CollapsibleContent>
+                      </div>
+                    </Collapsible>
+                  </div>
                 </div>
 
 
