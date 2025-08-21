@@ -696,21 +696,23 @@ export default function ManagerDashboard() {
                             setSelectedFile(file || null);
                           }}
                         />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => document.getElementById("csv-upload")?.click()}
-                          data-testid="button-select-file"
-                          className="w-full md:w-auto"
-                        >
-                          <CloudUpload className="mr-2 h-4 w-4" />
-                          {selectedFile ? selectedFile.name : "Select File"}
-                        </Button>
-                        {selectedFile && (
-                          <p className="text-xs text-green-600">
-                            ✓ {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
-                          </p>
-                        )}
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById("csv-upload")?.click()}
+                            data-testid="button-select-file"
+                            className="w-full md:w-auto"
+                          >
+                            <CloudUpload className="mr-2 h-4 w-4" />
+                            {selectedFile ? selectedFile.name : "Select File"}
+                          </Button>
+                          {selectedFile && (
+                            <p className="text-xs text-green-600 flex-1 ml-1">
+                              ✓ {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       {/* CSV Format Guide - Collapsible */}
