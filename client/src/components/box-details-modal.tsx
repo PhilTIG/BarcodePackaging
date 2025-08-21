@@ -67,23 +67,16 @@ export function BoxDetailsModal({
     enabled: isOpen && boxNumber !== null
   });
 
-  // Fetch workers to get their names
-  const { data: workersResponse } = useQuery({
-    queryKey: ["/api/users?role=worker"],
-    enabled: isOpen && boxNumber !== null
-  });
-
   if (!isOpen || boxNumber === null) return null;
 
   // Filter box requirements for this specific box number
-  const boxRequirementsData = boxRequirementsResponse as { boxRequirements: BoxRequirement[] } | undefined;
+  const boxRequirementsData = boxRequirementsResponse as { boxRequirements: BoxRequirement[], workers: Record<string, { id: string, name: string, staffId: string }> } | undefined;
   const allBoxRequirements: BoxRequirement[] = boxRequirementsData?.boxRequirements || [];
   const boxRequirements = allBoxRequirements.filter((req: BoxRequirement) => req.boxNumber === boxNumber);
   
-  // Get workers data for name mapping
-  const workersData = workersResponse as { workers: Worker[] } | undefined;
-  const workers: Worker[] = workersData?.workers || [];
-  const workerMap = new Map(workers.map(worker => [worker.id, worker]));
+  // Get workers data for name mapping from the box requirements response
+  const workersData = boxRequirementsData?.workers || {};
+  const workerMap = new Map(Object.entries(workersData).map(([id, worker]) => [id, worker]));
   
   // Calculate overall completion percentage
   const completionPercentage = totalQty > 0 ? Math.round((scannedQty / totalQty) * 100) : 0;

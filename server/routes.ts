@@ -893,7 +893,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/jobs/:id/box-requirements', requireAuth, async (req, res) => {
     try {
       const boxRequirements = await storage.getBoxRequirementsByJobId(req.params.id);
-      res.json({ boxRequirements });
+      
+      // Get unique worker IDs from box requirements
+      const workerIds = new Set<string>();
+      boxRequirements.forEach(req => {
+        if (req.lastWorkerUserId) {
+          workerIds.add(req.lastWorkerUserId);
+        }
+      });
+
+      // Fetch worker details for those IDs
+      const workers = new Map();
+      if (workerIds.size > 0) {
+        const workerList = await Promise.all(
+          Array.from(workerIds).map(id => storage.getUserById(id))
+        );
+        workerList.forEach(worker => {
+          if (worker) {
+            workers.set(worker.id, {
+              id: worker.id,
+              name: worker.name,
+              staffId: worker.staffId
+            });
+          }
+        });
+      }
+
+      res.json({ boxRequirements, workers: Object.fromEntries(workers) });
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch box requirements' });
     }
