@@ -916,7 +916,10 @@ export default function WorkerScanner() {
                       onClick={() => undoMutation.mutate(5)}
                       disabled={undoMutation.isPending || (jobPerformanceData?.performance?.totalScans || 0) < 5}
                       data-testid="button-bulk-undo"
-                    ></old_str>
+                    >
+                      <RotateCcw className="mr-1 h-3 w-3" />
+                      Bulk Undo
+                    </Button></old_str>
                       <RotateCcw className="mr-1 h-3 w-3" />
                       Bulk Undo
                     </Button>
