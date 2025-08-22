@@ -428,6 +428,9 @@ export default function Settings() {
                 <p className="text-sm text-gray-600">System configuration and user management</p>
               </div>
             </div>
+            <div className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-medium">
+              {user.staffId}
+            </div>
           </div>
         </div>
       </header>

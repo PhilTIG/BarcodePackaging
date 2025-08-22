@@ -45,6 +45,7 @@ interface MobileScannerInterfaceProps {
   runtimeSingleBoxMode?: boolean;
   onRuntimeToggle?: (enabled: boolean) => void;
   onLogout?: () => void;
+  userStaffId: string;
 }
 
 export function MobileScannerInterface({
@@ -65,7 +66,8 @@ export function MobileScannerInterface({
   scanResult = null,
   runtimeSingleBoxMode = false,
   onRuntimeToggle,
-  onLogout
+  onLogout,
+  userStaffId,
 }: MobileScannerInterfaceProps) {
   const [, setLocation] = useLocation();
   const { preferences, updatePreference } = useUserPreferences();
@@ -132,20 +134,29 @@ export function MobileScannerInterface({
               <p className="text-sm text-gray-600">Efficient barcode scanning for customer order sorting</p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">Single Box</span>
-              <Switch
-                checked={runtimeSingleBoxMode}
-                onCheckedChange={handleSingleBoxToggle}
-                data-testid="single-box-toggle"
-              />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600">Box</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={runtimeSingleBoxMode}
+                  onChange={(e) => onRuntimeToggle(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              </label>
             </div>
+
+            <div className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-medium">
+              {userStaffId}
+            </div>
+
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setLocation('/settings')}
+              onClick={onSwitchSession}
               data-testid="button-settings"
             >
               <Settings className="w-4 h-4" />
@@ -177,7 +188,7 @@ export function MobileScannerInterface({
             <Undo className="w-4 h-4 mr-1" />
             Undo
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -224,7 +235,7 @@ export function MobileScannerInterface({
               // Determine which scan was most recent by comparing timestamps
               const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
               const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
-              
+
               // Show most recent scan result
               if (scanResult && scanResultTime >= lastScanTime) {
                 return scanResult.isExtraItem ? 'EXTRA' : scanResult.boxNumber;
@@ -250,7 +261,7 @@ export function MobileScannerInterface({
               // Determine which scan was most recent by comparing timestamps
               const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
               const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
-              
+
               // Show most recent scan (successful or extra item)
               if (scanResult && scanResultTime >= lastScanTime) {
                 return scanResult.isExtraItem ? 'Extra Item' : scanResult.customerName;
@@ -261,12 +272,12 @@ export function MobileScannerInterface({
               }
             })()}
           </div>
-          
+
           {(() => {
             // Determine which scan was most recent by comparing timestamps
             const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
             const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
-            
+
             if (scanResult && scanResultTime >= lastScanTime) {
               // Show scanResult (extra item) product name
               return (
@@ -299,7 +310,7 @@ export function MobileScannerInterface({
           // Determine which scan was most recent by comparing timestamps
           const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
           const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
-          
+
           // Show progress based on most recent scan
           if (scanResult && scanResult.isExtraItem && scanResultTime >= lastScanTime) {
             // Extra item - show orange message
@@ -337,14 +348,14 @@ export function MobileScannerInterface({
             </div>
             <div className="text-sm text-blue-700">Total Scans</div>
           </div>
-          
+
           <div>
             <div className="text-lg font-bold text-blue-900" data-testid="stat-scans-per-hour">
               {scanStats.scansPerHour}
             </div>
             <div className="text-sm text-blue-700">Per Hour</div>
           </div>
-          
+
           <div>
             <div className="text-lg font-bold text-blue-900" data-testid="stat-accuracy">
               {scanStats.accuracy}%
