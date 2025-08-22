@@ -401,8 +401,8 @@ export default function ManagerDashboard() {
         jobName={extraItemsModal.jobName}
       />
 
-      {/* Error Dialog */}
-      <ErrorDialog />
+      {/* Error Dialog - Remove this as it's causing crashes without proper props */}
+      {/* <ErrorDialog /> */}
     </div>
   );
 }
