@@ -910,6 +910,7 @@ export default function WorkerScanner() {
                       <Undo className="mr-1 h-3 w-3" />
                       Undo
                     </Button>
+                    {/* Best not to bulk undo as it is too dangerous
                     <Button
                       variant="outline"
                       size="sm"
@@ -920,6 +921,7 @@ export default function WorkerScanner() {
                       <RotateCcw className="mr-1 h-3 w-3" />
                       Bulk Undo
                     </Button>
+                    */}
                     <Button
                       variant="outline"
                       size="sm"
