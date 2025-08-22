@@ -5,6 +5,7 @@ import { Lock } from "lucide-react";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useBoxHighlighting } from "@/hooks/use-box-highlighting";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { useAuth } from "@/hooks/use-auth";
 import { BoxDetailsModal } from "./box-details-modal";
 import { useQuery } from "@tanstack/react-query";
 
@@ -47,21 +48,30 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
     workerMode: !supervisorView // Workers only see their last scan, supervisors see all workers
   });
 
-  // WebSocket handler for supervisor view real-time highlighting
+  // Get current user for worker filtering
+  const { user } = useAuth();
+
+  // WebSocket handler for real-time highlighting
   const handleWebSocketUpdate = (boxNumber: number, workerId: string, workerColor?: string, workerStaffId?: string) => {
     console.log(`[CustomerBoxGrid] WebSocket scan update: Box ${boxNumber}, Worker ${workerId}`, {
       workerColor, 
-      workerStaffId
+      workerStaffId,
+      supervisorView,
+      currentUser: user?.id
     });
     
     if (supervisorView && workerColor && workerStaffId) {
-      // Trigger real-time highlighting for supervisors
+      // Managers/Supervisors: Show all worker colors
+      updateBoxHighlighting(boxNumber, workerId, workerColor, workerStaffId);
+    } else if (!supervisorView && workerColor && workerStaffId && workerId === user?.id) {
+      // Workers: Only show their own color background
       updateBoxHighlighting(boxNumber, workerId, workerColor, workerStaffId);
     }
+    // Note: All numerical updates (box counts, percentages) happen via React Query invalidation
   };
 
-  // Connect to WebSocket only for supervisor view
-  useWebSocket(supervisorView ? jobId : undefined, supervisorView ? handleWebSocketUpdate : undefined);
+  // Connect WebSocket for all views (workers need numerical updates, supervisors need highlighting)
+  useWebSocket(jobId, handleWebSocketUpdate);
 
   // Query for check sessions to show completion status
   const { data: checkSessionsData } = useQuery({
@@ -69,7 +79,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
     enabled: !!jobId,
     refetchInterval: 10000, // Refresh every 10 seconds
   });
-  const checkSessions = checkSessionsData?.sessions || [];
+  const checkSessions = (checkSessionsData as any)?.sessions || [];
 
   // Function to get check status for a box
   const getCheckStatus = (boxNumber: number): 'completed' | 'rejected' | null => {
