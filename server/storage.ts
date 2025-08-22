@@ -1495,7 +1495,7 @@ export class DatabaseStorage implements IStorage {
 
   /**
    * Find the next target box for a scanned item based on worker allocation pattern
-   * Logic: Find lowest numbered box that has this item in requirement list AND still needs more of this item
+   * Logic: Find the appropriate box based on worker pattern and current progress
    */
   async findNextTargetBox(barCode: string, jobId: string, workerId: string): Promise<number | null> {
     // PHASE 3: Get worker assignment pattern from job_assignments (primary source)
@@ -1537,33 +1537,44 @@ export class DatabaseStorage implements IStorage {
     }
 
     const boxNumbers = availableBoxes.map((box: BoxRequirement) => box.boxNumber);
+    console.log(`[Worker Pattern Debug] Worker ${workerId} (${workerPattern}) - Available boxes for barcode ${barCode}: [${boxNumbers.join(', ')}]`);
 
     // Apply worker allocation pattern to find next box
+    let targetBox: number;
+    
     switch (workerPattern) {
       case 'ascending':
-        // Worker 1: Find lowest numbered box
-        return Math.min(...boxNumbers);
+        // Worker with ascending pattern: Always pick the lowest numbered available box
+        targetBox = Math.min(...boxNumbers);
+        break;
 
       case 'descending':
-        // Worker 2: Find highest numbered box
-        return Math.max(...boxNumbers);
+        // Worker with descending pattern: Always pick the highest numbered available box
+        targetBox = Math.max(...boxNumbers);
+        break;
 
       case 'middle_up':
-        // Worker 3: Find middle or next higher box
+        // Worker with middle_up pattern: Start from middle, work up
         const sortedAsc = [...boxNumbers].sort((a, b) => a - b);
-        const middleIndex = Math.floor(sortedAsc.length / 2);
-        return sortedAsc[middleIndex];
+        const middleUpIndex = Math.floor(sortedAsc.length / 2);
+        targetBox = sortedAsc[middleUpIndex];
+        break;
 
       case 'middle_down':
-        // Worker 4: Find middle or next lower box  
+        // Worker with middle_down pattern: Start from middle, work down
         const sortedDesc = [...boxNumbers].sort((a, b) => b - a);
         const middleDownIndex = Math.floor(sortedDesc.length / 2);
-        return sortedDesc[middleDownIndex];
+        targetBox = sortedDesc[middleDownIndex];
+        break;
 
       default:
         // Fallback to ascending
-        return Math.min(...boxNumbers);
+        targetBox = Math.min(...boxNumbers);
+        break;
     }
+
+    console.log(`[Worker Pattern Debug] Worker ${workerId} (${workerPattern}) selected box ${targetBox} from available boxes [${boxNumbers.join(', ')}]`);
+    return targetBox;
   }
 
   /**
