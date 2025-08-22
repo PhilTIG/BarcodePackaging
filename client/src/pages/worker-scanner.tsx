@@ -16,63 +16,6 @@ import { BarcodeScanner } from "@/components/barcode-scanner";
 import { MobileScannerInterface } from "@/components/mobile-scanner-interface";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
-// JobProgressCard component for consistent progress display in job selection
-function JobProgressCard({ assignment, onNavigate }: { assignment: any; onNavigate: (path: string) => void }) {
-  const job = assignment.job;
-  
-  // Use consistent progress endpoint with 10-second refresh interval
-  const { data: progressData } = useQuery({
-    queryKey: [`/api/jobs/${job?.id}/progress`],
-    enabled: !!job?.id,
-    refetchInterval: 10000, // 10-second polling for consistency
-  });
-
-  // Extract consistent progress data
-  const progress = (progressData as any)?.progress;
-  const completionPercentage = progress?.completionPercentage || 0;
-  const totalItems = progress?.totalItems || job?.totalProducts || 0;
-  const scannedItems = progress?.scannedItems || job?.completedItems || 0;
-
-  return (
-    <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-      <CardContent className="p-6">
-        <div
-          className="flex items-center justify-between"
-          onClick={() => onNavigate(`/scanner/${assignment.jobId}`)}
-        >
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <div
-                className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                style={{ backgroundColor: assignment.assignedColor }}
-              />
-              <h3 className="text-lg font-semibold text-gray-900">
-                {job?.name || 'Loading...'}
-              </h3>
-            </div>
-            {job && (
-              <>
-                <p className="text-sm text-gray-600 mb-2">
-                  {totalItems} total items • {completionPercentage}% complete
-                </p>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${completionPercentage}%` }}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-          <Button size="sm">
-            Start Working
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function WorkerScanner() {
   const { jobId } = useParams();
   const [, setLocation] = useLocation();
@@ -660,7 +603,47 @@ export default function WorkerScanner() {
             <div className="max-w-2xl mx-auto">
               <div className="grid gap-4">
                 {assignments.map((assignment: any) => {
-                  return <JobProgressCard key={assignment.id} assignment={assignment} onNavigate={setLocation} />;
+                  const job = assignment.job;
+                  const completionPercentage = job ? Math.round((job.completedItems / job.totalProducts) * 100) : 0;
+
+                  return (
+                    <Card key={assignment.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+                      <CardContent className="p-6">
+                        <div
+                          className="flex items-center justify-between"
+                          onClick={() => setLocation(`/scanner/${assignment.jobId}`)}
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div
+                                className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                                style={{ backgroundColor: assignment.assignedColor }}
+                              />
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {job?.name || 'Loading...'}
+                              </h3>
+                            </div>
+                            {job && (
+                              <>
+                                <p className="text-sm text-gray-600 mb-2">
+                                  {job.totalProducts} total items • {completionPercentage}% complete
+                                </p>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                                    style={{ width: `${completionPercentage}%` }}
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <Button size="sm">
+                            Start Working
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
                 })}
               </div>
             </div>
