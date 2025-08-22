@@ -475,9 +475,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/jobs', requireAuth, async (req, res) => {
+  app.get('/api/jobs', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const jobs = await storage.getActiveJobs();
+      let jobs: any[];
+      
+      // Apply job visibility filtering based on user role
+      if (req.user!.role === 'manager') {
+        // Managers see all jobs (including locked ones)
+        jobs = await storage.getActiveJobs();
+      } else if (req.user!.role === 'supervisor') {
+        // Supervisors cannot see locked jobs
+        jobs = await storage.getVisibleJobsForSupervisors();
+      } else if (req.user!.role === 'worker') {
+        // Workers cannot see locked jobs
+        jobs = await storage.getVisibleJobsForWorkers();
+      } else {
+        jobs = [];
+      }
       
       // Fetch assignments for each job
       const jobsWithAssignments = await Promise.all(
@@ -598,24 +612,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update job active status for scanning control
-  app.patch('/api/jobs/:id/active', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+  // Update job active status for scanning control (includes job locking)
+  app.patch('/api/jobs/:id/active', requireAuth, requireRole(['manager']), async (req, res) => {
     try {
       const { isActive } = req.body;
-      const job = await storage.updateJobActiveStatus(req.params.id, isActive);
+      const jobId = req.params.id;
       
+      // Get job before updating to check completion status
+      const jobBefore = await storage.getJobById(jobId);
+      if (!jobBefore) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Update the job status
+      const job = await storage.updateJobActiveStatus(jobId, isActive);
       if (!job) {
         return res.status(404).json({ message: 'Job not found' });
       }
 
-      // Broadcast scanning status change to all connected clients
-      broadcastToJob(job.id, {
-        type: 'job_scanning_update',
-        data: { jobId: job.id, isActive }
-      });
+      // Determine if this is a locking/unlocking action for completed jobs
+      const isCompleted = job.status === 'completed';
+      const isLocking = isCompleted && !isActive; // Locking: completed + isActive=false
+      const isUnlocking = isCompleted && isActive; // Unlocking: completed + isActive=true
 
-      res.json({ job });
+      if (isLocking) {
+        // Job is being locked - terminate worker sessions immediately
+        console.log(`[Job Locking] Job ${jobId} is being locked - terminating worker sessions`);
+        
+        // Get all assignments for this job to notify assigned workers
+        const assignments = await storage.getJobAssignmentsWithUsers(jobId);
+        
+        // Send termination messages to all assigned workers
+        assignments.forEach((assignment) => {
+          broadcastToUser(assignment.userId, {
+            type: 'job_locked_session_terminated',
+            data: { 
+              jobId,
+              jobName: job.name,
+              message: 'Job has been locked by a manager. Your scanning session has been terminated.',
+              reason: 'job_locked'
+            }
+          });
+        });
+
+        // Broadcast job locked notification to all supervisors and managers
+        broadcastToJob(jobId, {
+          type: 'job_locked',
+          data: { 
+            jobId, 
+            jobName: job.name,
+            isActive: false,
+            message: 'Job has been locked and is no longer accessible to workers and supervisors'
+          }
+        });
+        
+        console.log(`[Job Locking] Successfully locked job ${jobId}, notified ${assignments.length} workers`);
+        
+      } else if (isUnlocking) {
+        // Job is being unlocked
+        console.log(`[Job Unlocking] Job ${jobId} is being unlocked`);
+        
+        broadcastToJob(jobId, {
+          type: 'job_unlocked',
+          data: { 
+            jobId, 
+            jobName: job.name,
+            isActive: true,
+            message: 'Job has been unlocked and is now accessible'
+          }
+        });
+        
+        console.log(`[Job Unlocking] Successfully unlocked job ${jobId}`);
+        
+      } else {
+        // Regular scanning control (not locking/unlocking)
+        broadcastToJob(job.id, {
+          type: 'job_scanning_update',
+          data: { jobId: job.id, isActive }
+        });
+      }
+
+      res.json({ 
+        job,
+        action: isLocking ? 'locked' : isUnlocking ? 'unlocked' : (isActive ? 'scanning_activated' : 'scanning_paused')
+      });
     } catch (error) {
+      console.error('Error updating job active status:', error);
       res.status(500).json({ message: 'Failed to update job scanning status' });
     }
   });
@@ -782,8 +864,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      // Filter out assignments with null jobs (deleted jobs)
-      const validAssignments = assignmentsWithJobs.filter(assignment => assignment.job !== null);
+      // Filter out assignments with null jobs (deleted jobs) and locked jobs (for workers)
+      let validAssignments = assignmentsWithJobs.filter(assignment => assignment.job !== null);
+      
+      // Workers cannot see locked jobs in their assignments
+      if (req.user!.role === 'worker') {
+        validAssignments = validAssignments.filter(assignment => {
+          const job = assignment.job;
+          // Show job if it's not completed, or if it's completed but not locked (isActive = true)
+          return job && (job.status !== 'completed' || job.isActive === true);
+        });
+      }
       
       res.json({ assignments: validAssignments });
     } catch (error) {

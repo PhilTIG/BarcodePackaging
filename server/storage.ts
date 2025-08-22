@@ -53,7 +53,7 @@ import {
   type InsertCheckResult
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, or, ne, desc, sql, inArray } from "drizzle-orm";
 
 /**
  * Utility function to normalize barcodes by converting scientific notation to full numeric strings
@@ -90,6 +90,9 @@ export interface IStorage {
   createJob(job: InsertJob): Promise<Job>;
   getJobById(id: string): Promise<Job | undefined>;
   getAllJobs(): Promise<Job[]>;
+  getActiveJobs(): Promise<Job[]>;
+  getVisibleJobsForWorkers(): Promise<Job[]>;
+  getVisibleJobsForSupervisors(): Promise<Job[]>;
   updateJobStatus(id: string, status: string): Promise<Job | undefined>;
   updateJobActiveStatus(id: string, isActive: boolean): Promise<Job | undefined>;
   getJobProgress(id: string): Promise<any>;
@@ -280,6 +283,36 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(jobs)
       .where(eq(jobs.isArchived, false))
+      .orderBy(desc(jobs.createdAt));
+  }
+
+  // Get jobs visible to workers (exclude locked jobs)
+  async getVisibleJobsForWorkers(): Promise<Job[]> {
+    return await this.db
+      .select()
+      .from(jobs)
+      .where(and(
+        eq(jobs.isArchived, false),
+        or(
+          ne(jobs.status, 'completed'), // Not completed jobs are always visible
+          eq(jobs.isActive, true) // Completed but unlocked jobs are visible
+        )
+      ))
+      .orderBy(desc(jobs.createdAt));
+  }
+
+  // Get jobs visible to supervisors (exclude locked jobs)  
+  async getVisibleJobsForSupervisors(): Promise<Job[]> {
+    return await this.db
+      .select()
+      .from(jobs)
+      .where(and(
+        eq(jobs.isArchived, false),
+        or(
+          ne(jobs.status, 'completed'), // Not completed jobs are always visible
+          eq(jobs.isActive, true) // Completed but unlocked jobs are visible
+        )
+      ))
       .orderBy(desc(jobs.createdAt));
   }
 

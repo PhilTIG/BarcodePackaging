@@ -830,14 +830,20 @@ export default function ManagerDashboard() {
                             {job.status === "completed" ? "Completed" : job.status === "active" ? "In Progress" : "Pending"}
                           </Badge>
                           <Button
-                            variant={job.isActive ? "default" : "outline"}
+                            variant={
+                              job.status === "completed" 
+                                ? (job.isActive ? "default" : "outline") 
+                                : (job.isActive ? "default" : "outline")
+                            }
                             size="sm"
                             onClick={() => handleJobActiveToggle(job.id, !job.isActive)}
-                            disabled={job.status === "completed"}
                             className="h-6 px-2 text-xs font-medium"
                             data-testid={`button-toggle-scanning-${job.id}`}
                           >
-                            {job.isActive ? "Scanning Active" : "Scanning Paused"}
+                            {job.status === "completed" 
+                              ? (job.isActive ? "Lock Job" : "Locked") 
+                              : (job.isActive ? "Scanning Active" : "Scanning Paused")
+                            }
                           </Button>
                           <span className="text-sm text-gray-600">Created: {new Date(job.createdAt).toLocaleDateString()}</span>
                         </div>
@@ -862,19 +868,22 @@ export default function ManagerDashboard() {
                                 Remove Job
                               </Button>
                             ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="mt-1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleArchiveJob(job.id);
-                                }}
-                                data-testid={`button-archive-${job.id}`}
-                              >
-                                <Archive className="h-3 w-3 mr-1" />
-                                Archive
-                              </Button>
+                              // Archive button only shows for locked jobs (completed + isActive = false)
+                              job.status === "completed" && !job.isActive && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleArchiveJob(job.id);
+                                  }}
+                                  data-testid={`button-archive-${job.id}`}
+                                >
+                                  <Archive className="h-3 w-3 mr-1" />
+                                  Archive
+                                </Button>
+                              )
                             )}
                           </div>
                         </div>

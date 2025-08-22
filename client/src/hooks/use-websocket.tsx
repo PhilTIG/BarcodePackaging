@@ -197,6 +197,33 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
           console.log(`[CheckCount] Extra items: ${message.data.extraItemsCount || 0}`);
         }
         break;
+
+      case "job_locked":
+        // Job has been locked by a manager
+        console.log("[WebSocket] Job locked notification received:", message.data);
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/users/me/assignments"] });
+        break;
+
+      case "job_unlocked":
+        // Job has been unlocked by a manager
+        console.log("[WebSocket] Job unlocked notification received:", message.data);
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/users/me/assignments"] });
+        break;
+
+      case "job_locked_session_terminated":
+        // Worker session terminated due to job locking
+        console.log("[WebSocket] Session terminated - job locked:", message.data);
+        queryClient.invalidateQueries({ queryKey: ["/api/users/me/assignments"] });
+        
+        // Handle session termination (could redirect to worker selection or show notification)
+        if (typeof window !== 'undefined' && window.location.pathname.includes('/worker-scanner')) {
+          // If worker is currently in scanning interface, redirect them
+          console.log("[WebSocket] Redirecting worker due to job lock");
+          window.location.href = '/worker-selection';
+        }
+        break;
       
       default:
         console.log("[WebSocket] Unknown message type received:", message.type, message.data);
