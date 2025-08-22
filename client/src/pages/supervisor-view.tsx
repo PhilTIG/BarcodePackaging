@@ -12,6 +12,96 @@ import { PerformanceDashboard } from "@/components/performance-dashboard";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
 import { useEffect, useState, useCallback } from "react";
 
+// JobProgressCard component for consistent progress display
+function JobProgressCard({ job, onNavigate }: { job: any; onNavigate: (path: string) => void }) {
+  // Use consistent progress endpoint with 10-second refresh interval
+  const { data: progressData } = useQuery({
+    queryKey: [`/api/jobs/${job.id}/progress`],
+    enabled: !!job.id,
+    refetchInterval: 10000, // 10-second polling for consistency
+  });
+
+  // Extract consistent progress data
+  const progress = (progressData as any)?.progress;
+  const completionPercentage = progress?.completionPercentage || 0;
+  const totalItems = progress?.totalItems || job.totalProducts || 0;
+  const scannedItems = progress?.scannedItems || job.completedItems || 0;
+  const assignedWorkers = job.assignments || [];
+
+  return (
+    <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+      <CardContent className="p-6">
+        <div
+          className="flex items-center justify-between"
+          onClick={() => onNavigate(`/supervisor/${job.id}`)}
+        >
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {job.name}
+                </h3>
+                <Badge
+                  variant={job.status === 'active' ? "default" : job.status === 'pending' ? "secondary" : "outline"}
+                  className="text-xs"
+                >
+                  {job.status}
+                </Badge>
+              </div>
+              <Badge
+                variant={completionPercentage === 100 ? "default" : "secondary"}
+                className="ml-2"
+              >
+                {completionPercentage}% Complete
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <p className="text-sm text-gray-600">Total Items</p>
+                <p className="text-lg font-semibold text-gray-900">{totalItems}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Assigned Workers</p>
+                <div className="flex items-center gap-1 mt-1">
+                  {assignedWorkers.slice(0, 3).map((assignment: any, index: number) => (
+                    <div
+                      key={assignment.id}
+                      className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
+                      style={{ backgroundColor: assignment.assignedColor }}
+                      title={assignment.assignee?.name}
+                    />
+                  ))}
+                  {assignedWorkers.length > 3 && (
+                    <span className="text-xs text-gray-500 ml-1">
+                      +{assignedWorkers.length - 3} more
+                    </span>
+                  )}
+                  {assignedWorkers.length === 0 && (
+                    <span className="text-sm text-gray-500">None assigned</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Progress</p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                  <div
+                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${completionPercentage}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <Button size="sm" className="ml-4">
+            Monitor
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SupervisorView() {
   const { jobId } = useParams();
   const [, setLocation] = useLocation();
@@ -30,11 +120,11 @@ export default function SupervisorView() {
     enabled: !!jobId && !!user,
   });
 
-  // Fetch job progress
+  // Fetch job progress using consistent endpoint
   const { data: progressData } = useQuery({
-    queryKey: ["/api/jobs", jobId, "progress"],
+    queryKey: [`/api/jobs/${jobId}/progress`],
     enabled: !!jobId && !!user,
-    refetchInterval: 10000, // Reduced from 5s to 10s for better performance
+    refetchInterval: 10000, // 10-second polling for consistency
   });
 
   // Connect to WebSocket for real-time updates 
@@ -147,81 +237,7 @@ export default function SupervisorView() {
             ) : (
               <div className="grid gap-4">
                 {visibleJobs.map((job: any) => {
-                  const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
-                  const assignedWorkers = job.assignments || [];
-
-                  return (
-                    <Card key={job.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-                      <CardContent className="p-6">
-                        <div
-                          className="flex items-center justify-between"
-                          onClick={() => setLocation(`/supervisor/${job.id}`)}
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                  {job.name}
-                                </h3>
-                                <Badge
-                                  variant={job.status === 'active' ? "default" : job.status === 'pending' ? "secondary" : "outline"}
-                                  className="text-xs"
-                                >
-                                  {job.status}
-                                </Badge>
-                              </div>
-                              <Badge
-                                variant={completionPercentage === 100 ? "default" : "secondary"}
-                                className="ml-2"
-                              >
-                                {completionPercentage}% Complete
-                              </Badge>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                              <div>
-                                <p className="text-sm text-gray-600">Total Items</p>
-                                <p className="text-lg font-semibold text-gray-900">{job.totalProducts}</p>
-                              </div>
-                              <div>
-                                <p className="text-sm text-gray-600">Assigned Workers</p>
-                                <div className="flex items-center gap-1 mt-1">
-                                  {assignedWorkers.slice(0, 3).map((assignment: any, index: number) => (
-                                    <div
-                                      key={assignment.id}
-                                      className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
-                                      style={{ backgroundColor: assignment.assignedColor }}
-                                      title={assignment.assignee?.name}
-                                    />
-                                  ))}
-                                  {assignedWorkers.length > 3 && (
-                                    <span className="text-xs text-gray-500 ml-1">
-                                      +{assignedWorkers.length - 3} more
-                                    </span>
-                                  )}
-                                  {assignedWorkers.length === 0 && (
-                                    <span className="text-sm text-gray-500">None assigned</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div>
-                                <p className="text-sm text-gray-600">Progress</p>
-                                <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                                  <div
-                                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                                    style={{ width: `${completionPercentage}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <Button size="sm" className="ml-4">
-                            Monitor
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
+                  return <JobProgressCard key={job.id} job={job} onNavigate={setLocation} />;
                 })}
               </div>
             )}

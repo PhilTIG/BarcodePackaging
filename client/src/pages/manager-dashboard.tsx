@@ -25,6 +25,191 @@ import { QASummaryPanel } from "@/components/qa-summary-panel";
 import { z } from "zod";
 import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPattern } from "../../../lib/worker-allocation";
 
+// JobCard component with consistent progress API
+function JobCard({ job }: { job: any }) {
+  // Use consistent progress endpoint with 10-second refresh interval
+  const { data: progressData } = useQuery({
+    queryKey: [`/api/jobs/${job.id}/progress`],
+    enabled: !!job.id,
+    refetchInterval: 10000, // 10-second polling for consistency
+  });
+
+  // Extract consistent progress data, fallback to job data
+  const progress = (progressData as any)?.progress;
+  const progressPercentage = progress?.completionPercentage || Math.round((job.completedItems / job.totalProducts) * 100);
+  const totalProducts = progress?.totalItems || job.totalProducts;
+  const totalCustomers = progress?.totalBoxes || job.totalCustomers;
+  const isCompleted = progressPercentage === 100;
+
+  return (
+    <div
+      className={`border border-gray-200 rounded-lg p-4 relative ${isCompleted ? 'bg-green-50 border-green-200' : ''}`}
+      data-testid={`job-card-${job.id}`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="font-medium text-gray-900">{job.name}</h3>
+          <p className="text-sm text-gray-600">
+            {totalProducts} products, {totalCustomers} boxes
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Badge
+            variant={
+              job.status === "completed"
+                ? "default"
+                : job.status === "active"
+                ? "secondary"
+                : "outline"
+            }
+          >
+            {job.status === "completed" ? "Completed" : job.status === "active" ? "In Progress" : "Pending"}
+          </Badge>
+          <Button
+            variant={job.isActive ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleJobActiveToggle(job.id, !job.isActive)}
+            disabled={job.status === "completed"}
+            className="h-6 px-2 text-xs font-medium"
+            data-testid={`button-toggle-scanning-${job.id}`}
+          >
+            {job.isActive ? "Scanning Active" : "Scanning Paused"}
+          </Button>
+          <span className="text-sm text-gray-600">Created: {new Date(job.createdAt).toLocaleDateString()}</span>
+        </div>
+      </div>
+
+      {/* Progress Bar with Percentage */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+          <span>Progress - {progressPercentage}% complete</span>
+          <div className="flex flex-col items-end">
+            {progressPercentage === 0 ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="mt-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemoveJob(job.id);
+                }}
+                data-testid={`button-remove-${job.id}`}
+              >
+                Remove Job
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleArchiveJob(job.id);
+                }}
+                data-testid={`button-archive-${job.id}`}
+              >
+                <Archive className="h-3 w-3 mr-1" />
+                Archive
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="rounded-md p-1 bg-gray-50">
+          <Progress value={progressPercentage} className="mb-2" />
+        </div>
+      </div>
+
+      {/* Assigned Workers Display with Allocation Patterns */}
+      {job.assignments && job.assignments.length > 0 && (
+        <div className="mb-4 mr-24">
+          <p className="text-sm text-gray-600 mb-2">Assigned Workers ({job.assignments.length}/4):</p>
+          <div className="flex flex-wrap gap-2">
+            {job.assignments.map((assignment: any, index: number) => {
+              const pattern = assignWorkerPattern(index);
+              const patternLabels = {
+                'ascending': '↗ Asc',
+                'descending': '↙ Desc',
+                'middle_up': '↑ Mid+',
+                'middle_down': '↓ Mid-'
+              };
+
+              return (
+                <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1 group">
+                  <div
+                    className="w-3 h-3 rounded-full border border-gray-300"
+                    style={{ backgroundColor: assignment.assignedColor || '#3B82F6' }}
+                    data-testid={`worker-color-${assignment.assignee.id}`}
+                  />
+                  <span className="text-sm text-gray-700 font-medium">
+                    {assignment.assignee.name}
+                  </span>
+                  <span className="text-xs text-gray-500 bg-white px-1 rounded">
+                    {patternLabels[pattern as keyof typeof patternLabels]}
+                  </span>
+                  <button
+                    onClick={() => handleUnassignWorker(job.id, assignment.assignee.id)}
+                    className="ml-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    data-testid={`unassign-${assignment.assignee.id}`}
+                    title="Unassign worker"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {job.assignments.length < 4 && (
+            <p className="text-xs text-gray-500 mt-1">
+              Can assign {4 - job.assignments.length} more worker(s) for optimal multi-worker coordination
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => setLocation(`/supervisor/${job.id}`)}
+          data-testid={`button-monitor-${job.id}`}
+        >
+          <Eye className="mr-1 h-4 w-4" />
+          Monitor
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setSelectedJobId(job.id);
+            setAssignDialogOpen(true);
+          }}
+          data-testid={`button-assign-${job.id}`}
+        >
+          <Users className="mr-1 h-4 w-4" />
+          Assign Workers
+        </Button>
+
+        <Button variant="outline" size="sm" data-testid={`button-export-${job.id}`}>
+          <Download className="mr-1 h-4 w-4" />
+          Export
+        </Button>
+
+        {/* Extra Items and Boxes buttons now inline with other action buttons */}
+        <ExtraItemsAndBoxesButtons jobId={job.id}
+          onExtraItemsClick={() => {
+            setExtraItemsJobId(job.id);
+            setIsExtraItemsModalOpen(true);
+          }}
+          onBoxesCompleteClick={() => {
+            setCompletedBoxesJobId(job.id);
+            setIsCompletedBoxesModalOpen(true);
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 const uploadFormSchema = z.object({
   name: z.string().min(1, "Job name is required"),
   jobTypeId: z.string().min(1, "Job type is required"),
@@ -44,17 +229,14 @@ function ExtraItemsAndBoxesButtons({
   onExtraItemsClick: () => void;
   onBoxesCompleteClick: () => void;
 }) {
-  // Connect to WebSocket for real-time updates (same as Job Monitoring)
-  const { isConnected } = useWebSocket(jobId);
-
-  // Use single /progress endpoint for consistent real-time data (same as Job Monitoring)
+  // Use consistent progress endpoint with 10-second refresh interval
   const { data: progressData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/progress`],
     enabled: !!jobId,
-    refetchInterval: 5000, // 5-second polling as requested
+    refetchInterval: 10000, // 10-second polling for consistency
   });
 
-  // Extract consistent data from progress endpoint (matches SupervisorView)
+  // Extract consistent data from progress endpoint
   const extraItemsCount = (progressData as any)?.progress?.extraItemsCount || 0;
   const completedBoxes = (progressData as any)?.progress?.completedBoxes || 0;
   const totalBoxes = (progressData as any)?.progress?.totalBoxes || 0;
@@ -96,11 +278,11 @@ function CompletedBoxesModal({
   onClose: () => void;
   jobId: string | null;
 }) {
-  // Use same real-time progress endpoint as Job Monitoring
+  // Use consistent progress endpoint with 10-second refresh interval
   const { data: progressData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/progress`],
     enabled: !!jobId && isOpen,
-    refetchInterval: 5000, // 5-second polling for consistency
+    refetchInterval: 10000, // 10-second polling for consistency
   });
 
   // Get completed boxes from progress data - now includes products array
@@ -212,14 +394,14 @@ export default function ManagerDashboard() {
     },
   });
 
-  // Fetch jobs with WebSocket real-time updates
+  // Fetch jobs with global WebSocket real-time updates
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
     queryKey: ["/api/jobs"],
     enabled: !!user,
-    refetchInterval: 5000, // 5-second polling as fallback
+    refetchInterval: 10000, // 10-second polling for consistency
   });
 
-  // Connect to WebSocket for real-time updates on all active jobs
+  // Connect to global WebSocket for real-time updates on all jobs
   useWebSocket();
 
   // Fetch users for assignment
@@ -801,22 +983,8 @@ export default function ManagerDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(jobsData as any)?.jobs?.map((job: any) => {
-                  const progressPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
-                  const isCompleted = progressPercentage === 100;
-
-                  return (
-                    <div
-                      key={job.id}
-                      className={`border border-gray-200 rounded-lg p-4 relative ${isCompleted ? 'bg-green-50 border-green-200' : ''}`}
-                      data-testid={`job-card-${job.id}`}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h3 className="font-medium text-gray-900">{job.name}</h3>
-                          <p className="text-sm text-gray-600">
-                            {job.totalProducts} products, {job.totalCustomers} boxes
-                          </p>
-                        </div>
+                  return <JobCard key={job.id} job={job} />;
+                })}
                         <div className="flex items-center space-x-2">
                           <Badge
                             variant={
