@@ -554,9 +554,6 @@ export default function ManagerDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-medium">
-                {user.staffId}
-              </div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -573,6 +570,9 @@ export default function ManagerDashboard() {
               >
                 <Settings className="h-4 w-4" />
               </Button>
+              <div className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-medium">
+                {user.staffId}
+              </div>
               <Button
                 variant="ghost"
                 size="sm"

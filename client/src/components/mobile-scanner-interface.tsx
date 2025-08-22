@@ -149,10 +149,6 @@ export function MobileScannerInterface({
               </label>
             </div>
 
-            <div className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-medium">
-              {userStaffId}
-            </div>
-
             <Button
               variant="ghost"
               size="sm"
@@ -161,6 +157,9 @@ export function MobileScannerInterface({
             >
               <Settings className="w-4 h-4" />
             </Button>
+            <div className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-medium">
+              {userStaffId}
+            </div>
             <Button
               variant="ghost"
               size="sm"
