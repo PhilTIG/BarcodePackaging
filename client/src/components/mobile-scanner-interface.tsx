@@ -46,6 +46,7 @@ interface MobileScannerInterfaceProps {
   onRuntimeToggle?: (enabled: boolean) => void;
   onLogout?: () => void;
   userStaffId: string;
+  isPaused?: boolean;
 }
 
 export function MobileScannerInterface({
@@ -68,6 +69,7 @@ export function MobileScannerInterface({
   onRuntimeToggle,
   onLogout,
   userStaffId,
+  isPaused = false,
 }: MobileScannerInterfaceProps) {
   const [, setLocation] = useLocation();
   const { preferences, updatePreference } = useUserPreferences();
@@ -84,7 +86,7 @@ export function MobileScannerInterface({
   // Handle barcode input submission
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (barcodeInput.trim()) {
+    if (barcodeInput.trim() && !isPaused) {
       onScan(barcodeInput.trim());
       setBarcodeInput("");
     }
@@ -208,8 +210,11 @@ export function MobileScannerInterface({
             type="text"
             value={barcodeInput}
             onChange={(e) => setBarcodeInput(e.target.value)}
-            placeholder="Scan barcode here..."
-            className="text-lg h-12 border-2 border-green-400"
+            placeholder={isPaused ? "Scanning is paused..." : "Scan barcode here..."}
+            className={`text-lg h-12 border-2 ${
+              isPaused ? 'border-yellow-400 opacity-50' : 'border-green-400'
+            }`}
+            disabled={isPaused}
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
@@ -221,6 +226,23 @@ export function MobileScannerInterface({
 
       {/* Main content area - Large box number display */}
       <div className="flex-1 flex flex-col justify-center items-center px-4 py-8 bg-gray-50">
+        
+        {/* Show paused message instead of box content when paused */}
+        {isPaused ? (
+          <div className="text-center">
+            <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Package className="w-12 h-12 text-yellow-600" />
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-yellow-800 mb-4">Scanning is Paused</h2>
+              <p className="text-lg text-yellow-700">
+                A manager has paused scanning for this job.<br />
+                Please wait for scanning to be resumed.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
         {/* Very large box number display */}
         <div className="text-center mb-8">
           <div className={`text-[120px] font-bold leading-none ${
@@ -336,6 +358,8 @@ export function MobileScannerInterface({
           }
           return null;
         })()}
+          </>
+        )}
       </div>
 
       {/* Bottom stats section - Light blue background */}

@@ -224,6 +224,14 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
           window.location.href = '/worker-selection';
         }
         break;
+
+      case "job_scanning_update":
+        // Job scanning status changed (paused/active for in-progress jobs)
+        console.log("[WebSocket] Job scanning status update received:", message.data);
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", message.data.jobId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/users/me/assignments"] });
+        break;
       
       default:
         console.log("[WebSocket] Unknown message type received:", message.type, message.data);

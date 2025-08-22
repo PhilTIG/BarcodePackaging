@@ -164,12 +164,19 @@ export default function SupervisorView() {
                                 <h3 className="text-lg font-semibold text-gray-900">
                                   {job.name}
                                 </h3>
-                                <Badge
-                                  variant={job.status === 'active' ? "default" : job.status === 'pending' ? "secondary" : "outline"}
-                                  className="text-xs"
-                                >
-                                  {job.status}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    variant={job.status === 'active' ? "default" : job.status === 'pending' ? "secondary" : "outline"}
+                                    className="text-xs"
+                                  >
+                                    {job.status}
+                                  </Badge>
+                                  {job.status !== 'completed' && !job.isActive && (
+                                    <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300">
+                                      Paused
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                               <Badge
                                 variant={completionPercentage === 100 ? "default" : "secondary"}

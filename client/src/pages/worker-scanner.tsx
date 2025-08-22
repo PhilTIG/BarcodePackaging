@@ -367,6 +367,13 @@ export default function WorkerScanner() {
   const handleBarcodeSubmit = (barcode: string) => {
     if (!barcode.trim()) return;
 
+    // Block scanning if job is paused (in-progress + not active)
+    if (job?.status !== 'completed' && !job?.isActive) {
+      setScanError('Scanning is paused by manager. Please wait for scanning to be resumed.');
+      setTimeout(() => setScanError(null), 3000);
+      return;
+    }
+
     // Clear previous scan results and errors
     setScanError(null);
     setScanResult(null);
@@ -624,6 +631,11 @@ export default function WorkerScanner() {
                               <h3 className="text-lg font-semibold text-gray-900">
                                 {job?.name || 'Loading...'}
                               </h3>
+                              {job?.status !== 'completed' && !job?.isActive && (
+                                <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300">
+                                  Paused
+                                </Badge>
+                              )}
                             </div>
                             {job && (
                               <>
@@ -688,6 +700,7 @@ export default function WorkerScanner() {
         }}
         lastScanEvent={lastScanEvent}
         onScan={handleBarcodeSubmit}
+        isPaused={job?.status !== 'completed' && !job?.isActive}
         onUndo={() => undoMutation.mutate(1)}
         onSwitchSession={() => setLocation('/scanner')}
         isUndoAvailable={(jobPerformanceData?.performance?.totalScans || 0) > 0}
@@ -872,9 +885,14 @@ export default function WorkerScanner() {
                     <div className="relative flex-1">
                       <Input
                         ref={barcodeInputRef}
-                        placeholder="Scan or type barcode here..."
+                        placeholder={
+                          job?.status !== 'completed' && !job?.isActive 
+                            ? "Scanning is paused..." 
+                            : "Scan or type barcode here..."
+                        }
                         className="text-lg font-mono h-12"
                         onKeyDown={handleKeyDown}
+                        disabled={job?.status !== 'completed' && !job?.isActive}
                         data-testid="input-barcode"
                       />
                     </div>
@@ -888,6 +906,7 @@ export default function WorkerScanner() {
                           scannerElement.click();
                         }
                       }}
+                      disabled={job?.status !== 'completed' && !job?.isActive}
                       className="h-12 px-3"
                       data-testid="button-start-camera-inline"
                     >
@@ -897,7 +916,9 @@ export default function WorkerScanner() {
 
                   {/* Camera scanner only on larger screens */}
                   <div className="hidden lg:block">
-                    <BarcodeScanner onScan={handleBarcodeSubmit} />
+                    <BarcodeScanner 
+                      onScan={job?.status !== 'completed' && !job?.isActive ? undefined : handleBarcodeSubmit} 
+                    />
                   </div>
 
                   <div className="flex flex-wrap gap-2">
@@ -952,10 +973,28 @@ export default function WorkerScanner() {
           {/* Last Scanned Item Panel */}
           <Card data-testid="scan-info" className="order-3 lg:order-3 md:col-span-2 lg:col-span-1">
             <CardHeader>
-              <CardTitle>Last Scanned Item</CardTitle>
+              <CardTitle>
+                {job && job.status !== 'completed' && !job.isActive ? 'Scanning Status' : 'Last Scanned Item'}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {scanResult ? (
+              {/* Show "Scanning is Paused" message for in-progress jobs that are not active */}
+              {job && job.status !== 'completed' && !job.isActive ? (
+                <div className="flex items-center justify-center h-48 text-center">
+                  <div className="space-y-4">
+                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
+                      <Package className="w-8 h-8 text-yellow-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg text-yellow-800 mb-2">Scanning is Paused</h3>
+                      <p className="text-sm text-yellow-700">
+                        A manager has paused scanning for this job.<br />
+                        Please wait for scanning to be resumed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : scanResult ? (
                 <div className="flex items-center space-x-4">
                   {/* Text area on the left */}
                   <div className="flex-1 min-w-0">
