@@ -926,7 +926,7 @@ export default function ManagerDashboard() {
 
                       <div className="flex flex-wrap gap-2">
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
                           onClick={() => setLocation(`/supervisor/${job.id}`)}
                           data-testid={`button-monitor-${job.id}`}
