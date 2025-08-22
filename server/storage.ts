@@ -2482,7 +2482,7 @@ export class DatabaseStorage implements IStorage {
       });
 
       // Calculate and create worker statistics from scan_sessions (aggregated data)
-      const scanSessions = await this.db
+      const jobScanSessions = await this.db
         .select()
         .from(scanSessions)
         .leftJoin(users, eq(scanSessions.userId, users.id))
@@ -2490,7 +2490,7 @@ export class DatabaseStorage implements IStorage {
 
       const workerStatsRecords: InsertArchiveWorkerStats[] = [];
       
-      for (const sessionRecord of scanSessions) {
+      for (const sessionRecord of jobScanSessions) {
         const session = sessionRecord.scan_sessions;
         const worker = sessionRecord.users;
         
@@ -2547,34 +2547,44 @@ export class DatabaseStorage implements IStorage {
 
       const snapshot = archive.jobDataSnapshot as any;
       
-      // Restore job
-      const [restoredJob] = await this.db
-        .insert(jobs)
-        .values({
+      // Clean up any existing related data to prevent conflicts
+      await this.db
+        .delete(jobAssignments)
+        .where(eq(jobAssignments.jobId, archive.originalJobId));
+      
+      await this.db
+        .delete(boxRequirements)
+        .where(eq(boxRequirements.jobId, archive.originalJobId));
+      
+      // Check if job already exists (prevent duplicate key error)
+      const existingJob = await this.getJobById(archive.originalJobId);
+      if (existingJob) {
+        // Job already exists, just mark as not archived
+        await this.db
+          .update(jobs)
+          .set({ isArchived: false })
+          .where(eq(jobs.id, archive.originalJobId));
+      } else {
+        // Restore job with proper date conversion
+        const jobData = {
           ...snapshot.job,
-          id: archive.originalJobId // Restore original ID
-        })
-        .returning();
+          id: archive.originalJobId,
+          createdAt: snapshot.job.createdAt ? new Date(snapshot.job.createdAt) : null,
+          completedAt: snapshot.job.completedAt ? new Date(snapshot.job.completedAt) : null,
+          isArchived: false // Ensure it's marked as not archived
+        };
+        
+        const [restoredJob] = await this.db
+          .insert(jobs)
+          .values(jobData)
+          .returning();
+      }
 
       // Restore box requirements
       if (snapshot.boxRequirements?.length > 0) {
         await this.db
           .insert(boxRequirements)
           .values(snapshot.boxRequirements);
-      }
-
-      // Restore job assignments
-      if (snapshot.assignments?.length > 0) {
-        const assignments = snapshot.assignments.map((a: any) => ({
-          jobId: archive.originalJobId,
-          assigneeId: a.assigneeId,
-          assignerId: a.assignerId,
-          role: a.role,
-          assignedAt: a.assignedAt
-        }));
-        await this.db
-          .insert(jobAssignments)
-          .values(assignments);
       }
 
       // Mark archive as un-purged
