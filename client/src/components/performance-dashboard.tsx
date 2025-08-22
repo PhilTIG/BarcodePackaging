@@ -29,7 +29,7 @@ export function PerformanceDashboard({ jobId, supervisorView = false }: Performa
   const { data: progressData } = useQuery({
     queryKey: ["/api/jobs", jobId, "progress"],
     enabled: !!jobId,
-    refetchInterval: 5000,
+    refetchInterval: 10000, // Reduced from 5s to 10s for better performance
   });
 
   if (!(progressData as any)?.progress?.workers || (progressData as any)?.progress?.workers?.length === 0) {

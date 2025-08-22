@@ -34,7 +34,7 @@ export default function SupervisorView() {
   const { data: progressData } = useQuery({
     queryKey: ["/api/jobs", jobId, "progress"],
     enabled: !!jobId && !!user,
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 10000, // Reduced from 5s to 10s for better performance
   });
 
   // Connect to WebSocket for real-time updates 

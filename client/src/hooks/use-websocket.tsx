@@ -146,13 +146,16 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         // Invalidate relevant queries to refresh data
         console.log("[WebSocket] Scan update received:", message.data);
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         break;
       
       case "scan_event":
         // Real-time scan event received
         console.log("[WebSocket] Scan event received:", message.data);
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
         
         // Trigger box highlighting update for worker box highlighting
         if (onWorkerBoxUpdate && message.data.boxNumber && message.data.userId) {
@@ -169,6 +172,8 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         // Undo operation received
         console.log("[WebSocket] Undo event received:", message.data);
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
         break;
       
       case "job_status_update":
@@ -187,7 +192,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         queryClient.invalidateQueries({ queryKey: ["/api/check-sessions"] });
         
         // Show user feedback about the CheckCount correction
-        if (message.data.applyCorrections && message.data.corrections?.length > 0) {
+        if (message.data && message.data.applyCorrections && Array.isArray(message.data.corrections) && message.data.corrections.length > 0) {
           console.log(`[CheckCount] Box ${message.data.boxNumber} corrections applied by ${message.data.userName}`);
           console.log(`[CheckCount] Extra items: ${message.data.extraItemsCount || 0}`);
         }

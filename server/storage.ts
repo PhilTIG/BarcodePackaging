@@ -471,33 +471,35 @@ export class DatabaseStorage implements IStorage {
       // Get job with products
       const job = await this.getJobById(id);
       
-      // Use box requirements system (all jobs should have box requirements)
-      const boxRequirements = await this.getBoxRequirementsByJobId(id);
-      const totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
-      const scannedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
+      // OPTIMIZED: Use direct database aggregation instead of loading all records
+      const [progressStats] = await this.db
+        .select({
+          totalItems: sql<number>`COALESCE(SUM(${boxRequirements.requiredQty}), 0)`,
+          scannedItems: sql<number>`COALESCE(SUM(LEAST(${boxRequirements.scannedQty}, ${boxRequirements.requiredQty})), 0)`,
+          totalBoxes: sql<number>`COUNT(DISTINCT ${boxRequirements.boxNumber})`,
+          completedBoxes: sql<number>`COUNT(DISTINCT CASE WHEN ${boxRequirements.isComplete} = true THEN ${boxRequirements.boxNumber} END)`
+        })
+        .from(boxRequirements)
+        .where(eq(boxRequirements.jobId, id));
+
+      const totalItems = progressStats.totalItems || 0;
+      const scannedItems = progressStats.scannedItems || 0;
       
-      // Transform to products format for compatibility with existing components
-      const productMap = new Map();
-      boxRequirements.forEach(req => {
-        const key = `${req.customerName}-${req.boxNumber}`;
-        if (!productMap.has(key)) {
-          productMap.set(key, {
-            customerName: req.customerName,
-            qty: 0,
-            scannedQty: 0,
-            boxNumber: req.boxNumber,
-            isComplete: true,
-            lastWorkerColor: req.lastWorkerColor
-          });
-        }
-        const product = productMap.get(key);
-        product.qty += req.requiredQty;
-        product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
-        product.isComplete = product.isComplete && req.isComplete;
-        // Keep the most recent worker info
-        if (req.lastWorkerColor) product.lastWorkerColor = req.lastWorkerColor;
-      });
-      const jobProducts = Array.from(productMap.values());
+      // Get box data efficiently with aggregation query
+      const boxData = await this.db
+        .select({
+          customerName: boxRequirements.customerName,
+          boxNumber: boxRequirements.boxNumber,
+          qty: sql<number>`SUM(${boxRequirements.requiredQty})`,
+          scannedQty: sql<number>`SUM(LEAST(${boxRequirements.scannedQty}, ${boxRequirements.requiredQty}))`,
+          isComplete: sql<boolean>`BOOL_AND(${boxRequirements.isComplete})`,
+          lastWorkerColor: sql<string>`MAX(${boxRequirements.lastWorkerColor})`
+        })
+        .from(boxRequirements)
+        .where(eq(boxRequirements.jobId, id))
+        .groupBy(boxRequirements.customerName, boxRequirements.boxNumber);
+
+      const jobProducts = boxData;
 
       const sessions = await this.getScanSessionsByJobId(id);
       const assignments = await this.getJobAssignmentsWithUsers(id);
@@ -508,8 +510,13 @@ export class DatabaseStorage implements IStorage {
 
       if (!job) return null;
 
-      // Calculate Box Complete logic using helper method
-      const boxCompletion = this.calculateBoxCompletion(jobProducts);
+      // Use pre-calculated box completion from aggregation
+      const boxCompletion = {
+        totalBoxes: progressStats.totalBoxes || 0,
+        completedBoxes: progressStats.completedBoxes || 0,
+        boxCompletionPercentage: (progressStats.totalBoxes || 0) > 0 ? 
+          Math.round(((progressStats.completedBoxes || 0) / (progressStats.totalBoxes || 0)) * 100) : 0
+      };
 
       // Get worker performance data for all assigned workers
       const workersData = await Promise.all(
