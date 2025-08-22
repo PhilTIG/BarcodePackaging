@@ -22,7 +22,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2, Archive, Box } from "lucide-react";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
 import { QASummaryPanel } from "@/components/qa-summary-panel";
-import { JobCardWithLiveProgress } from "@/components/job-card-with-live-progress";
 import { z } from "zod";
 import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPattern } from "../../../lib/worker-allocation";
 
@@ -35,21 +34,176 @@ const uploadFormSchema = z.object({
 
 type UploadForm = z.infer<typeof uploadFormSchema>;
 
+// Component for Extra Items and Boxes Complete buttons
+function ExtraItemsAndBoxesButtons({
+  jobId,
+  onExtraItemsClick,
+  onBoxesCompleteClick
+}: {
+  jobId: string;
+  onExtraItemsClick: () => void;
+  onBoxesCompleteClick: () => void;
+}) {
+  // Connect to WebSocket for real-time updates (same as Job Monitoring)
+  const { isConnected } = useWebSocket(jobId);
+
+  // Use single /progress endpoint for consistent real-time data (same as Job Monitoring)
+  const { data: progressData } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/progress`],
+    enabled: !!jobId,
+    refetchInterval: 5000, // 5-second polling as requested
+  });
+
+  // Extract consistent data from progress endpoint (matches SupervisorView)
+  const extraItemsCount = (progressData as any)?.progress?.extraItemsCount || 0;
+  const completedBoxes = (progressData as any)?.progress?.completedBoxes || 0;
+  const totalBoxes = (progressData as any)?.progress?.totalBoxes || 0;
+
+  return (
+    <>
+      {/* Extra Items Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onExtraItemsClick}
+        data-testid={`button-extra-items-${jobId}`}
+      >
+        <Package className="mr-1 h-4 w-4" />
+        {extraItemsCount} Extra Items
+      </Button>
+
+      {/* Boxes Complete Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onBoxesCompleteClick}
+        data-testid={`button-boxes-complete-${jobId}`}
+      >
+        <Box className="mr-1 h-4 w-4" />
+        {completedBoxes}/{totalBoxes} Boxes
+      </Button>
+    </>
+  );
+}
+
+// Component for Completed Boxes Modal
+function CompletedBoxesModal({
+  isOpen,
+  onClose,
+  jobId
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  jobId: string | null;
+}) {
+  // Use same real-time progress endpoint as Job Monitoring
+  const { data: progressData } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/progress`],
+    enabled: !!jobId && isOpen,
+    refetchInterval: 5000, // 5-second polling for consistency
+  });
+
+  // Get completed boxes from progress data - now includes products array
+  const products = (progressData as any)?.products || [];
+
+  // Group by customer and check if all items in customer's box are complete
+  const boxMap = new Map<string, {
+    customerName: string;
+    boxNumber: number;
+    totalQty: number;
+    scannedQty: number;
+    isComplete: boolean;
+  }>();
+
+  products.forEach((product: any) => {
+    const key = `${product.customerName}-${product.boxNumber}`;
+    if (!boxMap.has(key)) {
+      boxMap.set(key, {
+        customerName: product.customerName,
+        boxNumber: product.boxNumber,
+        totalQty: 0,
+        scannedQty: 0,
+        isComplete: true
+      });
+    }
+    const box = boxMap.get(key)!;
+    box.totalQty += product.qty;
+    box.scannedQty += product.scannedQty;
+    box.isComplete = box.isComplete && product.isComplete;
+  });
+
+  const completedBoxes = Array.from(boxMap.values()).filter(box => box.isComplete);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Completed Boxes</DialogTitle>
+          <DialogDescription>
+            List of all completed boxes showing item counts
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="mt-4">
+          {completedBoxes.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No completed boxes found.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {completedBoxes
+                .sort((a: any, b: any) => a.boxNumber - b.boxNumber)
+                .map((box: any, index: number) => (
+                  <div key={`${box.customerName}-${box.boxNumber}`} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-green-50">
+                    <div>
+                      <div className="font-medium">Box {box.boxNumber}</div>
+                      <div className="text-sm text-gray-600">{box.customerName}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-green-600">{box.scannedQty}/{box.totalQty} items</div>
+                      <div className="text-xs text-gray-500">100% Complete</div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ManagerDashboard() {
-  const { user, logout } = useAuth();
-  const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const { error, clearError } = useErrorContext();
-
-  // State Management
-  const [selectedTab, setSelectedTab] = useState("upload");
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const { user, logout, isLoading } = useAuth();
+  const { formatError, getErrorDetails } = useErrorContext();
+  const [uploadSuccess, setUploadSuccess] = useState<{
+    productsCount: number;
+    customersCount: number;
+    job: any;
+  } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [currentError, setCurrentError] = useState<any>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [selectedJobId, setSelectedJobId] = useState<string>("");
-  const [workerColors, setWorkerColors] = useState<{ [workerId: string]: string }>({});
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
+  const [extraItemsJobId, setExtraItemsJobId] = useState<string | null>(null);
+  const [isCompletedBoxesModalOpen, setIsCompletedBoxesModalOpen] = useState(false);
+  const [completedBoxesJobId, setCompletedBoxesJobId] = useState<string | null>(null);
 
-  // Form Setup
-  const uploadForm = useForm<UploadForm>({
+  // Assignment form state
+  const [assignForm, setAssignForm] = useState({
+    userId: "",
+    assignedColor: "#3B82F6", // Default blue
+  });
+
+  const form = useForm<UploadForm>({
     resolver: zodResolver(uploadFormSchema),
     defaultValues: {
       name: "",
@@ -58,351 +212,986 @@ export default function ManagerDashboard() {
     },
   });
 
-  // Modal State
-  const [assignWorkersModal, setAssignWorkersModal] = useState<{
-    isOpen: boolean;
-    jobId: string;
-  }>({ isOpen: false, jobId: "" });
-
-  const [exportModal, setExportModal] = useState<{
-    isOpen: boolean;
-    jobId: string;
-    jobName: string;
-  }>({ isOpen: false, jobId: "", jobName: "" });
-
-  const [extraItemsModal, setExtraItemsModal] = useState<{
-    isOpen: boolean;
-    jobId: string;
-    jobName: string;
-  }>({ isOpen: false, jobId: "", jobName: "" });
-
-  // Data Queries
+  // Fetch jobs
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
     queryKey: ["/api/jobs"],
+    enabled: !!user,
   });
 
+  // Fetch users for assignment
   const { data: workersData } = useQuery({
-    queryKey: ["/api/users/workers"],
+    queryKey: ["/api/users?role=worker"],
+    enabled: !!user,
   });
 
+  // Fetch job types for upload form
   const { data: jobTypesData } = useQuery({
     queryKey: ["/api/job-types"],
+    enabled: !!user,
   });
 
-  // Mutations
+  // Upload CSV mutation
   const uploadMutation = useMutation({
-    mutationFn: async (data: UploadForm) => {
+    mutationFn: async (data: UploadForm & { file: File }) => {
       const formData = new FormData();
+      formData.append("csv", data.file);
       formData.append("name", data.name);
       formData.append("jobTypeId", data.jobTypeId);
-      if (data.description) {
-        formData.append("description", data.description);
-      }
-      if (data.file) {
-        formData.append("file", data.file);
+      formData.append("description", data.description || "");
+
+      const response = await apiRequest("POST", "/api/jobs", formData);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Upload failed");
       }
 
-      return await apiRequest("/api/jobs", {
-        method: "POST",
-        body: formData,
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setUploadSuccess({
+        productsCount: data.productsCount,
+        customersCount: data.customersCount,
+        job: data.job
+      });
+      form.reset();
+      setSelectedFile(null); // Clear selected file on success
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "CSV uploaded successfully",
+        description: `${data.productsCount} products loaded for ${data.customersCount} customers`,
       });
     },
+    onError: (error: any) => {
+      console.error('Upload error:', error);
+      setCurrentError(error);
+
+      const errorDetails = getErrorDetails(error);
+      const formattedMessage = formatError(error, "Please check your CSV format and try again");
+
+      // If there are more than 3 errors and detailed mode is enabled, show "More..." option
+      if (errorDetails.length > 3) {
+        toast({
+          title: "CSV Upload Failed",
+          description: formattedMessage,
+          variant: "destructive",
+          action: (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setErrorDialogOpen(true)}
+              data-testid="button-more-errors"
+            >
+              More...
+            </Button>
+          ),
+        });
+      } else {
+        toast({
+          title: "CSV Upload Failed",
+          description: formattedMessage,
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  // Job status update mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ jobId, status }: { jobId: string; status: string }) => {
+      const response = await apiRequest("PATCH", `/api/jobs/${jobId}/status`, { status });
+      return response.json();
+    },
     onSuccess: () => {
-      toast({ title: "Job created successfully!" });
-      uploadForm.reset();
-      setUploadDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    },
+  });
+
+  // Multi-Worker Assignment mutation with automatic pattern assignment
+  const assignWorkerMutation = useMutation({
+    mutationFn: async (data: { jobId: string; userId: string; assignedColor: string }) => {
+      // Get current job assignments to determine worker count and pattern
+      const jobsResponse = await apiRequest("GET", "/api/jobs");
+      const jobsData = await jobsResponse.json();
+      const currentJob = jobsData.jobs?.find((job: any) => job.id === data.jobId);
+      const currentAssignments = currentJob?.assignments || [];
+
+      // Automatically assign allocation pattern based on assignment order (chronological)
+      const workerIndex = currentAssignments.length;
+      const allocationPattern = assignWorkerPattern(workerIndex);
+
+      const response = await apiRequest("POST", `/api/jobs/${data.jobId}/assign`, {
+        userId: data.userId,
+        assignedColor: data.assignedColor,
+        allocationPattern,
+        workerIndex,
+      });
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      setAssignDialogOpen(false);
+      setAssignForm({ userId: "", assignedColor: "#3B82F6" });
+      toast({
+        title: "Worker assigned successfully",
+        description: `Worker assigned with ${data.assignment?.allocationPattern || 'ascending'} box allocation pattern`,
+      });
     },
     onError: (error: any) => {
       toast({
-        title: "Error creating job",
+        title: "Assignment failed",
+        description: error.message || "Failed to assign worker to job",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Worker unassignment mutation
+  const unassignWorkerMutation = useMutation({
+    mutationFn: async (data: { jobId: string; userId: string }) => {
+      const response = await apiRequest("DELETE", `/api/jobs/${data.jobId}/assign/${data.userId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Worker unassigned successfully",
+        description: "The worker has been removed from the job",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Unassignment failed",
+        description: error.message || "Failed to unassign worker from job",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle unassign worker action
+  const handleUnassignWorker = (jobId: string, userId: string) => {
+    unassignWorkerMutation.mutate({ jobId, userId });
+  };
+
+  // Toggle job active status mutation for scanning control
+  const toggleJobActiveMutation = useMutation({
+    mutationFn: async ({ jobId, isActive }: { jobId: string; isActive: boolean }) => {
+      const response = await apiRequest("PATCH", `/api/jobs/${jobId}/active`, {
+        isActive,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Scanning control updated",
+        description: "Job scanning status has been updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Job Management Functions
-  const handleArchiveJob = async (jobId: string) => {
-    try {
-      await apiRequest(`/api/jobs/${jobId}/archive`, { method: "POST" });
-      toast({ title: "Job archived successfully!" });
+  // Handle job active toggle
+  const handleJobActiveToggle = (jobId: string, isActive: boolean) => {
+    toggleJobActiveMutation.mutate({ jobId, isActive });
+  };
+
+  // Remove job mutation
+  const removeJobMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const response = await apiRequest("DELETE", `/api/jobs/${jobId}`);
+      return response.json();
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-    } catch (error: any) {
       toast({
-        title: "Error archiving job",
-        description: error.message,
+        title: "Job removed successfully",
+        description: "The job and all its data have been deleted.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to remove job",
+        description: error.message || "Unable to remove the job",
         variant: "destructive",
       });
+    },
+  });
+
+  // Handle job removal
+  const handleRemoveJob = (jobId: string) => {
+    if (confirm("Are you sure you want to remove this job? This action cannot be undone.")) {
+      removeJobMutation.mutate(jobId);
     }
   };
 
-  const handleRemoveJob = async (jobId: string) => {
-    try {
-      await apiRequest(`/api/jobs/${jobId}`, { method: "DELETE" });
-      toast({ title: "Job removed successfully!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-    } catch (error: any) {
+  // Handle job archiving
+  const archiveJobMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const response = await apiRequest('POST', `/api/jobs/${jobId}/archive`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/archives'] });
       toast({
-        title: "Error removing job",
-        description: error.message,
+        title: "Success",
+        description: "Job archived successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to archive job",
         variant: "destructive",
       });
     }
-  };
+  });
 
-  const handleJobActiveToggle = async (jobId: string, isActive: boolean) => {
-    try {
-      await apiRequest(`/api/jobs/${jobId}/toggle-active`, {
-        method: "POST",
-        body: JSON.stringify({ isActive }),
-        headers: { "Content-Type": "application/json" },
-      });
-      
-      toast({ 
-        title: isActive ? "Job scanning activated!" : "Job scanning paused!" 
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-    } catch (error: any) {
-      toast({
-        title: "Error updating job status",
-        description: error.message,
-        variant: "destructive",
-      });
+  const handleArchiveJob = (jobId: string) => {
+    if (confirm("Are you sure you want to archive this job? It will be moved to the archives with a comprehensive summary.")) {
+      archiveJobMutation.mutate(jobId);
     }
   };
 
-  const handleUnassignWorker = async (jobId: string, workerId: string) => {
-    try {
-      await apiRequest(`/api/jobs/${jobId}/assignments/${workerId}`, {
-        method: "DELETE",
-      });
-      toast({ title: "Worker unassigned successfully!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-    } catch (error: any) {
+  // Handle assignment form submission
+  const handleAssignWorker = () => {
+    if (!selectedJobId || !assignForm.userId) {
       toast({
-        title: "Error unassigning worker",
-        description: error.message,
+        title: "Assignment incomplete",
+        description: "Please select a worker to assign",
         variant: "destructive",
       });
+      return;
     }
+
+    assignWorkerMutation.mutate({
+      jobId: selectedJobId,
+      userId: assignForm.userId,
+      assignedColor: assignForm.assignedColor,
+    });
   };
 
-  const onUploadSubmit = (data: UploadForm) => {
-    uploadMutation.mutate(data);
+  const onSubmit = (data: UploadForm) => {
+    if (!selectedFile) {
+      toast({
+        title: "No file selected",
+        description: "Please select a CSV file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Basic file validation
+    if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
+      toast({
+        title: "Invalid file format",
+        description: "Please select a .csv file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+      toast({
+        title: "File too large",
+        description: "CSV file must be smaller than 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Uploading CSV...",
+      description: "Validating and processing your file",
+    });
+
+    uploadMutation.mutate({
+      ...data,
+      file: selectedFile,
+    });
   };
+
+  const handleLogout = () => {
+    logout();
+    setLocation("/login");
+  };
+
+  // Redirect if not authenticated or not a manager
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation("/login");
+      return;
+    }
+    if (user && user.role !== "manager") {
+      setLocation("/login");
+    }
+  }, [user, isLoading, setLocation]);
 
   if (!user || user.role !== "manager") {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Access denied. Manager role required.</p>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6" data-testid="manager-dashboard">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Manager Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user.name}</p>
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-primary-100 w-10 h-10 rounded-lg flex items-center justify-center">
+                <Package className="text-primary-600" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Manager Dashboard</h1>
+                <p className="text-sm text-gray-600">Welcome back, {user.name}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/archives")}
+                data-testid="button-archives"
+              >
+                <Archive className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/settings")}
+                data-testid="button-settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+              <div className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-medium">
+                {user.staffId}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => setLocation("/settings")}>
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
-          <Button variant="outline" onClick={logout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+      </header>
+
+      <div className="p-4 space-y-6">
+        {/* CSV Upload Section or Success Display */}
+        <Card data-testid="upload-section">
+          {uploadSuccess ? (
+            // Success Banner
+            <CardContent className="p-6">
+              <div className="border-2 border-dashed border-green-300 rounded-lg p-6 bg-green-50 text-center">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-green-800">CSV Loaded Successfully</h3>
+                </div>
+                <p className="text-green-700 mb-4">
+                  {uploadSuccess.productsCount} products, {uploadSuccess.customersCount} customers
+                </p>
+                <div className="flex justify-center space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setUploadSuccess(null)}
+                    data-testid="button-upload-new"
+                  >
+                    Upload New CSV
+                  </Button>
+                  <Button
+                    onClick={() => setLocation(`/supervisor/${uploadSuccess.job.id}`)}
+                    data-testid="button-monitor-job"
+                  >
+                    Monitor Job
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          ) : (
+            <>
+              <CardHeader>
+                <CardTitle>Upload New Job</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Form Fields Row - Responsive */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Job Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Enter job name" data-testid="input-job-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="jobTypeId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Job Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-job-type">
+                                  <SelectValue placeholder="Select a job type..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {(jobTypesData as any)?.jobTypes?.map((jobType: any) => (
+                                  <SelectItem key={jobType.id} value={jobType.id}>
+                                    {jobType.name} ({jobType.benchmarkItemsPerHour} items/hr)
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="md:col-span-2">
+                        <FormField
+                          control={form.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description (Optional)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Enter job description" data-testid="input-job-description" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* File Selection and CSV Format Requirements Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <input
+                          type="file"
+                          accept=".csv"
+                          className="hidden"
+                          id="csv-upload"
+                          data-testid="input-csv-file"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            setSelectedFile(file || null);
+                          }}
+                        />
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById("csv-upload")?.click()}
+                            data-testid="button-select-file"
+                            className="w-full md:w-auto"
+                          >
+                            <CloudUpload className="mr-2 h-4 w-4" />
+                            {selectedFile ? selectedFile.name : "Select File"}
+                          </Button>
+                          {selectedFile && (
+                            <p className="text-xs text-green-600 flex-1 ml-1">
+                              ✓ {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* CSV Format Guide - Collapsible */}
+                      <div>
+                        <Collapsible defaultOpen={false}>
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <CollapsibleTrigger className="w-full">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-blue-900">CSV Format Requirements</h4>
+                                <ChevronDown className="h-4 w-4 text-blue-600 transition-transform duration-200 data-[state=open]:rotate-180" />
+                              </div>
+                            </CollapsibleTrigger>
+
+                            <CollapsibleContent className="mt-2">
+                              <p className="text-blue-800 text-sm mb-3">Your CSV file must contain these exact column headers:</p>
+                              <div className="bg-white border border-blue-200 rounded text-xs p-2 font-mono mb-3">
+                                BarCode,Product Name,Qty,CustomName,Group
+                              </div>
+                              <div className="text-blue-700 text-sm space-y-1">
+                                <p><strong>BarCode:</strong> Product barcode (required)</p>
+                                <p><strong>Product Name:</strong> Name of the product (required)</p>
+                                <p><strong>Qty:</strong> Quantity as a positive number (required)</p>
+                                <p><strong>CustomName:</strong> Customer destination name (required)</p>
+                                <p><strong>Group:</strong> Product grouping (optional)</p>
+                              </div>
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                      </div>
+                    </div>
+
+
+
+                    <Button
+                      type="submit"
+                      disabled={uploadMutation.isPending}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                      data-testid="button-upload"
+                    >
+                      {uploadMutation.isPending ? "Uploading..." : "Create Job"}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </>
+          )}
+        </Card>
+
+        {/* Active Jobs */}
+        <Card data-testid="active-jobs">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Active Jobs</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation("/archives")}
+                className="flex items-center gap-2"
+                data-testid="button-archives-inline"
+              >
+                <Archive className="h-4 w-4" />
+                Archives
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {jobsLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
+                    <div className="h-2 bg-gray-200 rounded mb-2"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(jobsData as any)?.jobs?.map((job: any) => {
+                  const progressPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
+                  const isCompleted = progressPercentage === 100;
+
+                  return (
+                    <div
+                      key={job.id}
+                      className={`border border-gray-200 rounded-lg p-4 relative ${isCompleted ? 'bg-green-50 border-green-200' : ''}`}
+                      data-testid={`job-card-${job.id}`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{job.name}</h3>
+                          <p className="text-sm text-gray-600">
+                            {job.totalProducts} products, {job.totalCustomers} boxes
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge
+                            variant={
+                              job.status === "completed"
+                                ? "default"
+                                : job.status === "active"
+                                ? "secondary"
+                                : "outline"
+                            }
+                          >
+                            {job.status === "completed" ? "Completed" : job.status === "active" ? "In Progress" : "Pending"}
+                          </Badge>
+                          <Button
+                            variant={job.isActive ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleJobActiveToggle(job.id, !job.isActive)}
+                            disabled={job.status === "completed"}
+                            className="h-6 px-2 text-xs font-medium"
+                            data-testid={`button-toggle-scanning-${job.id}`}
+                          >
+                            {job.isActive ? "Scanning Active" : "Scanning Paused"}
+                          </Button>
+                          <span className="text-sm text-gray-600">Created: {new Date(job.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar with Percentage */}
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                          <span>Progress - {progressPercentage}% complete</span>
+                          <div className="flex flex-col items-end">
+                            {progressPercentage === 0 ? (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="mt-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveJob(job.id);
+                                }}
+                                data-testid={`button-remove-${job.id}`}
+                              >
+                                Remove Job
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleArchiveJob(job.id);
+                                }}
+                                data-testid={`button-archive-${job.id}`}
+                              >
+                                <Archive className="h-3 w-3 mr-1" />
+                                Archive
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="rounded-md p-1 bg-gray-50">
+                          <Progress value={progressPercentage} className="mb-2" />
+                        </div>
+                      </div>
+
+
+
+                      {/* Assigned Workers Display with Allocation Patterns */}
+                      {job.assignments && job.assignments.length > 0 && (
+                        <div className="mb-4 mr-24">
+                          <p className="text-sm text-gray-600 mb-2">Assigned Workers ({job.assignments.length}/4):</p>
+                          <div className="flex flex-wrap gap-2">
+                            {job.assignments.map((assignment: any, index: number) => {
+                              const pattern = assignWorkerPattern(index);
+                              const patternLabels = {
+                                'ascending': '↗ Asc',
+                                'descending': '↙ Desc',
+                                'middle_up': '↑ Mid+',
+                                'middle_down': '↓ Mid-'
+                              };
+
+                              return (
+                                <div key={assignment.id} className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1 group">
+                                  <div
+                                    className="w-3 h-3 rounded-full border border-gray-300"
+                                    style={{ backgroundColor: assignment.assignedColor || '#3B82F6' }}
+                                    data-testid={`worker-color-${assignment.assignee.id}`}
+                                  />
+                                  <span className="text-sm text-gray-700 font-medium">
+                                    {assignment.assignee.name}
+                                  </span>
+                                  <span className="text-xs text-gray-500 bg-white px-1 rounded">
+                                    {patternLabels[pattern as keyof typeof patternLabels]}
+                                  </span>
+                                  <button
+                                    onClick={() => handleUnassignWorker(job.id, assignment.assignee.id)}
+                                    className="ml-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    data-testid={`unassign-${assignment.assignee.id}`}
+                                    title="Unassign worker"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {job.assignments.length < 4 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Can assign {4 - job.assignments.length} more worker(s) for optimal multi-worker coordination
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => setLocation(`/supervisor/${job.id}`)}
+                          data-testid={`button-monitor-${job.id}`}
+                        >
+                          <Eye className="mr-1 h-4 w-4" />
+                          Monitor
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedJobId(job.id);
+                            setAssignDialogOpen(true);
+                          }}
+                          data-testid={`button-assign-${job.id}`}
+                        >
+                          <Users className="mr-1 h-4 w-4" />
+                          Assign Workers
+                        </Button>
+
+                        <Button variant="outline" size="sm" data-testid={`button-export-${job.id}`}>
+                          <Download className="mr-1 h-4 w-4" />
+                          Export
+                        </Button>
+
+                        {/* Extra Items and Boxes buttons now inline with other action buttons */}
+                        <ExtraItemsAndBoxesButtons jobId={job.id}
+                          onExtraItemsClick={() => {
+                            setExtraItemsJobId(job.id);
+                            setIsExtraItemsModalOpen(true);
+                          }}
+                          onBoxesCompleteClick={() => {
+                            setCompletedBoxesJobId(job.id);
+                            setIsCompletedBoxesModalOpen(true);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {!(jobsData as any)?.jobs?.length && (
+                  <div className="text-center py-8 text-gray-500">
+                    No jobs found. Upload a CSV file to create your first job.
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* QA Summary Panel and Worker Status - Side by Side on Desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* QA Summary Panel */}
+          <div className="h-full">
+            <QASummaryPanel />
+          </div>
+
+          {/* Workers Status */}
+          <div className="h-full">
+            <Card data-testid="workers-status" className="h-full">
+              <CardHeader>
+                <CardTitle>Worker Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {(workersData as any)?.workers?.map((worker: any) => (
+                    <div key={worker.id} className="border border-gray-200 rounded-lg p-4" data-testid={`worker-card-${worker.id}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-medium text-gray-900">{worker.name}</h3>
+                        <div className="flex items-center">
+                          <div className={`w-2 h-2 rounded-full mr-2 ${worker.isActive ? 'bg-success-500' : 'bg-gray-400'}`}></div>
+                          <span className={`text-sm font-medium ${worker.isActive ? 'text-success-600' : 'text-gray-600'}`}>
+                            {worker.isActive ? 'Active' : 'Offline'}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">Staff ID: {worker.staffId}</p>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Role: {worker.role}</span>
+                        <span className="text-gray-600">Last active: 2h ago</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {!(workersData as any)?.workers?.length && (
+                    <div className="col-span-full text-center py-8 text-gray-500">
+                      No workers found.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
-      {/* Job Upload Section */}
-      <Card data-testid="upload-section">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Create New Job
-            <Button onClick={() => setUploadDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Job
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">
-            Upload CSV files to create new sorting jobs. Each job represents a batch of products to be sorted.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Error Details Dialog */}
+      <ErrorDialog
+        isOpen={errorDialogOpen}
+        onClose={() => setErrorDialogOpen(false)}
+        title="CSV Upload Errors"
+        errors={currentError ? getErrorDetails(currentError) : []}
+      />
 
-      {/* Active Jobs with Live Progress */}
-      <Card data-testid="active-jobs">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Active Jobs</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLocation("/archives")}
-              className="flex items-center gap-2"
-              data-testid="button-archives-inline"
-            >
-              <Archive className="h-4 w-4" />
-              Archives
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {jobsLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
-                  <div className="h-2 bg-gray-200 rounded mb-2"></div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(jobsData as any)?.jobs?.map((job: any) => (
-                <JobCardWithLiveProgress 
-                  key={job.id} 
-                  job={job} 
-                  onArchive={handleArchiveJob} 
-                  onRemove={handleRemoveJob} 
-                  onToggleActive={handleJobActiveToggle} 
-                  onUnassignWorker={handleUnassignWorker} 
-                  assignWorkerPattern={assignWorkerPattern}
-                  setAssignWorkersModal={setAssignWorkersModal}
-                  setExportModal={setExportModal}
-                  setExtraItemsModal={setExtraItemsModal}
-                />
-              ))}
-
-              {!(jobsData as any)?.jobs?.length && (
-                <div className="text-center py-8 text-gray-500">
-                  No jobs found. Upload a CSV file to create your first job.
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* QA Summary Panel */}
-      <QASummaryPanel />
-
-      {/* Upload Dialog */}
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent>
+      {/* Assign Workers Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent className="sm:max-w-md" data-testid="assign-worker-dialog">
           <DialogHeader>
-            <DialogTitle>Create New Job</DialogTitle>
+            <DialogTitle>Assign Worker to Job</DialogTitle>
             <DialogDescription>
-              Upload a CSV file to create a new sorting job.
+              Select a worker and choose their color. Each worker will be automatically assigned a box allocation pattern based on assignment order.
             </DialogDescription>
           </DialogHeader>
-          <Form {...uploadForm}>
-            <form onSubmit={uploadForm.handleSubmit(onUploadSubmit)} className="space-y-4">
-              <FormField
-                control={uploadForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Job Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter job name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={uploadForm.control}
-                name="jobTypeId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Job Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select job type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(jobTypesData as any)?.jobTypes?.map((type: any) => (
-                          <SelectItem key={type.id} value={type.id}>
-                            {type.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <FormField
-                control={uploadForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter job description" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-4">
+            {/* Worker Selection */}
+            <div>
+              <Label htmlFor="worker-select">Select Worker</Label>
+              <Select
+                value={assignForm.userId}
+                onValueChange={(value) => setAssignForm(prev => ({ ...prev, userId: value }))}
+              >
+                <SelectTrigger id="worker-select" data-testid="select-worker">
+                  <SelectValue placeholder="Choose a worker..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(workersData as any)?.workers?.filter((worker: any) => {
+                    // Filter out workers already assigned to this job
+                    const currentJob = (jobsData as any)?.jobs?.find((job: any) => job.id === selectedJobId);
+                    const assignedWorkerIds = currentJob?.assignments?.map((assignment: any) => assignment.assignee.id) || [];
+                    return !assignedWorkerIds.includes(worker.id);
+                  }).map((worker: any) => (
+                    <SelectItem key={worker.id} value={worker.id}>
+                      {worker.name} ({worker.staffId})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <FormField
-                control={uploadForm.control}
-                name="file"
-                render={({ field: { value, onChange, ...field } }) => (
-                  <FormItem>
-                    <FormLabel>CSV File</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        accept=".csv"
-                        onChange={(e) => onChange(e.target.files?.[0])}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Color Selection */}
+            <div>
+              <Label htmlFor="color-picker">Worker Color</Label>
+              <div className="flex items-center space-x-3 mt-2">
+                <input
+                  type="color"
+                  id="color-picker"
+                  value={assignForm.assignedColor}
+                  onChange={(e) => setAssignForm(prev => ({ ...prev, assignedColor: e.target.value }))}
+                  className="w-12 h-12 rounded border border-gray-300 cursor-pointer"
+                  data-testid="input-worker-color"
+                />
+                <div className="flex-1">
+                  <Input
+                    value={assignForm.assignedColor}
+                    onChange={(e) => setAssignForm(prev => ({ ...prev, assignedColor: e.target.value }))}
+                    placeholder="#3B82F6"
+                    data-testid="input-color-code"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    This color will identify the worker in dashboards and reports
+                  </p>
+                </div>
+              </div>
+            </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setUploadDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={uploadMutation.isPending}>
-                  {uploadMutation.isPending ? "Creating..." : "Create Job"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+            {/* Allocation Pattern Preview */}
+            {selectedJobId && (
+              <div className="border border-gray-200 rounded-lg p-3">
+                <Label className="text-sm font-medium">Worker Allocation Pattern</Label>
+                <div className="mt-2">
+                  {(() => {
+                    const currentJob = (jobsData as any)?.jobs?.find((job: any) => job.id === selectedJobId);
+                    const currentAssignments = currentJob?.assignments || [];
+                    const workerIndex = currentAssignments.length;
+                    const pattern = assignWorkerPattern(workerIndex);
+
+                    const patternDescriptions = {
+                      'ascending': 'Ascending: Boxes 1, 2, 3, 4... (Worker 1)',
+                      'descending': 'Descending: Boxes 100, 99, 98, 97... (Worker 2)',
+                      'middle_up': 'Middle Up: Boxes 50, 51, 52, 53... (Worker 3)',
+                      'middle_down': 'Middle Down: Boxes 49, 48, 47, 46... (Worker 4)'
+                    };
+
+                    return (
+                      <div className="flex items-center space-x-2 text-sm text-gray-700">
+                        <div
+                          className="w-4 h-4 rounded-full border"
+                          style={{ backgroundColor: assignForm.assignedColor }}
+                        />
+                        <span className="font-medium">
+                          {patternDescriptions[pattern as keyof typeof patternDescriptions]}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Allocation patterns ensure workers don't conflict when scanning boxes
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Color Preview */}
+            <div className="border border-gray-200 rounded-lg p-3">
+              <Label className="text-sm font-medium">Preview</Label>
+              <div className="flex items-center space-x-2 mt-2">
+                <div
+                  className="w-4 h-4 rounded-full border"
+                  style={{ backgroundColor: assignForm.assignedColor }}
+                ></div>
+                <span className="text-sm text-gray-600">
+                  {assignForm.userId ? (workersData as any)?.workers?.find((w: any) => w.id === assignForm.userId)?.name || "Selected Worker" : "Worker Name"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAssignDialogOpen(false)}
+              data-testid="button-cancel-assign"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignWorker}
+              disabled={!assignForm.userId || assignWorkerMutation.isPending}
+              data-testid="button-confirm-assign"
+            >
+              {assignWorkerMutation.isPending ? "Assigning..." : "Assign Worker"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Extra Items Modal */}
-      <ExtraItemsModal
-        isOpen={extraItemsModal.isOpen}
-        onClose={() => setExtraItemsModal(prev => ({ ...prev, isOpen: false }))}
-        jobId={extraItemsModal.jobId}
-        jobName={extraItemsModal.jobName}
-      />
+      {extraItemsJobId && (
+        <ExtraItemsModal
+          isOpen={isExtraItemsModalOpen}
+          onClose={() => {
+            setIsExtraItemsModalOpen(false);
+            setExtraItemsJobId(null);
+          }}
+          jobId={extraItemsJobId}
+        />
+      )}
 
-      {/* Error Dialog - Remove this as it's causing crashes without proper props */}
-      {/* <ErrorDialog /> */}
+      {/* Completed Boxes Modal */}
+      {completedBoxesJobId && (
+        <CompletedBoxesModal
+          isOpen={isCompletedBoxesModalOpen}
+          onClose={() => {
+            setIsCompletedBoxesModalOpen(false);
+            setCompletedBoxesJobId(null);
+          }}
+          jobId={completedBoxesJobId}
+        />
+      )}
     </div>
   );
 }
