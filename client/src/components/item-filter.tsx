@@ -52,28 +52,29 @@ export function ItemFilter({
   return (
     <div className="flex flex-col gap-2" data-testid="item-filter">
       {/* Filter Control */}
-      <div className="flex items-center gap-2">
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={open}
-              className="w-64 justify-between"
-              data-testid="button-filter-products"
-            >
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-600">
-                  {selectedProducts.length > 0 
-                    ? `${selectedProducts.length} product${selectedProducts.length > 1 ? 's' : ''} selected`
-                    : placeholder
-                  }
-                </span>
-              </div>
-              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
+      <div className="flex items-center gap-2 justify-start">
+        <div className="ml-8">
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-64 justify-between"
+                data-testid="button-filter-products"
+              >
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600">
+                    {selectedProducts.length > 0 
+                      ? `${selectedProducts.length} product${selectedProducts.length > 1 ? 's' : ''} selected`
+                      : placeholder
+                    }
+                  </span>
+                </div>
+                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
           <PopoverContent className="w-64 p-0" data-testid="filter-dropdown">
             <Command>
               <CommandInput 
@@ -108,6 +109,7 @@ export function ItemFilter({
             </Command>
           </PopoverContent>
         </Popover>
+        </div>
         
         {selectedProducts.length > 0 && (
           <Button
