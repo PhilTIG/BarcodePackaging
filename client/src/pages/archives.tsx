@@ -35,11 +35,13 @@ import { useLocation } from 'wouter';
 interface WorkerStats {
   workerId: string;
   workerName: string;
-  workerStaffId: string;
-  totalItemsChecked: number;
+  totalScans: number;
+  totalSessionTime: number;
+  itemsChecked: number;
   correctChecks: number;
-  discrepanciesFound: number;
-  accuracy: string;
+  checkAccuracy: string;
+  extrasFound: number;
+  errorsCaused: number;
 }
 
 interface JobArchive {
@@ -77,7 +79,7 @@ export default function Archives() {
   // Unarchive mutation
   const unarchiveMutation = useMutation({
     mutationFn: async (archiveId: string) => {
-      const response = await apiRequest(`/api/archives/${archiveId}/unarchive`, 'POST');
+      const response = await apiRequest('POST', `/api/archives/${archiveId}/unarchive`);
       return response;
     },
     onSuccess: () => {
@@ -100,7 +102,7 @@ export default function Archives() {
   // Purge mutation
   const purgeMutation = useMutation({
     mutationFn: async (archiveId: string) => {
-      const response = await apiRequest(`/api/archives/${archiveId}/purge`, 'DELETE');
+      const response = await apiRequest('DELETE', `/api/archives/${archiveId}/purge`);
       return response;
     },
     onSuccess: () => {
@@ -122,7 +124,7 @@ export default function Archives() {
   // Delete archive mutation
   const deleteArchiveMutation = useMutation({
     mutationFn: async (archiveId: string) => {
-      const response = await apiRequest(`/api/archives/${archiveId}`, 'DELETE');
+      const response = await apiRequest('DELETE', `/api/archives/${archiveId}`);
       return response;
     },
     onSuccess: () => {
@@ -355,17 +357,21 @@ export default function Archives() {
                       Worker Performance
                     </h4>
                     <div className="grid gap-2">
-                      {archive.workerStats.map((worker) => (
-                        <div key={worker.workerId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      {archive.workerStats.map((worker, index) => (
+                        <div key={`${worker.workerId}-${index}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-3">
                             <div>
                               <div className="font-medium">{worker.workerName}</div>
-                              <div className="text-sm text-gray-500">ID: {worker.workerStaffId}</div>
+                              <div className="text-sm text-gray-500">Session: {worker.totalSessionTime}min</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-4 text-sm">
                             <div className="text-center">
-                              <div className="font-medium">{worker.totalItemsChecked}</div>
+                              <div className="font-medium">{worker.totalScans}</div>
+                              <div className="text-gray-500">Scans</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-medium">{worker.itemsChecked}</div>
                               <div className="text-gray-500">Checked</div>
                             </div>
                             <div className="text-center">
@@ -373,12 +379,12 @@ export default function Archives() {
                               <div className="text-gray-500">Correct</div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium text-red-600">{worker.discrepanciesFound}</div>
-                              <div className="text-gray-500">Issues</div>
+                              <div className="font-medium text-red-600">{worker.errorsCaused}</div>
+                              <div className="text-gray-500">Errors</div>
                             </div>
                             <div className="text-center">
-                              <div className={`font-medium ${getAccuracyColor(worker.accuracy)}`}>
-                                {parseFloat(worker.accuracy).toFixed(1)}%
+                              <div className={`font-medium ${getAccuracyColor(worker.checkAccuracy)}`}>
+                                {parseFloat(worker.checkAccuracy).toFixed(1)}%
                               </div>
                               <div className="text-gray-500">Accuracy</div>
                             </div>
