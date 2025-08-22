@@ -818,44 +818,30 @@ export default function WorkerScanner() {
               <CardTitle>Job Performance</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {/* Progress Bar - Same as Dashboard Active Jobs */}
-                <div>
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                    <span>Progress - {Math.round((job.completedItems / job.totalProducts) * 100)}% complete</span>
-                    <span>{job.completedItems} / {job.totalProducts} items</span>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <div className="text-xl font-bold text-primary-600" data-testid="stat-items-scanned">
+                    {jobPerformanceData?.performance?.totalScans || 0}
                   </div>
-                  <div className="rounded-md p-1 bg-gray-50">
-                    <Progress value={Math.round((job.completedItems / job.totalProducts) * 100)} className="mb-2" />
-                  </div>
+                  <p className="text-xs text-gray-600">Items Scanned</p>
                 </div>
-
-                {/* Performance Stats Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-primary-600" data-testid="stat-items-scanned">
-                      {jobPerformanceData?.performance?.totalScans || 0}
-                    </div>
-                    <p className="text-xs text-gray-600">Items Scanned</p>
+                <div className="text-center">
+                  <div className="text-xl font-bold text-primary-600" data-testid="stat-scans-per-hour">
+                    {jobPerformanceData?.performance?.scansPerHour || 0}
                   </div>
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-primary-600" data-testid="stat-scans-per-hour">
-                      {jobPerformanceData?.performance?.scansPerHour || 0}
-                    </div>
-                    <p className="text-xs text-gray-600">Scans/Hour</p>
+                  <p className="text-xs text-gray-600">Scans/Hour</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold text-success-600" data-testid="stat-accuracy">
+                    {jobPerformanceData?.performance?.accuracy || 100}%
                   </div>
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-success-600" data-testid="stat-accuracy">
-                      {jobPerformanceData?.performance?.accuracy || 100}%
-                    </div>
-                    <p className="text-xs text-gray-600">Accuracy</p>
+                  <p className="text-xs text-gray-600">Accuracy</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold text-primary-600" data-testid="stat-score">
+                    {jobPerformanceData?.performance?.score?.toFixed(1) || '0.0'}
                   </div>
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-primary-600" data-testid="stat-score">
-                      {jobPerformanceData?.performance?.score?.toFixed(1) || '0.0'}
-                    </div>
-                    <p className="text-xs text-gray-600">Score (1-10)</p>
-                  </div>
+                  <p className="text-xs text-gray-600">Score (1-10)</p>
                 </div>
               </div>
             </CardContent>
