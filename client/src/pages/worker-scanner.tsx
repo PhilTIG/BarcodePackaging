@@ -904,7 +904,7 @@ export default function WorkerScanner() {
                       variant="outline"
                       size="sm"
                       onClick={() => undoMutation.mutate(1)}
-                      disabled={undoMutation.isPending || (jobPerformanceData?.performance?.totalScans || 0) === 0}
+                      disabled={undoMutation.isPending || scanStats.totalScans === 0}
                       data-testid="button-undo"
                     >
                       <Undo className="mr-1 h-3 w-3" />
@@ -914,12 +914,9 @@ export default function WorkerScanner() {
                       variant="outline"
                       size="sm"
                       onClick={() => undoMutation.mutate(5)}
-                      disabled={undoMutation.isPending || (jobPerformanceData?.performance?.totalScans || 0) < 5}
+                      disabled={undoMutation.isPending || scanStats.totalScans < 5}
                       data-testid="button-bulk-undo"
                     >
-                      <RotateCcw className="mr-1 h-3 w-3" />
-                      Bulk Undo
-                    </Button></old_str>
                       <RotateCcw className="mr-1 h-3 w-3" />
                       Bulk Undo
                     </Button>
