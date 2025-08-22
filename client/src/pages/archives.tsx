@@ -283,7 +283,7 @@ export default function Archives() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Purge Job Data</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will permanently delete the detailed job data while keeping the summary. The job cannot be unarchived after purging.
+                              This will permanently delete ALL job data from the live system (sessions, scans, assignments, etc.) while keeping only the archive summary. The job cannot be unarchived after purging.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -292,7 +292,7 @@ export default function Archives() {
                               onClick={() => purgeMutation.mutate(archive.id)}
                               className="bg-orange-600 hover:bg-orange-700"
                             >
-                              Purge Data
+                              Purge All Data
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -310,7 +310,7 @@ export default function Archives() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Archive</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will permanently delete the entire archive including all summary data. This action cannot be undone.
+                            This will permanently delete the entire archive including all summary data AND all related job data from the live system. This action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -319,7 +319,7 @@ export default function Archives() {
                             onClick={() => deleteArchiveMutation.mutate(archive.id)}
                             className="bg-red-600 hover:bg-red-700"
                           >
-                            Delete Archive
+                            Delete Everything
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>

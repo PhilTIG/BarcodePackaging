@@ -2380,12 +2380,64 @@ export class DatabaseStorage implements IStorage {
 
   async deleteJobArchive(id: string): Promise<boolean> {
     try {
-      // First delete worker stats
+      // Get the archive to find the original job ID
+      const archive = await this.getJobArchiveById(id);
+      if (!archive) {
+        return false;
+      }
+
+      const originalJobId = archive.originalJobId;
+
+      // Delete ALL job-related data from live operational tables
+      // Note: scan_events will cascade delete when scan_sessions are deleted
+      // Note: check_events and check_results will cascade delete when check_sessions are deleted
+      
+      // Delete check sessions and related data
+      await this.db
+        .delete(checkSessions)
+        .where(eq(checkSessions.jobId, originalJobId));
+
+      // Delete scan sessions and related data
+      await this.db
+        .delete(scanSessions)
+        .where(eq(scanSessions.jobId, originalJobId));
+
+      // Delete job assignments
+      await this.db
+        .delete(jobAssignments)
+        .where(eq(jobAssignments.jobId, originalJobId));
+
+      // Delete worker box assignments
+      await this.db
+        .delete(workerBoxAssignments)
+        .where(eq(workerBoxAssignments.jobId, originalJobId));
+
+      // Delete box requirements
+      await this.db
+        .delete(boxRequirements)
+        .where(eq(boxRequirements.jobId, originalJobId));
+
+      // Delete products (legacy table)
+      await this.db
+        .delete(products)
+        .where(eq(products.jobId, originalJobId));
+
+      // Delete any scan events that directly reference the job (extra items)
+      await this.db
+        .delete(scanEvents)
+        .where(eq(scanEvents.jobId, originalJobId));
+
+      // Delete the main job record
+      await this.db
+        .delete(jobs)
+        .where(eq(jobs.id, originalJobId));
+
+      // Finally delete archive worker stats
       await this.db
         .delete(archiveWorkerStats)
         .where(eq(archiveWorkerStats.archiveId, id));
       
-      // Then delete the archive
+      // Delete the archive record
       const result = await this.db
         .delete(jobArchives)
         .where(eq(jobArchives.id, id));
@@ -2602,7 +2654,58 @@ export class DatabaseStorage implements IStorage {
 
   async purgeJobData(archiveId: string): Promise<boolean> {
     try {
-      // Mark archive as purged and clear snapshot data
+      // Get the archive to find the original job ID
+      const archive = await this.getJobArchiveById(archiveId);
+      if (!archive) {
+        return false;
+      }
+
+      const originalJobId = archive.originalJobId;
+
+      // Delete ALL job-related data from live operational tables
+      // This removes all session data, extra items, check data, etc.
+      
+      // Delete check sessions and related data (cascade deletes check_events and check_results)
+      await this.db
+        .delete(checkSessions)
+        .where(eq(checkSessions.jobId, originalJobId));
+
+      // Delete scan sessions and related data (cascade deletes scan_events)
+      await this.db
+        .delete(scanSessions)
+        .where(eq(scanSessions.jobId, originalJobId));
+
+      // Delete job assignments (worker/supervisor/manager assignments to this job)
+      await this.db
+        .delete(jobAssignments)
+        .where(eq(jobAssignments.jobId, originalJobId));
+
+      // Delete worker box assignments
+      await this.db
+        .delete(workerBoxAssignments)
+        .where(eq(workerBoxAssignments.jobId, originalJobId));
+
+      // Delete box requirements
+      await this.db
+        .delete(boxRequirements)
+        .where(eq(boxRequirements.jobId, originalJobId));
+
+      // Delete products (legacy table)
+      await this.db
+        .delete(products)
+        .where(eq(products.jobId, originalJobId));
+
+      // Delete any scan events that directly reference the job (extra items)
+      await this.db
+        .delete(scanEvents)
+        .where(eq(scanEvents.jobId, originalJobId));
+
+      // Delete the main job record
+      await this.db
+        .delete(jobs)
+        .where(eq(jobs.id, originalJobId));
+
+      // Mark archive as purged and clear snapshot data, but keep archive summary
       const result = await this.db
         .update(jobArchives)
         .set({ 
