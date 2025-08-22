@@ -1238,8 +1238,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/jobs/:id/progress', requireAuth, async (req, res) => {
     try {
       const progressData = await storage.getJobProgress(req.params.id);
+      
+      // Ensure we always return a consistent structure
+      if (!progressData || !progressData.progress) {
+        // Fallback to basic job data if progress data is not available
+        const job = await storage.getJobById(req.params.id);
+        if (job) {
+          const fallbackProgress = {
+            progress: {
+              completionPercentage: Math.round((job.completedItems / job.totalProducts) * 100) || 0,
+              totalItems: job.totalProducts || 0,
+              scannedItems: job.completedItems || 0,
+              totalBoxes: job.totalCustomers || 0,
+              completedBoxes: 0,
+              extraItemsCount: 0,
+              workers: []
+            }
+          };
+          return res.json(fallbackProgress);
+        }
+        return res.json({ progress: { completionPercentage: 0, totalItems: 0, scannedItems: 0 } });
+      }
+      
       res.json(progressData);
     } catch (error) {
+      console.error('Failed to fetch job progress:', error);
       res.status(500).json({ message: 'Failed to fetch job progress' });
     }
   });
