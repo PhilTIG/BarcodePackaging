@@ -8,6 +8,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useAuth } from "@/hooks/use-auth";
 import { BoxDetailsModal } from "./box-details-modal";
 import { useQuery } from "@tanstack/react-query";
+import { useFilteredBoxData } from "@/hooks/use-filtered-box-data";
 
 interface Product {
   id: string;
@@ -28,9 +29,16 @@ interface CustomerBoxGridProps {
   lastScannedBoxNumber?: number | null; // For POC-style single box highlighting
   onBoxScanUpdate?: (boxNumber: number, workerId?: string, workerColor?: string, workerStaffId?: string) => void;
   onCheckCount?: (boxNumber: number, jobId: string) => void;
+  filterByProducts?: string[]; // Array of product names to filter by
 }
 
-export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount }: CustomerBoxGridProps) {
+export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount, filterByProducts = [] }: CustomerBoxGridProps) {
+  
+  // Use filtered box data when filtering is requested
+  const { boxData: filteredBoxData, availableProducts, isLoading: filterDataLoading } = useFilteredBoxData(
+    filterByProducts.length > 0 ? jobId : "", // Only fetch when filtering is active
+    filterByProducts
+  );
   // State for box details modal
   const [selectedBox, setSelectedBox] = useState<{
     boxNumber: number;
@@ -99,7 +107,16 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
     return 'completed';
   };
   
+  // Choose between filtered data (from box requirements) or legacy product data
   const boxData = useMemo(() => {
+    const isFiltering = filterByProducts.length > 0;
+    
+    // When filtering is active, use the filtered box data
+    if (isFiltering && filteredBoxData.length > 0) {
+      return filteredBoxData;
+    }
+    
+    // Otherwise, use legacy product-based calculation
     const boxes: { [key: number]: {
       boxNumber: number;
       customerName: string;
@@ -109,6 +126,8 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
       assignedWorker?: string;
       lastWorkerColor?: string;
       lastWorkerStaffId?: string;
+      filteredTotalQty?: number;
+      filteredScannedQty?: number;
     }} = {};
 
     products.forEach(product => {
@@ -120,6 +139,8 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
           scannedQty: 0,
           isComplete: false,
           lastWorkerColor: product.lastWorkerColor,
+          filteredTotalQty: 0,
+          filteredScannedQty: 0,
         };
       }
 
@@ -139,10 +160,8 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
       }
     });
 
-    // Only show actual boxes from CSV data - no artificial empty boxes
-
     return Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
-  }, [products, preferences.maxBoxesPerRow]);
+  }, [products, preferences.maxBoxesPerRow, filterByProducts, filteredBoxData]);
 
   // Create responsive grid classes based on actual box count and user preference
   const getGridClasses = () => {
@@ -186,7 +205,11 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
   return (
     <div className={getGridClasses()} data-testid="customer-box-grid">
       {boxData.map((box) => {
-        const completionPercentage = box.totalQty > 0 ? Math.round((box.scannedQty / box.totalQty) * 100) : 0;
+        // Display logic: Use filtered quantities when filtering is active, otherwise use full quantities
+        const isFiltering = filterByProducts.length > 0;
+        const displayTotalQty = isFiltering ? (box.filteredTotalQty || 0) : box.totalQty;
+        const displayScannedQty = isFiltering ? (box.filteredScannedQty || 0) : box.scannedQty;
+        const completionPercentage = displayTotalQty > 0 ? Math.round((displayScannedQty / displayTotalQty) * 100) : 0;
         
         // POC-style highlighting with worker color support
         const isLastScanned = lastScannedBoxNumber === box.boxNumber;
@@ -284,7 +307,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
             {/* Quantity fraction - Left side at same height as box number */}
             <div className="absolute top-12 left-2">
               <div className={`text-lg font-bold ${highlighting.textColor}`} data-testid={`quantity-${box.boxNumber}`}>
-                {box.scannedQty}/{box.totalQty}
+                {displayScannedQty}/{displayTotalQty}
               </div>
               {/* Worker staffId under quantity if available */}
               {highlighting.workerStaffId && (

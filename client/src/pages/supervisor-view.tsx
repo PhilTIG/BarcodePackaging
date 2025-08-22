@@ -10,6 +10,8 @@ import { Settings, LogOut, Users, Package, ChevronLeft } from "lucide-react";
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { PerformanceDashboard } from "@/components/performance-dashboard";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
+import { ItemFilter } from "@/components/item-filter";
+import { useFilteredBoxData } from "@/hooks/use-filtered-box-data";
 import { useEffect, useState, useCallback } from "react";
 
 export default function SupervisorView() {
@@ -17,6 +19,7 @@ export default function SupervisorView() {
   const [, setLocation] = useLocation();
   const { user, isLoading, logout } = useAuth();
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
   // Fetch all jobs for supervisor (job selection) with real-time updates
   const { data: allJobsData } = useQuery({
@@ -40,6 +43,9 @@ export default function SupervisorView() {
 
   // Connect to WebSocket for real-time updates 
   const { isConnected } = useWebSocket(jobId);
+
+  // Get available products for filtering (always fetch when job is available)
+  const { availableProducts } = useFilteredBoxData(jobId || "", []);
 
   // Redirect if not authenticated or not a supervisor/manager
   useEffect(() => {
@@ -278,12 +284,22 @@ export default function SupervisorView() {
               <div className="bg-primary-100 w-10 h-10 rounded-lg flex items-center justify-center">
                 <Users className="text-primary-600" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Job Monitor</h1>
-                <p className="text-sm text-gray-600">{job.name}</p>
+              <div className="flex-1 mx-4">
+                <div className="mb-2">
+                  <h1 className="text-xl font-bold text-gray-900">Job Monitor</h1>
+                  <p className="text-sm text-gray-600">{job.name}</p>
+                </div>
+                
+                {/* Item Filter */}
+                <ItemFilter
+                  availableProducts={availableProducts}
+                  selectedProducts={selectedProducts}
+                  onSelectionChange={setSelectedProducts}
+                  placeholder="Filter by product name..."
+                />
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-right flex-shrink-0">
               <p className="text-sm font-medium text-gray-900">{completionPercentage}% Complete</p>
               <p className="text-xs text-gray-600">
                 {job.completedItems} of {job.totalProducts} items
@@ -354,6 +370,7 @@ export default function SupervisorView() {
               products={products}
               jobId={job.id}
               supervisorView={true}
+              filterByProducts={selectedProducts}
               onCheckCount={(boxNumber, jobId) => {
                 // Navigate to dedicated CheckCount page
                 setLocation(`/check-count/${jobId}/${boxNumber}`);
