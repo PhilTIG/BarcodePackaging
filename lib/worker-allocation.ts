@@ -118,23 +118,52 @@ export function getWorkerForBox(
   workerAssignments: WorkerAssignment[],
   maxBoxes: number = 100
 ): string | null {
-  // Find which worker has this box number next in their sequence
-  for (const worker of workerAssignments) {
+  // Sort workers by their allocation pattern priority
+  const sortedWorkers = [...workerAssignments].sort((a, b) => {
+    const patternPriority = { 'ascending': 0, 'descending': 1, 'middle_up': 2, 'middle_down': 3 };
+    return (patternPriority[a.pattern] || 0) - (patternPriority[b.pattern] || 0);
+  });
+
+  // Find the worker whose pattern should handle this box number
+  for (const worker of sortedWorkers) {
     const sequence = getWorkerBoxSequence(worker.pattern, maxBoxes);
-    const boxIndex = sequence.indexOf(boxNumber);
+    const currentIndex = worker.currentBoxIndex || 0;
     
-    if (boxIndex !== -1) {
-      // Check if this box comes next in the worker's current progression
-      const currentIndex = worker.currentBoxIndex || 0;
-      if (boxIndex >= currentIndex) {
-        return worker.workerId;
-      }
+    // Check if this box number is in the worker's upcoming sequence
+    const boxIndex = sequence.indexOf(boxNumber);
+    if (boxIndex !== -1 && boxIndex >= currentIndex) {
+      return worker.workerId;
     }
   }
   
-  // Fallback: assign to first worker with ascending pattern
-  const ascendingWorker = workerAssignments.find(w => w.pattern === 'ascending');
-  return ascendingWorker?.workerId || null;
+  // Fallback: assign to first worker
+  return workerAssignments[0]?.workerId || null;
+}
+
+/**
+ * Get the next box number a worker should scan into based on their allocation pattern
+ */
+export function getNextBoxForWorkerById(
+  workerId: string,
+  workerAssignments: WorkerAssignment[],
+  availableBoxNumbers: number[],
+  maxBoxes: number = 100
+): number | null {
+  const worker = workerAssignments.find(w => w.workerId === workerId);
+  if (!worker || availableBoxNumbers.length === 0) return null;
+  
+  const sequence = getWorkerBoxSequence(worker.pattern, maxBoxes);
+  const currentIndex = worker.currentBoxIndex || 0;
+  
+  // Find the next available box in the worker's sequence
+  for (let i = currentIndex; i < sequence.length; i++) {
+    const nextBox = sequence[i];
+    if (availableBoxNumbers.includes(nextBox)) {
+      return nextBox;
+    }
+  }
+  
+  return null;
 }
 
 /**
