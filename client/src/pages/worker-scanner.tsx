@@ -81,11 +81,11 @@ export default function WorkerScanner() {
     enabled: !!user,
   });
 
-  // Fetch job-specific worker performance with consistent refresh interval
+  // Fetch job-specific worker performance
   const { data: jobPerformanceData } = useQuery({
     queryKey: ["/api/jobs", jobId, "worker-performance", user?.id],
     enabled: !!jobId && !!user?.id,
-    refetchInterval: 10000, // 10-second refresh for consistency
+    refetchInterval: 5000, // Update every 5 seconds for real-time updates
   });
 
   // Connect to WebSocket
