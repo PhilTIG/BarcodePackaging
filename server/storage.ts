@@ -275,6 +275,14 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(jobs).orderBy(desc(jobs.createdAt));
   }
 
+  async getActiveJobs(): Promise<Job[]> {
+    return await this.db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.isArchived, false))
+      .orderBy(desc(jobs.createdAt));
+  }
+
   async updateJobStatus(id: string, status: string): Promise<Job | undefined> {
     const updateData: any = { status };
     if (status === 'completed') {
@@ -1726,37 +1734,7 @@ export class DatabaseStorage implements IStorage {
 
   // PHASE 4: Session snapshot methods removed (unused dead code)
 
-  // Job archive methods
-  async createJobArchive(archive: InsertJobArchive): Promise<JobArchive> {
-    const [result] = await this.db
-      .insert(jobArchives)
-      .values(archive)
-      .returning();
-    return result;
-  }
-
-  async getJobArchives(): Promise<JobArchive[]> {
-    return await this.db
-      .select()
-      .from(jobArchives)
-      .orderBy(sql`archived_at DESC`);
-  }
-
-  async searchJobArchives(query: string): Promise<JobArchive[]> {
-    return await this.db
-      .select()
-      .from(jobArchives)
-      .where(sql`job_data_snapshot::text ILIKE ${`%${query}%`}`)
-      .orderBy(sql`archived_at DESC`);
-  }
-
-  async deleteJobArchive(id: string): Promise<boolean> {
-    const result = await this.db
-      .delete(jobArchives)
-      .where(eq(jobArchives.id, id))
-      .returning();
-    return result.length > 0;
-  }
+  // Job archive methods - moved to end of class to avoid duplicates
 
   // Delete all job data while preserving users and their settings
   async deleteAllJobData(): Promise<{ deletedJobs: number; message: string }> {
@@ -2434,7 +2412,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(archiveWorkerStats)
       .where(eq(archiveWorkerStats.archiveId, archiveId))
-      .orderBy(desc(archiveWorkerStats.accuracy));
+      .orderBy(desc(archiveWorkerStats.checkAccuracy));
   }
 
   async archiveJob(jobId: string, archivedBy: string): Promise<JobArchive> {
@@ -2503,58 +2481,55 @@ export class DatabaseStorage implements IStorage {
         jobDataSnapshot
       });
 
-      // Calculate and create worker statistics
-      const workerStats = new Map();
-      
-      // Process CheckCount sessions for worker accuracy
-      checkSessions.forEach(session => {
-        if (session.status === 'completed' && session.userId) {
-          if (!workerStats.has(session.userId)) {
-            workerStats.set(session.userId, {
-              totalItemsChecked: 0,
-              correctChecks: 0,
-              discrepanciesFound: 0
-            });
-          }
-          const stats = workerStats.get(session.userId);
-          stats.totalItemsChecked++;
-          if ((session.discrepanciesFound || 0) === 0) {
-            stats.correctChecks++;
-          } else {
-            stats.discrepanciesFound += session.discrepanciesFound || 0;
-          }
-        }
-      });
+      // Calculate and create worker statistics from scan_sessions (aggregated data)
+      const scanSessions = await this.db
+        .select()
+        .from(scanSessions)
+        .leftJoin(users, eq(scanSessions.userId, users.id))
+        .where(eq(scanSessions.jobId, jobId));
 
-      // Create worker stats records
       const workerStatsRecords: InsertArchiveWorkerStats[] = [];
-      for (const [workerId, stats] of Array.from(workerStats.entries())) {
-        const [worker] = await this.db
-          .select()
-          .from(users)
-          .where(eq(users.id, workerId));
+      
+      for (const sessionRecord of scanSessions) {
+        const session = sessionRecord.scan_sessions;
+        const worker = sessionRecord.users;
         
-        if (worker) {
-          const accuracy = stats.totalItemsChecked > 0 ? (stats.correctChecks / stats.totalItemsChecked) * 100 : 0;
-          
-          workerStatsRecords.push({
-            archiveId: archive.id,
-            workerId,
-            workerName: worker.name,
-            totalScans: 0, // Default value
-            totalSessionTime: 0, // Default value
-            itemsChecked: stats.totalItemsChecked,
-            correctChecks: stats.correctChecks,
-            checkAccuracy: accuracy.toString(),
-            extrasFound: 0, // Default value
-            errorsCaused: stats.discrepanciesFound
-          });
-        }
+        if (!worker) continue;
+
+        // Find CheckCount sessions for this worker
+        const workerCheckSessions = checkSessions.filter(cs => cs.userId === worker.id);
+        const totalItemsChecked = workerCheckSessions.length;
+        const correctChecks = workerCheckSessions.filter(cs => (cs.discrepanciesFound || 0) === 0).length;
+        const checkAccuracy = totalItemsChecked > 0 ? (correctChecks / totalItemsChecked) * 100 : 0;
+
+        // Calculate session time in minutes
+        const sessionTimeMinutes = session.endTime && session.startTime 
+          ? Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / (1000 * 60))
+          : 0;
+
+        workerStatsRecords.push({
+          archiveId: archive.id,
+          workerId: worker.id,
+          workerName: worker.name,
+          totalScans: session.totalScans || 0,
+          totalSessionTime: sessionTimeMinutes,
+          itemsChecked: totalItemsChecked,
+          correctChecks,
+          checkAccuracy: checkAccuracy.toString(),
+          extrasFound: 0, // Will be calculated from extra items in scan events
+          errorsCaused: session.errorScans || 0
+        });
       }
 
       if (workerStatsRecords.length > 0) {
         await this.createArchiveWorkerStats(workerStatsRecords);
       }
+
+      // Mark the job as archived
+      await this.db
+        .update(jobs)
+        .set({ isArchived: true })
+        .where(eq(jobs.id, jobId));
 
       return archive;
     } catch (error) {

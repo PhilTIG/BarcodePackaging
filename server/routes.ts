@@ -474,7 +474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/jobs', requireAuth, async (req, res) => {
     try {
-      const jobs = await storage.getAllJobs();
+      const jobs = await storage.getActiveJobs();
       
       // Fetch assignments for each job
       const jobsWithAssignments = await Promise.all(

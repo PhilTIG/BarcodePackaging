@@ -24,11 +24,13 @@ import {
   CheckCircle, 
   AlertTriangle,
   ArrowUpFromLine,
-  Calendar
+  Calendar,
+  ArrowLeft
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { useLocation } from 'wouter';
 
 interface WorkerStats {
   workerId: string;
@@ -61,6 +63,7 @@ interface JobArchive {
 export default function Archives() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [selectedArchive, setSelectedArchive] = useState<JobArchive | null>(null);
 
   // Fetch all archives
@@ -183,9 +186,20 @@ export default function Archives() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Archive className="h-6 w-6" />
-          <h1 className="text-3xl font-bold">Job Archives</h1>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation('/manager')}
+            className="flex items-center gap-2"
+            data-testid="button-back-to-dashboard"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+          <div className="flex items-center gap-2">
+            <Archive className="h-6 w-6" />
+            <h1 className="text-3xl font-bold">Job Archives</h1>
+          </div>
         </div>
         <Badge variant="outline" className="px-3 py-1">
           {archives.length} Total Archives

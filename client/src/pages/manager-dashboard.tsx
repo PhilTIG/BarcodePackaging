@@ -764,7 +764,19 @@ export default function ManagerDashboard() {
         {/* Active Jobs */}
         <Card data-testid="active-jobs">
           <CardHeader>
-            <CardTitle>Active Jobs</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Active Jobs</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation("/archives")}
+                className="flex items-center gap-2"
+                data-testid="button-archives-inline"
+              >
+                <Archive className="h-4 w-4" />
+                Archives
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {jobsLoading ? (
