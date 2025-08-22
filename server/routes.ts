@@ -429,6 +429,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Maximum of 4 workers can be assigned per job' });
       }
 
+      // Calculate correct worker index based on assignment order
+      const correctWorkerIndex = currentAssignments.length;
+      
       // Create assignment with allocation pattern
       const assignment = await storage.createJobAssignment({
         jobId,
@@ -436,11 +439,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedBy: req.user!.id,
         assignedColor: assignedColor || '#3B82F6',
         allocationPattern: allocationPattern || 'ascending',
-        workerIndex: typeof workerIndex === 'number' ? workerIndex : currentAssignments.length,
+        workerIndex: correctWorkerIndex, // Use calculated worker index, not frontend provided
         isActive: true,
       });
 
-      console.log(`[Job Assignment] Worker ${userId} assigned to job ${jobId} with ${allocationPattern || 'ascending'} pattern`);
+      console.log(`[Job Assignment] Worker ${userId} assigned to job ${jobId} with ${allocationPattern || 'ascending'} pattern, workerIndex: ${correctWorkerIndex}`);
 
       res.status(201).json({ 
         assignment: {

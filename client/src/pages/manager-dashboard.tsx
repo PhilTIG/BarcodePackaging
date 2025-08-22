@@ -311,11 +311,12 @@ export default function ManagerDashboard() {
   const assignWorkerMutation = useMutation({
     mutationFn: async (data: { jobId: string; userId: string; assignedColor: string }) => {
       // Get current job assignments to determine worker count and pattern
-      const jobResponse = await apiRequest("GET", `/api/jobs/${data.jobId}`);
-      const jobData = await jobResponse.json();
-      const currentAssignments = jobData.job?.assignments || [];
+      const jobsResponse = await apiRequest("GET", "/api/jobs");
+      const jobsData = await jobsResponse.json();
+      const currentJob = jobsData.jobs?.find((job: any) => job.id === data.jobId);
+      const currentAssignments = currentJob?.assignments || [];
 
-      // Automatically assign allocation pattern based on worker order
+      // Automatically assign allocation pattern based on assignment order (chronological)
       const workerIndex = currentAssignments.length;
       const allocationPattern = assignWorkerPattern(workerIndex);
 
