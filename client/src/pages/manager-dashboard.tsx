@@ -212,11 +212,15 @@ export default function ManagerDashboard() {
     },
   });
 
-  // Fetch jobs
+  // Fetch jobs with WebSocket real-time updates
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
     queryKey: ["/api/jobs"],
     enabled: !!user,
+    refetchInterval: 5000, // 5-second polling as fallback
   });
+
+  // Connect to WebSocket for real-time updates on all active jobs
+  useWebSocket();
 
   // Fetch users for assignment
   const { data: workersData } = useQuery({
