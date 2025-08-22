@@ -19,7 +19,7 @@ import { useErrorContext } from "@/lib/error-context";
 import { ErrorDialog } from "@/components/ui/error-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2, Archive } from "lucide-react";
+import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2, Archive, Box } from "lucide-react";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
 import { QASummaryPanel } from "@/components/qa-summary-panel";
 import { z } from "zod";
@@ -60,12 +60,12 @@ function ExtraItemsAndBoxesButtons({
   const totalBoxes = (progressData as any)?.progress?.totalBoxes || 0;
 
   return (
-    <div className="space-y-2">
+    <>
       {/* Extra Items Button */}
       <Button
         variant="outline"
+        size="sm"
         onClick={onExtraItemsClick}
-        className="w-full h-9 px-2"
         data-testid={`button-extra-items-${jobId}`}
       >
         <Package className="mr-1 h-4 w-4" />
@@ -75,13 +75,14 @@ function ExtraItemsAndBoxesButtons({
       {/* Boxes Complete Button */}
       <Button
         variant="outline"
+        size="sm"
         onClick={onBoxesCompleteClick}
-        className="w-full h-9 px-2"
         data-testid={`button-boxes-complete-${jobId}`}
       >
+        <Box className="mr-1 h-4 w-4" />
         {completedBoxes}/{totalBoxes} Boxes
       </Button>
-    </div>
+    </>
   );
 }
 
@@ -874,20 +875,7 @@ export default function ManagerDashboard() {
                         </div>
                       </div>
 
-                      {/* Extra Items and Boxes Complete - Bottom Right Vertical Stack */}
-                      <div className="absolute bottom-4 right-4 space-y-2">
-                        {/* Get extra items count and progress data */}
-                        <ExtraItemsAndBoxesButtons jobId={job.id}
-                          onExtraItemsClick={() => {
-                            setExtraItemsJobId(job.id);
-                            setIsExtraItemsModalOpen(true);
-                          }}
-                          onBoxesCompleteClick={() => {
-                            setCompletedBoxesJobId(job.id);
-                            setIsCompletedBoxesModalOpen(true);
-                          }}
-                        />
-                      </div>
+
 
                       {/* Assigned Workers Display with Allocation Patterns */}
                       {job.assignments && job.assignments.length > 0 && (
@@ -936,7 +924,7 @@ export default function ManagerDashboard() {
                         </div>
                       )}
 
-                      <div className="flex flex-wrap gap-2 mr-24">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -963,6 +951,18 @@ export default function ManagerDashboard() {
                           <Download className="mr-1 h-4 w-4" />
                           Export
                         </Button>
+
+                        {/* Extra Items and Boxes buttons now inline with other action buttons */}
+                        <ExtraItemsAndBoxesButtons jobId={job.id}
+                          onExtraItemsClick={() => {
+                            setExtraItemsJobId(job.id);
+                            setIsExtraItemsModalOpen(true);
+                          }}
+                          onBoxesCompleteClick={() => {
+                            setCompletedBoxesJobId(job.id);
+                            setIsCompletedBoxesModalOpen(true);
+                          }}
+                        />
                       </div>
                     </div>
                   );
