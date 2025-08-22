@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -61,12 +62,13 @@ export default function WorkerScanner() {
   const isMobileMode = runtimeSingleBoxMode || (window.innerWidth < 800);
   const isDesktopAndMobile = runtimeSingleBoxMode && window.innerWidth >= 800;
 
-  // Fetch worker's job assignments
+  // Fetch worker's job assignments with real-time updates for progress
   const { data: assignmentsData, isLoading: isAssignmentsLoading, error: assignmentsError } = useQuery({
     queryKey: ["/api/users/me/assignments"],
     enabled: !!user,
     retry: 3,
     retryDelay: 1000,
+    refetchInterval: 10000, // 10-second polling for real-time job progress updates
   });
 
   // Fetch job details
@@ -628,12 +630,11 @@ export default function WorkerScanner() {
                                 <p className="text-sm text-gray-600 mb-2">
                                   {job.totalProducts} total items • {completionPercentage}% complete
                                 </p>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                                    style={{ width: `${completionPercentage}%` }}
-                                  />
-                                </div>
+                                <Progress 
+                                  value={completionPercentage} 
+                                  className="h-2" 
+                                  data-testid={`job-progress-${assignment.jobId}`}
+                                />
                               </>
                             )}
                           </div>

@@ -18,10 +18,11 @@ export default function SupervisorView() {
   const { user, isLoading, logout } = useAuth();
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
 
-  // Fetch all jobs for supervisor (job selection)
+  // Fetch all jobs for supervisor (job selection) with real-time updates
   const { data: allJobsData } = useQuery({
     queryKey: ["/api/jobs"],
     enabled: !!user && !jobId,
+    refetchInterval: 10000, // 10-second polling for consistent real-time updates
   });
 
   // Fetch job details
@@ -206,12 +207,11 @@ export default function SupervisorView() {
                               </div>
                               <div>
                                 <p className="text-sm text-gray-600">Progress</p>
-                                <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                                  <div
-                                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                                    style={{ width: `${completionPercentage}%` }}
-                                  />
-                                </div>
+                                <Progress 
+                                  value={completionPercentage} 
+                                  className="h-2 mt-1" 
+                                  data-testid={`job-progress-${job.id}`}
+                                />
                               </div>
                             </div>
                           </div>
