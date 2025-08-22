@@ -285,18 +285,22 @@ export default function SupervisorView() {
                 <Users className="text-primary-600" />
               </div>
               <div className="flex-1 mx-4">
-                <div className="mb-2">
-                  <h1 className="text-xl font-bold text-gray-900">Job Monitor</h1>
-                  <p className="text-sm text-gray-600">{job.name}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h1 className="text-xl font-bold text-gray-900">Job Monitor</h1>
+                    <p className="text-sm text-gray-600">{job.name}</p>
+                  </div>
+                  
+                  {/* Item Filter - Same row as title */}
+                  <div className="flex-shrink-0">
+                    <ItemFilter
+                      availableProducts={availableProducts}
+                      selectedProducts={selectedProducts}
+                      onSelectionChange={setSelectedProducts}
+                      placeholder="Filter by product name..."
+                    />
+                  </div>
                 </div>
-                
-                {/* Item Filter */}
-                <ItemFilter
-                  availableProducts={availableProducts}
-                  selectedProducts={selectedProducts}
-                  onSelectionChange={setSelectedProducts}
-                  placeholder="Filter by product name..."
-                />
               </div>
             </div>
             <div className="text-right flex-shrink-0">
