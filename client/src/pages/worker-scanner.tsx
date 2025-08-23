@@ -295,9 +295,34 @@ export default function WorkerScanner() {
       return response.json();
     },
     onSuccess: (data) => {
+      // Enhanced toast message to differentiate between scan types
+      let title = "";
+      let description = "";
+
+      if (data.summary) {
+        const { scanUndone, extraItemsUndone, totalUndone } = data.summary;
+        if (extraItemsUndone > 0 && scanUndone > 0) {
+          title = `Undid ${totalUndone} items`;
+          description = `${scanUndone} successful scans and ${extraItemsUndone} extra items removed`;
+        } else if (extraItemsUndone > 0) {
+          title = `Removed ${extraItemsUndone} extra item${extraItemsUndone > 1 ? 's' : ''}`;
+          description = "Extra items removed from history";
+        } else if (scanUndone > 0) {
+          title = `Undid ${scanUndone} successful scan${scanUndone > 1 ? 's' : ''}`;
+          description = "Scan progress and box quantities updated";
+        } else {
+          title = `Undid ${totalUndone} item${totalUndone > 1 ? 's' : ''}`;
+          description = "Scan history updated";
+        }
+      } else {
+        // Fallback for old response format
+        title = `Undid ${data.undoneEvents?.length || 0} scan(s)`;
+        description = "Scan history updated";
+      }
+
       toast({
-        title: `Undid ${data.undoneEvents.length} scan(s)`,
-        description: "Scan history updated",
+        title,
+        description,
       });
 
       // Invalidate job performance query to get updated stats

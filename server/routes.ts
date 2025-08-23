@@ -1081,7 +1081,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.json({ undoneEvents });
+      // Enhanced response with event type information for better UI feedback
+      const undoneEventsWithTypes = undoneEvents.map((event: any) => ({
+        ...event,
+        originalEventType: event.eventType === 'undo' ? 'unknown' : event.eventType // Store original type before undo
+      }));
+
+      res.json({ 
+        undoneEvents: undoneEventsWithTypes,
+        summary: {
+          totalUndone: undoneEvents.length,
+          scanUndone: undoneEvents.filter((e: any) => e.eventType === 'scan').length,
+          extraItemsUndone: undoneEvents.filter((e: any) => e.eventType === 'extra_item').length
+        }
+      });
     } catch (error) {
       res.status(500).json({ message: 'Failed to undo scan events' });
     }

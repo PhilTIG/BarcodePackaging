@@ -676,14 +676,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  private getCurrentBox(products: Product[], userId: string): number | null {
+  private getCurrentBox(products: any[], userId: string): number | null {
     // Find the box number for products currently being scanned by this user
     // This would need more sophisticated logic based on session data
     const activeProducts = products.filter(p => (p.scannedQty || 0) > 0 && (p.scannedQty || 0) < p.qty);
     return activeProducts.length > 0 ? activeProducts[0].boxNumber : null;
   }
 
-  private getCurrentCustomer(products: Product[], userId: string): string | null {
+  private getCurrentCustomer(products: any[], userId: string): string | null {
     // Find the customer for products currently being scanned by this user
     const activeProducts = products.filter(p => (p.scannedQty || 0) > 0 && (p.scannedQty || 0) < p.qty);
     return activeProducts.length > 0 ? activeProducts[0].customerName : null;
@@ -693,7 +693,7 @@ export class DatabaseStorage implements IStorage {
    * Helper method to calculate box completion status for a set of products
    * Box Complete = 100% fulfillment: all items allocated to each box (CustomName) must be scanned
    */
-  private calculateBoxCompletion(products: Product[]): {
+  private calculateBoxCompletion(products: any[]): {
     totalBoxes: number;
     completedBoxes: number;
     boxCompletionPercentage: number;
@@ -976,11 +976,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async undoScanEvents(sessionId: string, count: number): Promise<ScanEvent[]> {
-    // Get the most recent scan events to undo
+    // Get the most recent undoable events (both scans and extra items) to undo
     const eventsToUndo = await this.db
       .select()
       .from(scanEvents)
-      .where(and(eq(scanEvents.sessionId, sessionId), eq(scanEvents.eventType, 'scan')))
+      .where(and(
+        eq(scanEvents.sessionId, sessionId), 
+        or(eq(scanEvents.eventType, 'scan'), eq(scanEvents.eventType, 'extra_item'))
+      ))
       .orderBy(desc(scanEvents.scanTime))
       .limit(count);
 
@@ -1001,9 +1004,10 @@ export class DatabaseStorage implements IStorage {
       .values(undoEvents)
       .returning();
 
-    // Decrease box requirement scanned quantities using modern system
+    // Decrease box requirement scanned quantities for successful scans only
+    // Extra items don't affect box requirements, so skip them
     for (const event of eventsToUndo) {
-      if (event.barCode && event.boxNumber) {
+      if (event.eventType === 'scan' && event.barCode && event.boxNumber) {
         // Find matching box requirements and decrement their scanned quantity
         const boxReqs = await this.db
           .select()
@@ -1026,6 +1030,7 @@ export class DatabaseStorage implements IStorage {
           }
         }
       }
+      // For extra_item events, no box requirement updates needed - just remove the record
     }
 
     // Automatically update job status after an undo event
