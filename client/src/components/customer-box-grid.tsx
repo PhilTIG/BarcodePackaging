@@ -111,7 +111,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
   
   // Choose between filtered data (from box requirements) or legacy product data
   const boxData = useMemo(() => {
-    const isFiltering = filterByProducts.length > 0;
+    const isFiltering = filterByProducts.length > 0 || filterByGroups.length > 0;
     
     // When filtering is active, use the filtered box data
     if (isFiltering && filteredBoxData.length > 0) {
@@ -163,7 +163,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
     });
 
     return Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
-  }, [products, preferences.maxBoxesPerRow, filterByProducts, filteredBoxData]);
+  }, [products, preferences.maxBoxesPerRow, filterByProducts, filterByGroups, filteredBoxData]);
 
   // Create responsive grid classes based on actual box count and user preference
   const getGridClasses = () => {
@@ -208,7 +208,7 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
     <div className={getGridClasses()} data-testid="customer-box-grid">
       {boxData.map((box) => {
         // Display logic: Use filtered quantities when filtering is active, otherwise use full quantities
-        const isFiltering = filterByProducts.length > 0;
+        const isFiltering = filterByProducts.length > 0 || filterByGroups.length > 0;
         const displayTotalQty = isFiltering ? (box.filteredTotalQty || 0) : box.totalQty;
         const displayScannedQty = isFiltering ? (box.filteredScannedQty || 0) : box.scannedQty;
         const completionPercentage = displayTotalQty > 0 ? Math.round((displayScannedQty / displayTotalQty) * 100) : 0;
