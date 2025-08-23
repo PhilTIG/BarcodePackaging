@@ -48,23 +48,7 @@ export const boxRequirements = pgTable("box_requirements", {
   lastWorkerColor: text("last_worker_color"),
 });
 
-// Keep products table simplified - just for barcode to product name mapping
-export const products = pgTable("products", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
-  barCode: text("bar_code").notNull(),
-  productName: text("product_name").notNull(),
-  customerName: text("customer_name").notNull(),
-  groupName: text("group_name"),
-  qty: integer("qty").notNull(), // Keep for backward compatibility
-  
-  // Deprecated fields - will be moved to boxRequirements
-  scannedQty: integer("scanned_qty").default(0),
-  boxNumber: integer("box_number"),
-  isComplete: boolean("is_complete").default(false),
-  lastWorkerUserId: varchar("last_worker_user_id").references(() => users.id),
-  lastWorkerColor: text("last_worker_color"),
-});
+// Products table removed - all functionality moved to box_requirements system
 
 export const scanSessions = pgTable("scan_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -325,7 +309,7 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
     fields: [jobs.jobTypeId],
     references: [jobTypes.id],
   }),
-  products: many(products),
+
   boxRequirements: many(boxRequirements),
   scanSessions: many(scanSessions),
   assignments: many(jobAssignments),
@@ -345,12 +329,7 @@ export const boxRequirementsRelations = relations(boxRequirements, ({ one, many 
   checkResults: many(checkResults), // NEW
 }));
 
-export const productsRelations = relations(products, ({ one }) => ({
-  job: one(jobs, {
-    fields: [products.jobId],
-    references: [jobs.id],
-  }),
-}));
+// Products relations removed - table eliminated
 
 export const scanSessionsRelations = relations(scanSessions, ({ one, many }) => ({
   job: one(jobs, {
@@ -459,9 +438,7 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   completedAt: true,
 });
 
-export const insertProductSchema = createInsertSchema(products).omit({
-  id: true,
-});
+// Product schema removed - table eliminated
 
 export const insertBoxRequirementSchema = createInsertSchema(boxRequirements).omit({
   id: true,
@@ -627,8 +604,7 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Job = typeof jobs.$inferSelect;
 export type InsertJob = z.infer<typeof insertJobSchema>;
-export type Product = typeof products.$inferSelect;
-export type InsertProduct = z.infer<typeof insertProductSchema>;
+// Product types removed - table eliminated
 export type ScanSession = typeof scanSessions.$inferSelect;
 export type InsertScanSession = z.infer<typeof insertScanSessionSchema>;
 // ScanEvent types already defined above

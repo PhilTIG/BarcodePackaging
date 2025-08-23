@@ -1,7 +1,6 @@
 import { 
   users, 
   jobs, 
-  products, 
   boxRequirements,
   scanSessions, 
   scanEvents, 
@@ -21,8 +20,7 @@ import {
   type InsertUser,
   type Job,
   type InsertJob,
-  type Product,
-  type InsertProduct,
+
   type BoxRequirement,
   type InsertBoxRequirement,
   type ScanSession,
@@ -101,10 +99,7 @@ export interface IStorage {
   deleteJob(jobId: string): Promise<boolean>;
   updateJobStatusBasedOnProgress(jobId: string): Promise<void>;
 
-  // Product methods
-  createProducts(products: InsertProduct[]): Promise<Product[]>;
-  getProductsByJobId(jobId: string): Promise<Product[]>;
-  updateProductScannedQty(barCode: string, jobId: string, increment: number, workerId?: string, workerColor?: string): Promise<Product | undefined>;
+  // Products methods removed - functionality moved to box_requirements system
 
   // Box requirement methods - NEW SCANNING LOGIC
   createBoxRequirements(requirements: InsertBoxRequirement[]): Promise<BoxRequirement[]>;
@@ -112,7 +107,7 @@ export interface IStorage {
   getBoxRequirementsByBoxNumber(jobId: string, boxNumber: number): Promise<BoxRequirement[]>;
   findNextTargetBox(barCode: string, jobId: string, workerId: string): Promise<number | null>;
   updateBoxRequirementScannedQty(boxNumber: number, barCode: string, jobId: string, workerId: string, workerColor: string): Promise<BoxRequirement | undefined>;
-  migrateProductsToBoxRequirements(jobId: string): Promise<void>;
+  // Migration method removed - not needed after full migration completed
 
   // Scan session methods
   createScanSession(session: InsertScanSession): Promise<ScanSession>;
@@ -364,10 +359,10 @@ export class DatabaseStorage implements IStorage {
         totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
         completedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
       } else {
-        // LEGACY SYSTEM: Use products table
-        const products = await this.getProductsByJobId(jobId);
-        totalItems = products.reduce((sum, p) => sum + p.qty, 0);
-        completedItems = products.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+        // All jobs should have box requirements
+        console.warn(`No box requirements found for job ${jobId} - this should not happen`);
+        totalItems = 0;
+        completedItems = 0;
       }
 
       let newStatus = job.status;
@@ -481,10 +476,7 @@ export class DatabaseStorage implements IStorage {
           .delete(boxRequirements)
           .where(eq(boxRequirements.jobId, jobId));
 
-        // Delete products (legacy table)
-        await tx
-          .delete(products)
-          .where(eq(products.jobId, jobId));
+        // Products table removed - deletion not needed
 
         // Finally delete the job
         await tx
@@ -638,10 +630,11 @@ export class DatabaseStorage implements IStorage {
             products = Array.from(productMap.values());
             totalProducts = totalItems; // Use total items, not product count
           } else {
-            // LEGACY SYSTEM: Use products table
-            products = await this.getProductsByJobId(job.id);
-            totalProducts = products.reduce((sum, p) => sum + p.qty, 0); // Use total quantities, not product count
-            completedItems = products.reduce((sum, p) => sum + (p.scannedQty || 0), 0);
+            // All jobs should have box requirements - this case should not happen
+            console.warn(`No box requirements found for job ${job.id}`);
+            products = [];
+            totalProducts = 0;
+            completedItems = 0;
           }
 
           // Calculate box completion using the same logic as getJobProgress
@@ -733,27 +726,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async createProducts(productList: InsertProduct[]): Promise<Product[]> {
-    if (productList.length === 0) return [];
-
-    return await this.db
-      .insert(products)
-      .values(productList)
-      .returning();
-  }
-
-  async getProductsByJobId(jobId: string): Promise<Product[]> {
-    return await this.db.select().from(products).where(eq(products.jobId, jobId));
-  }
-
-  // DEPRECATED: Legacy method for products table scanning - use box requirements system instead
-  async updateProductScannedQty(barCode: string, jobId: string, increment: number, workerId?: string, workerColor?: string): Promise<Product | undefined> {
-    console.warn('[DEPRECATED] updateProductScannedQty called - this method is deprecated, use box requirements system instead');
-    
-    // This method is kept only for potential emergency fallback
-    // All new jobs should use the box_requirements system via updateBoxRequirement()
-    return undefined;
-  }
+  // Products table methods removed - all functionality moved to box_requirements system
 
   private async updateJobCompletedItems(jobId: string): Promise<void> {
     // Use box requirements system (all jobs should have box requirements)
@@ -1666,62 +1639,7 @@ export class DatabaseStorage implements IStorage {
     return updatedRequirement;
   }
 
-  /**
-   * Migrate existing CSV product data to the new box requirements structure
-   * This preserves existing data while enabling the new scanning logic
-   */
-  async migrateProductsToBoxRequirements(jobId: string): Promise<void> {
-    console.log(`Starting migration of products to box requirements for job ${jobId}`);
-
-    // Get existing products for this job
-    const existingProducts = await this.getProductsByJobId(jobId);
-
-    if (existingProducts.length === 0) {
-      console.log('No products found to migrate');
-      return;
-    }
-
-    // Create box requirements from products, preserving original CSV box assignments
-    // Use the existing boxNumber from the products table (which follows CSV order)
-    const boxRequirements: InsertBoxRequirement[] = existingProducts
-      .filter(product => product.boxNumber !== null) // Skip any products without box assignments
-      .map(product => ({
-        jobId: product.jobId,
-        boxNumber: product.boxNumber!, // Use existing box assignment from CSV
-        customerName: product.customerName,
-        barCode: product.barCode,
-        productName: product.productName,
-        requiredQty: product.qty,
-        scannedQty: product.scannedQty || 0,
-        isComplete: (product.scannedQty || 0) >= product.qty,
-        groupName: product.groupName, // NEW: Include group data in migration
-        lastWorkerUserId: product.lastWorkerUserId,
-        lastWorkerColor: product.lastWorkerColor
-      }));
-
-    // Insert box requirements
-    await this.createBoxRequirements(boxRequirements);
-
-    // Create worker assignments for the job (up to 4 workers with their patterns)
-    const jobAssignments = await this.getJobAssignmentsWithUsers(jobId);
-    const workers = jobAssignments.slice(0, 4); // Max 4 workers
-
-    const workerAssignments: InsertWorkerBoxAssignment[] = workers.map((assignment, index) => {
-      const patterns = ['ascending', 'descending', 'middle_up', 'middle_down'];
-      return {
-        jobId,
-        workerId: assignment.userId,
-        assignmentType: patterns[index % 4]
-      };
-    });
-
-    // Insert worker assignments
-    for (const assignment of workerAssignments) {
-      await this.createWorkerBoxAssignment(assignment);
-    }
-
-    console.log(`Migration completed: Created ${boxRequirements.length} box requirements and ${workerAssignments.length} worker assignments`);
-  }
+  // Migration method removed - all jobs now use box_requirements system
 
   // Extra Items tracking methods (NEW)
   async getExtraItemsCount(jobId: string): Promise<number> {
@@ -1820,8 +1738,7 @@ export class DatabaseStorage implements IStorage {
       // 8. Delete box requirements (modern scanning system, references jobs)
       await this.db.delete(boxRequirements);
 
-      // 9. Delete products (legacy table, references jobs)
-      await this.db.delete(products);
+      // Products table removed - deletion not needed
 
       // 10. Finally delete jobs (parent table)
       // NOTE: job_archives is preserved to maintain historical summaries

@@ -10,7 +10,7 @@ import {
   insertJobAssignmentSchema,
   type User,
   type Job,
-  type Product,
+  // Product type removed - table eliminated
   type ScanSession,
   type ScanEvent
 } from "@shared/schema";
@@ -468,10 +468,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         boxNumber: customerToBoxMap.get(row.CustomName)! // Assign based on customer first appearance
       }));
 
-      await storage.createProducts(products);
+      // Create box requirements directly (products table eliminated)
+      const boxRequirements = products.map(product => ({
+        jobId: product.jobId,
+        barCode: product.barCode,
+        productName: product.productName,
+        requiredQty: product.qty,
+        customerName: product.customerName,
+        groupName: product.groupName,
+        boxNumber: product.boxNumber,
+        scannedQty: 0,
+        isComplete: false
+      }));
 
-      // PHASE 3: Auto-migrate to box requirements system for new jobs
-      await storage.migrateProductsToBoxRequirements(job.id);
+      await storage.createBoxRequirements(boxRequirements);
 
       res.status(201).json({ 
         job, 
@@ -673,8 +683,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         products = Array.from(productMap.values());
       } else {
-        // Fallback to legacy products table
-        products = await storage.getProductsByJobId(job.id);
+        // All jobs should have box requirements - empty fallback
+        products = [];
       }
       
       const sessions = await storage.getScanSessionsByJobId(job.id);
@@ -1113,15 +1123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/jobs/:id/migrate-to-box-requirements', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
-    try {
-      await storage.migrateProductsToBoxRequirements(req.params.id);
-      res.json({ message: 'Migration completed successfully' });
-    } catch (error) {
-      console.error('Migration failed:', error);
-      res.status(500).json({ message: 'Failed to migrate to box requirements' });
-    }
-  });
+  // Migration endpoint removed - all jobs now use box requirements system
 
   app.post('/api/jobs/:id/find-target-box', requireAuth, requireRole(['worker']), async (req: AuthenticatedRequest, res) => {
     try {
