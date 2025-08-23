@@ -322,6 +322,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Validate barcode/product name consistency
+      const barcodeProductMap = new Map<string, string>();
+      const consistencyErrors: string[] = [];
+      
+      csvData.forEach((row, index) => {
+        const barcode = row.BarCode;
+        const productName = row['Product Name'];
+        
+        if (barcodeProductMap.has(barcode)) {
+          const existingProductName = barcodeProductMap.get(barcode)!;
+          if (existingProductName !== productName) {
+            // Case-sensitive exact match failed - report the mismatch
+            consistencyErrors.push(
+              `Row ${index + 1}: Barcode "${barcode}" maps to "${productName}" but was previously mapped to "${existingProductName}"`
+            );
+          }
+        } else {
+          barcodeProductMap.set(barcode, productName);
+        }
+      });
+
+      // If consistency errors found, reject the entire CSV upload
+      if (consistencyErrors.length > 0) {
+        const errorCount = consistencyErrors.length;
+        const displayedErrors = consistencyErrors.slice(0, 10); // Show first 10 issues
+        const moreErrorsText = errorCount > 10 ? ` (and ${errorCount - 10} more)` : '';
+        
+        return res.status(400).json({
+          message: 'Barcode / Product mismatch - Check your product names are consistent',
+          details: `Found ${errorCount} barcode/product name inconsistencies${moreErrorsText}:\n\n${displayedErrors.join('\n')}`
+        });
+      }
+
       // Create job
       const jobData = {
         name: req.body.name || `Job ${new Date().toISOString().split('T')[0]}`,
