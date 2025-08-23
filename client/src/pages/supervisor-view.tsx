@@ -11,6 +11,7 @@ import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { PerformanceDashboard } from "@/components/performance-dashboard";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
 import { ItemFilter } from "@/components/item-filter";
+import { GroupFilter } from "@/components/group-filter";
 import { useFilteredBoxData } from "@/hooks/use-filtered-box-data";
 import { useEffect, useState, useCallback } from "react";
 
@@ -20,6 +21,7 @@ export default function SupervisorView() {
   const { user, isLoading, logout } = useAuth();
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
   // Fetch all jobs for supervisor (job selection) with real-time updates
   const { data: allJobsData } = useQuery({
@@ -44,8 +46,8 @@ export default function SupervisorView() {
   // Connect to WebSocket for real-time updates 
   const { isConnected } = useWebSocket(jobId);
 
-  // Get available products for filtering (always fetch when job is available)
-  const { availableProducts } = useFilteredBoxData(jobId || "", []);
+  // Get available products and groups for filtering (always fetch when job is available)
+  const { availableProducts, availableGroups } = useFilteredBoxData(jobId || "", [], []);
 
   // Redirect if not authenticated or not a supervisor/manager
   useEffect(() => {
@@ -291,13 +293,19 @@ export default function SupervisorView() {
                     <p className="text-sm text-gray-600">{job.name}</p>
                   </div>
                   
-                  {/* Item Filter - Same row as title */}
-                  <div className="flex-shrink-0">
+                  {/* Filters - Same row as title */}
+                  <div className="flex-shrink-0 flex items-center gap-3">
                     <ItemFilter
                       availableProducts={availableProducts}
                       selectedProducts={selectedProducts}
                       onSelectionChange={setSelectedProducts}
                       placeholder="Filter by product name..."
+                    />
+                    <GroupFilter
+                      availableGroups={availableGroups || []}
+                      selectedGroups={selectedGroups}
+                      onSelectionChange={setSelectedGroups}
+                      placeholder="Filter by group..."
                     />
                   </div>
                 </div>
@@ -375,6 +383,7 @@ export default function SupervisorView() {
               jobId={job.id}
               supervisorView={true}
               filterByProducts={selectedProducts}
+              filterByGroups={selectedGroups}
               onCheckCount={(boxNumber, jobId) => {
                 // Navigate to dedicated CheckCount page
                 setLocation(`/check-count/${jobId}/${boxNumber}`);

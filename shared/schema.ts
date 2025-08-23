@@ -41,6 +41,7 @@ export const boxRequirements = pgTable("box_requirements", {
   requiredQty: integer("required_qty").notNull(),
   scannedQty: integer("scanned_qty").default(0),
   isComplete: boolean("is_complete").default(false),
+  groupName: text("group_name"), // NEW: Group information for filtering
   
   // Worker tracking fields for color highlighting
   lastWorkerUserId: varchar("last_worker_user_id").references(() => users.id),

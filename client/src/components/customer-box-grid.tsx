@@ -30,14 +30,16 @@ interface CustomerBoxGridProps {
   onBoxScanUpdate?: (boxNumber: number, workerId?: string, workerColor?: string, workerStaffId?: string) => void;
   onCheckCount?: (boxNumber: number, jobId: string) => void;
   filterByProducts?: string[]; // Array of product names to filter by
+  filterByGroups?: string[]; // Array of group names to filter by
 }
 
-export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount, filterByProducts = [] }: CustomerBoxGridProps) {
+export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount, filterByProducts = [], filterByGroups = [] }: CustomerBoxGridProps) {
   
   // Use filtered box data when filtering is requested
   const { boxData: filteredBoxData, availableProducts, isLoading: filterDataLoading } = useFilteredBoxData(
-    filterByProducts.length > 0 ? jobId : "", // Only fetch when filtering is active
-    filterByProducts
+    (filterByProducts.length > 0 || filterByGroups.length > 0) ? jobId : "", // Only fetch when filtering is active
+    filterByProducts,
+    filterByGroups
   );
   // State for box details modal
   const [selectedBox, setSelectedBox] = useState<{

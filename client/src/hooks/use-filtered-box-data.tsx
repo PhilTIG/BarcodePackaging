@@ -11,6 +11,7 @@ interface BoxRequirement {
   requiredQty: number;
   scannedQty: number;
   isComplete: boolean;
+  groupName?: string;
   lastWorkerUserId?: string;
   lastWorkerColor?: string;
 }
@@ -21,6 +22,7 @@ interface FilteredBoxData {
   totalQty: number;
   scannedQty: number;
   isComplete: boolean;
+  groupName?: string;
   assignedWorker?: string;
   lastWorkerColor?: string;
   lastWorkerStaffId?: string;
@@ -28,7 +30,7 @@ interface FilteredBoxData {
   filteredScannedQty?: number;
 }
 
-export function useFilteredBoxData(jobId: string, filterByProducts: string[] = []) {
+export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [], filterByGroups: string[] = []) {
   // Fetch box requirements data
   const { data: boxRequirementsResponse, isLoading, error } = useQuery({
     queryKey: [`/api/jobs/${jobId}/box-requirements`],
@@ -37,7 +39,7 @@ export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [
 
   const processedData = useMemo(() => {
     if (!boxRequirementsResponse) {
-      return { boxData: [], availableProducts: [], isLoading: true };
+      return { boxData: [], availableProducts: [], availableGroups: [], isLoading: true };
     }
 
     const boxRequirementsData = boxRequirementsResponse as { 
@@ -52,9 +54,13 @@ export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [
     const productNamesSet = new Set(boxRequirements.map(req => req.productName));
     const availableProducts = Array.from(productNamesSet).sort();
 
+    // Get all unique group names for filtering, sorted alphabetically
+    const groupNamesSet = new Set(boxRequirements.map(req => req.groupName).filter(Boolean));
+    const availableGroups = Array.from(groupNamesSet).sort() as string[];
+
     // Process box data
     const boxes: { [key: number]: FilteredBoxData } = {};
-    const isFiltering = filterByProducts.length > 0;
+    const isFiltering = filterByProducts.length > 0 || filterByGroups.length > 0;
 
     boxRequirements.forEach(requirement => {
       if (!boxes[requirement.boxNumber]) {
@@ -64,6 +70,7 @@ export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [
           totalQty: 0,
           scannedQty: 0,
           isComplete: true,
+          groupName: requirement.groupName,
           assignedWorker: requirement.lastWorkerUserId ? workersData[requirement.lastWorkerUserId]?.name : undefined,
           lastWorkerColor: requirement.lastWorkerColor,
           lastWorkerStaffId: requirement.lastWorkerUserId ? workersData[requirement.lastWorkerUserId]?.staffId : undefined,
@@ -80,7 +87,10 @@ export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [
       boxes[requirement.boxNumber].isComplete = boxes[requirement.boxNumber].isComplete && requirement.isComplete;
 
       // Calculate filtered quantities if filtering is active
-      if (isFiltering && filterByProducts.includes(requirement.productName)) {
+      const matchesProductFilter = filterByProducts.length === 0 || filterByProducts.includes(requirement.productName);
+      const matchesGroupFilter = filterByGroups.length === 0 || (requirement.groupName && filterByGroups.includes(requirement.groupName));
+      
+      if (isFiltering && matchesProductFilter && matchesGroupFilter) {
         boxes[requirement.boxNumber].filteredTotalQty! += requirement.requiredQty;
         boxes[requirement.boxNumber].filteredScannedQty! += requirement.scannedQty;
       }
@@ -108,9 +118,10 @@ export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [
     return {
       boxData: boxList,
       availableProducts,
+      availableGroups,
       isLoading: false,
     };
-  }, [boxRequirementsResponse, filterByProducts]);
+  }, [boxRequirementsResponse, filterByProducts, filterByGroups]);
 
   return {
     ...processedData,

@@ -1694,6 +1694,7 @@ export class DatabaseStorage implements IStorage {
         requiredQty: product.qty,
         scannedQty: product.scannedQty || 0,
         isComplete: (product.scannedQty || 0) >= product.qty,
+        groupName: product.groupName, // NEW: Include group data in migration
         lastWorkerUserId: product.lastWorkerUserId,
         lastWorkerColor: product.lastWorkerColor
       }));
