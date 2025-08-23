@@ -343,15 +343,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // If consistency errors found, reject the entire CSV upload
+      // Check if Group validation should run
+      const shouldValidateGroup = jobType.requireGroupField || csvData.some(row => row.Group && row.Group.trim() !== '');
+      
+      let groupConsistencyErrors: string[] = [];
+      let groupRequiredErrors: string[] = [];
+
+      if (shouldValidateGroup) {
+        // Validate Group field population (if required by job type OR present in CSV)
+        csvData.forEach((row, index) => {
+          if (!row.Group || row.Group.trim() === '') {
+            groupRequiredErrors.push(`Row ${index + 1}: Group field is empty but Group data is required`);
+          }
+        });
+
+        // Validate customer/group consistency
+        const customerGroupMap = new Map<string, string>();
+        
+        csvData.forEach((row, index) => {
+          const customerName = row.CustomName;
+          const groupName = row.Group;
+          
+          if (groupName && groupName.trim() !== '') {
+            if (customerGroupMap.has(customerName)) {
+              const existingGroupName = customerGroupMap.get(customerName)!;
+              if (existingGroupName !== groupName) {
+                // Case-sensitive exact match failed - report the mismatch
+                groupConsistencyErrors.push(
+                  `Row ${index + 1}: Customer "${customerName}" maps to Group "${groupName}" but was previously mapped to Group "${existingGroupName}"`
+                );
+              }
+            } else {
+              customerGroupMap.set(customerName, groupName);
+            }
+          }
+        });
+      }
+
+      // Combine all validation errors and return comprehensive error response
+      const allErrors: string[] = [];
+      
       if (consistencyErrors.length > 0) {
         const errorCount = consistencyErrors.length;
-        const displayedErrors = consistencyErrors.slice(0, 10); // Show first 10 issues
+        const displayedErrors = consistencyErrors.slice(0, 10);
         const moreErrorsText = errorCount > 10 ? ` (and ${errorCount - 10} more)` : '';
+        allErrors.push(`Barcode/Product errors:\nFound ${errorCount} barcode/product name inconsistencies${moreErrorsText}:\n${displayedErrors.join('\n')}`);
+      }
+
+      if (groupRequiredErrors.length > 0) {
+        const errorCount = groupRequiredErrors.length;
+        const displayedErrors = groupRequiredErrors.slice(0, 10);
+        const moreErrorsText = errorCount > 10 ? ` (and ${errorCount - 10} more)` : '';
+        allErrors.push(`Group Required errors:\nFound ${errorCount} missing Group values${moreErrorsText}:\n${displayedErrors.join('\n')}`);
+      }
+
+      if (groupConsistencyErrors.length > 0) {
+        const errorCount = groupConsistencyErrors.length;
+        const displayedErrors = groupConsistencyErrors.slice(0, 10);
+        const moreErrorsText = errorCount > 10 ? ` (and ${errorCount - 10} more)` : '';
+        allErrors.push(`Customer/Group errors:\nFound ${errorCount} customer/group inconsistencies${moreErrorsText}:\n${displayedErrors.join('\n')}`);
+      }
+
+      // If any errors found, reject the entire CSV upload
+      if (allErrors.length > 0) {
+        const message = allErrors.length === 1 
+          ? (groupConsistencyErrors.length > 0 ? 'Customer / Group mismatch - Check your group assignments are consistent' : 'Barcode / Product mismatch - Check your product names are consistent')
+          : 'Multiple validation errors found';
         
         return res.status(400).json({
-          message: 'Barcode / Product mismatch - Check your product names are consistent',
-          details: `Found ${errorCount} barcode/product name inconsistencies${moreErrorsText}:\n\n${displayedErrors.join('\n')}`
+          message,
+          details: allErrors.join('\n\n')
         });
       }
 
