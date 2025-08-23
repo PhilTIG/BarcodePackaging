@@ -42,6 +42,13 @@ interface MobileScannerInterfaceProps {
     isExtraItem?: boolean;
     timestamp?: string;
   } | null;
+  undoDisplay?: Array<{
+    productName: string;
+    barCode: string;
+    customerName: string;
+    boxNumber: number | null;
+    timestamp: string;
+  }> | null;
   runtimeSingleBoxMode?: boolean;
   onRuntimeToggle?: (enabled: boolean) => void;
   onLogout?: () => void;
@@ -65,6 +72,7 @@ export function MobileScannerInterface({
   isConnected = true,
   scanError = null,
   scanResult = null,
+  undoDisplay = null,
   runtimeSingleBoxMode = false,
   onRuntimeToggle,
   onLogout,
@@ -247,12 +255,22 @@ export function MobileScannerInterface({
         <div className="text-center mb-8">
           <div className={`text-[120px] font-bold leading-none ${
             (() => {
+              // Check for undo display first (red color for undo)
+              if (undoDisplay && undoDisplay.length > 0) {
+                return 'text-red-500';
+              }
+              
               const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
               const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
               return (scanResult && scanResult.isExtraItem && scanResultTime >= lastScanTime) ? 'text-orange-500' : 'text-blue-500';
             })()
           }`} data-testid="box-number-display">
             {(() => {
+              // Check for undo display first (highest priority)
+              if (undoDisplay && undoDisplay.length > 0) {
+                return 'UNDONE';
+              }
+
               // Determine which scan was most recent by comparing timestamps
               const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
               const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
@@ -273,12 +291,23 @@ export function MobileScannerInterface({
         <div className="text-center mb-6">
           <div className={`text-2xl font-semibold mb-2 ${
             (() => {
+              // Check for undo display first (red text for undo)
+              if (undoDisplay && undoDisplay.length > 0) {
+                return 'text-red-600';
+              }
+              
               const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
               const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
               return (scanResult && scanResult.isExtraItem && scanResultTime >= lastScanTime) ? 'text-orange-600' : 'text-gray-900';
             })()
           }`} data-testid="customer-name">
             {(() => {
+              // Check for undo display first (highest priority)
+              if (undoDisplay && undoDisplay.length > 0) {
+                const firstUndo = undoDisplay[0];
+                return firstUndo.customerName;
+              }
+
               // Determine which scan was most recent by comparing timestamps
               const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
               const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
@@ -295,6 +324,22 @@ export function MobileScannerInterface({
           </div>
 
           {(() => {
+            // Check for undo display first (highest priority)
+            if (undoDisplay && undoDisplay.length > 0) {
+              const firstUndo = undoDisplay[0];
+              return (
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" data-testid="undo-icon">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  <div className="text-lg text-red-600" data-testid="product-name">
+                    Undid: {firstUndo.productName}
+                    {firstUndo.boxNumber ? ` from Box ${firstUndo.boxNumber}` : ''}
+                  </div>
+                </div>
+              );
+            }
+
             // Determine which scan was most recent by comparing timestamps
             const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
             const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
@@ -328,6 +373,20 @@ export function MobileScannerInterface({
 
         {/* Progress indicator */}
         {(() => {
+          // Check for undo display first (highest priority)
+          if (undoDisplay && undoDisplay.length > 0) {
+            const firstUndo = undoDisplay[0];
+            return (
+              <div className="text-center">
+                <div className="inline-flex items-center px-4 py-2 border-2 rounded-full bg-red-100 border-red-300">
+                  <span className="text-lg font-medium text-red-800" data-testid="progress-indicator">
+                    Undo at {new Date(firstUndo.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+              </div>
+            );
+          }
+
           // Determine which scan was most recent by comparing timestamps
           const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
           const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;

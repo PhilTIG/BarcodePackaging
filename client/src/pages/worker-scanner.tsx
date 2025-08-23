@@ -31,6 +31,15 @@ export default function WorkerScanner() {
     customerName: string;
     boxNumber: number;
   } | null>(null);
+  
+  // State for displaying undo events
+  const [undoDisplay, setUndoDisplay] = useState<Array<{
+    productName: string;
+    barCode: string;
+    customerName: string;
+    boxNumber: number | null;
+    timestamp: string;
+  }> | null>(null);
   const [scanStats, setScanStats] = useState({
     totalScans: 0,
     scansPerHour: 0,
@@ -90,7 +99,7 @@ export default function WorkerScanner() {
     refetchInterval: 5000, // Update every 5 seconds for real-time updates
   });
 
-  // Connect to WebSocket
+  // Connect to WebSocket 
   const { sendMessage, isConnected } = useWebSocket(jobId);
 
   // Auto-focus barcode input
@@ -98,6 +107,34 @@ export default function WorkerScanner() {
     if (barcodeInputRef.current) {
       barcodeInputRef.current.focus();
     }
+  }, []);
+
+  // Listen for undo events from successful undo mutations
+  useEffect(() => {
+    const handleUndoSuccess = (data: any) => {
+      if (data.undoneEvents && Array.isArray(data.undoneEvents)) {
+        // Transform undone events into display format  
+        const undoItems = data.undoneEvents.map((event: any) => ({
+          productName: event.productName,
+          barCode: event.barCode,
+          customerName: event.customerName,
+          boxNumber: event.boxNumber,
+          timestamp: event.scanTime || new Date().toISOString()
+        }));
+        
+        // Set undo display (replaces last scan temporarily)
+        setUndoDisplay(undoItems);
+        setLastScanEvent(null); // Clear last scan event
+        setScanResult(null); // Clear any scan results
+      }
+    };
+
+    // Store the handler for potential cleanup
+    (window as any).handleUndoSuccess = handleUndoSuccess;
+    
+    return () => {
+      delete (window as any).handleUndoSuccess;
+    };
   }, []);
 
   // Redirect if not authenticated or not a worker
@@ -171,8 +208,9 @@ export default function WorkerScanner() {
     onSuccess: (data) => {
       setLastScanEvent(data.scanEvent);
 
-      // Clear any previous scan result (extra items only) since we have a new scan
+      // Clear any previous scan result (extra items only) and undo display since we have a new scan
       setScanResult(null);
+      setUndoDisplay(null);
 
       // Check if backend marked this as an error scan
       if (data.scanEvent.eventType === 'error') {
@@ -328,6 +366,11 @@ export default function WorkerScanner() {
       // Invalidate job performance query to get updated stats
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "worker-performance", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+
+      // Handle undo display for this worker
+      if ((window as any).handleUndoSuccess) {
+        (window as any).handleUndoSuccess(data);
+      }
     },
   });
 
@@ -732,6 +775,7 @@ export default function WorkerScanner() {
         isConnected={isConnected}
         scanError={scanError}
         scanResult={scanResult}
+        undoDisplay={undoDisplay}
         runtimeSingleBoxMode={runtimeSingleBoxMode}
         onRuntimeToggle={setRuntimeSingleBoxMode}
         onLogout={() => {
@@ -1077,6 +1121,64 @@ export default function WorkerScanner() {
                       </div>
                     </div>
                   </div>
+                </div>
+              ) : undoDisplay && undoDisplay.length > 0 ? (
+                // Display undo events with red styling
+                <div className="space-y-2">
+                  {undoDisplay.map((undoItem, index) => (
+                    <div key={index} className="flex items-center space-x-4 bg-red-50 p-3 rounded-lg border border-red-200">
+                      {/* Undo icon and text area on the left */}
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" data-testid="undo-icon">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-red-800 text-sm mb-1">
+                            Undid: {undoItem.productName}
+                            {undoItem.boxNumber ? ` from Box ${undoItem.boxNumber}` : ''}
+                          </h3>
+                          <p className="text-xs text-red-600 mb-1">Barcode: {undoItem.barCode}</p>
+                          <p className="text-xs text-red-500 font-medium">
+                            {new Date(undoItem.timestamp).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Red-styled box tile on the right */}
+                      <div className="flex-shrink-0">
+                        <div 
+                          className="border border-red-300 bg-red-100 rounded-lg p-3 relative transition-all duration-200"
+                          style={{ minHeight: '150px', width: '192px' }}
+                        >
+                          {/* Red indicator dot for undo */}
+                          <div className="absolute top-1 left-1">
+                            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                          </div>
+
+                          {/* Customer name */}
+                          <div className="mb-4 pr-2">
+                            <h3 className="font-medium text-sm truncate text-red-900" title={undoItem.customerName}>
+                              {undoItem.customerName}
+                            </h3>
+                          </div>
+
+                          {/* Center content with UNDO text */}
+                          <div className="flex items-center justify-center h-20">
+                            <div className="text-center">
+                              <svg className="h-8 w-8 text-red-600 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
+                              <div className="text-sm font-bold text-red-600">
+                                UNDONE
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : lastScanEvent ? (
                 <div className="flex items-center space-x-4">
