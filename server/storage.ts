@@ -1029,8 +1029,12 @@ export class DatabaseStorage implements IStorage {
               .where(eq(boxRequirements.id, boxReq.id));
           }
         }
+      } else if (event.eventType === 'extra_item') {
+        // For extra_item events, delete the original record from the database
+        await this.db
+          .delete(scanEvents)
+          .where(eq(scanEvents.id, event.id));
       }
-      // For extra_item events, no box requirement updates needed - just remove the record
     }
 
     // Automatically update job status after an undo event
