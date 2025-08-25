@@ -208,8 +208,25 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         break;
       
       case "undo_event":
-        // Legacy undo event handling (kept for compatibility)
-        console.log("[WebSocket] Legacy undo event received:", message.data);
+        // Undo event handling - update UI in real-time
+        console.log("[WebSocket] Undo event received:", message.data);
+        
+        // Call the worker's handleUndoSuccess function if it exists (for worker scanner UI)
+        if (typeof window !== 'undefined' && (window as any).handleUndoSuccess) {
+          (window as any).handleUndoSuccess(message.data);
+        }
+        
+        // Invalidate query cache to update all monitoring interfaces
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
+        
+        // Invalidate worker performance data if we know which user performed the undo
+        if (message.data.userId) {
+          queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "worker-performance", message.data.userId] });
+        }
+        
+        // Invalidate extra items query to update Extra Items modal
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "extra-items"] });
         break;
         
       case "undo_update":
