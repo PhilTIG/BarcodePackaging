@@ -665,7 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        boxRequirements.forEach(req => {
+        for (const req of boxRequirements) {
           const key = `${req.customerName}-${req.boxNumber}`;
           if (!productMap.has(key)) {
             const worker = req.lastWorkerUserId ? workers.get(req.lastWorkerUserId) : null;
@@ -694,7 +694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             product.lastWorkerColor = req.lastWorkerColor;
             product.lastWorkerStaffId = worker?.staffId;
           }
-        });
+        }
 
         products = Array.from(productMap.values());
       } else {
@@ -1071,13 +1071,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get updated box requirements (replaces products query)
       const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
 
-      // Transform box requirements to products format for UI compatibility
+      // Transform box requirements to product format for UI compatibility
       const updatedProducts = [];
       const productMap = new Map();
 
-      updatedBoxRequirements.forEach(req => {
+      for (const req of updatedBoxRequirements) {
         const key = `${req.customerName}-${req.boxNumber}`;
         if (!productMap.has(key)) {
+          const worker = req.lastWorkerUserId ? await storage.getUserById(req.lastWorkerUserId) : null;
           productMap.set(key, {
             id: `${req.customerName}-${req.boxNumber}`,
             customerName: req.customerName,
@@ -1087,10 +1088,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             isComplete: true,
             lastWorkerUserId: req.lastWorkerUserId,
             lastWorkerColor: req.lastWorkerColor,
-            lastWorkerStaffId: req.lastWorkerUserId ? (await storage.getUserById(req.lastWorkerUserId))?.staffId : undefined
+            lastWorkerStaffId: worker?.staffId
           });
         }
+      }
 
+      for (const req of updatedBoxRequirements) {
+        const key = `${req.customerName}-${req.boxNumber}`;
         const product = productMap.get(key);
         product.qty += req.requiredQty;
         product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
@@ -1100,7 +1104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           product.lastWorkerUserId = req.lastWorkerUserId;
           product.lastWorkerColor = req.lastWorkerColor;
         }
-      });
+      }
 
       const transformedProducts = Array.from(productMap.values());
 
