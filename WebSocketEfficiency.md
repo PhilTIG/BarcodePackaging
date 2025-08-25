@@ -15,11 +15,11 @@ This plan addresses the identified WebSocket efficiency issues in the Worker Sca
 ## Optimization Tasks
 
 ### Phase 1: Core WebSocket Optimizations
-- [ ] **Task 1.1**: Replace broad query invalidations with targeted WebSocket data updates
-- [ ] **Task 1.2**: Eliminate double data fetching by removing mutation-triggered invalidations
-- [ ] **Task 1.3**: Implement direct WebSocket data updates instead of query invalidations
-- [ ] **Task 1.4**: Reduce mobile mode artificial delay from 100ms to 50ms
-- [ ] **Task 1.5**: Remove 10-second polling fallback mechanism (WebSocket-only updates)
+- [x] **Task 1.1**: Replace broad query invalidations with targeted WebSocket data updates
+- [x] **Task 1.2**: Eliminate double data fetching by removing mutation-triggered invalidations
+- [x] **Task 1.3**: Implement direct WebSocket data updates instead of query invalidations
+- [x] **Task 1.4**: Reduce mobile mode artificial delay from 100ms to 50ms
+- [x] **Task 1.5**: Remove 10-second polling fallback mechanism (WebSocket-only updates)
 
 ### Phase 2: Component Re-render Optimization
 - [ ] **Task 2.1**: Implement React.memo for CustomerBoxGrid with custom comparison functions
@@ -50,6 +50,15 @@ This plan addresses the identified WebSocket efficiency issues in the Worker Sca
 - [ ] **Task 6.2**: Network traffic measurement and optimization validation
 - [ ] **Task 6.3**: UI responsiveness testing under high load
 - [ ] **Task 6.4**: WebSocket connection stability testing
+
+### Phase 7: WebSocket Message Compatibility
+- [ ] **Task 7.1**: Review all WebSocket message consumers across client components
+- [ ] **Task 7.2**: Ensure CustomerBoxGrid handles new WebSocket message format
+- [ ] **Task 7.3**: Verify worker-scanner page compatibility with optimized messages
+- [ ] **Task 7.4**: Test supervisor-view WebSocket message handling
+- [ ] **Task 7.5**: Validate manager-dashboard real-time updates with new messages
+- [ ] **Task 7.6**: Ensure mobile-scanner-interface processes optimized WebSocket data
+- [ ] **Task 7.7**: Create backward compatibility layer for gradual rollout if needed
 
 ## Success Metrics
 - [ ] Reduce API calls per scan from 3+ to 0 (WebSocket-only updates)

@@ -143,14 +143,35 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         break;
         
       case "scan_update":
-        // Direct data update without query invalidation
-        console.log("[WebSocket] Scan update received:", message.data);
+        // PHASE 1 OPTIMIZATION: Direct data update without query invalidation
+        console.log("[WebSocket] Optimized scan update received:", message.data);
+        
+        // Update job products data directly
         if (message.data.products) {
           queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
             ...oldData,
             products: message.data.products
           }));
         }
+        
+        // Update worker performance data directly
+        if (message.data.performance && message.data.scanEvent?.userId) {
+          queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", message.data.scanEvent.userId], {
+            performance: message.data.performance
+          });
+        }
+        
+        // Trigger box highlighting update for real-time visual feedback
+        if (onWorkerBoxUpdate && message.data.scanEvent?.boxNumber && message.data.scanEvent?.userId) {
+          onWorkerBoxUpdate(
+            Number(message.data.scanEvent.boxNumber),
+            String(message.data.scanEvent.userId),
+            message.data.scanEvent.workerColor as string,
+            message.data.scanEvent.workerStaffId as string
+          );
+        }
+        
+        // Update job progress if available
         if (message.data.progress) {
           queryClient.setQueryData([`/api/jobs/${jobId}/progress`], message.data.progress);
         }
@@ -187,14 +208,23 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         break;
       
       case "undo_event":
-        // Direct data update for undo operations
-        console.log("[WebSocket] Undo event received:", message.data);
+        // Legacy undo event handling (kept for compatibility)
+        console.log("[WebSocket] Legacy undo event received:", message.data);
+        break;
+        
+      case "undo_update":
+        // PHASE 1 OPTIMIZATION: Direct data update for undo operations
+        console.log("[WebSocket] Optimized undo update received:", message.data);
+        
+        // Update job products data directly
         if (message.data.products) {
           queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
             ...oldData,
             products: message.data.products
           }));
         }
+        
+        // Update worker performance data directly
         if (message.data.performance && message.data.userId) {
           queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", message.data.userId], {
             performance: message.data.performance

@@ -20,8 +20,8 @@ import csv from "csv-parser";
 import { Readable } from "stream";
 import bcrypt from "bcryptjs";
 import { db } from "./db"; // Assuming db is imported for direct access
-import { eq } from "drizzle-orm"; // Assuming drizzle ORM for queries
 import { products } from "@shared/schema/products"; // Assuming products schema path
+import { eq } from "drizzle-orm"; // Assuming drizzle ORM for queries
 
 // Helper function to get worker performance (placeholder)
 async function getWorkerPerformance(userId: string, jobId: string): Promise<any> {
@@ -230,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: req.user!.id,
         staffId: req.user!.staffId,
         name: req.user!.name,
-        role: req.user!.role
+        role: req.user!.role,
       }
     });
   });
@@ -1044,7 +1044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/scan-events', requireAuth, requireRole(['worker']), async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId, sessionId, ...scanEventData } = req.body; // Destructure to get jobId and sessionId
-      
+
       const eventData = {
         ...scanEventData,
         jobId: jobId,
@@ -1065,22 +1065,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get worker's assigned color from job assignments
       const workerAssignment = await storage.checkExistingAssignment(jobId, req.user!.id);
 
-      // Get updated products and performance data for WebSocket broadcast
-      const updatedProducts = await db.select().from(products).where(eq(products.jobId, jobId));
-      const workerPerformance = await getWorkerPerformance(req.user!.id, jobId); // Use req.user!.id for current worker
+      // PHASE 1 OPTIMIZATION: Get complete updated data for WebSocket broadcast
+      // This eliminates the need for clients to make additional API calls
 
-      // Send real-time update to all connected clients for this job with complete data
+      // Get updated box requirements (replaces products query)
+      const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
+
+      // Transform box requirements to products format for UI compatibility
+      const updatedProducts = [];
+      const productMap = new Map();
+
+      updatedBoxRequirements.forEach(req => {
+        const key = `${req.customerName}-${req.boxNumber}`;
+        if (!productMap.has(key)) {
+          productMap.set(key, {
+            id: `${req.customerName}-${req.boxNumber}`,
+            customerName: req.customerName,
+            qty: 0,
+            scannedQty: 0,
+            boxNumber: req.boxNumber,
+            isComplete: true,
+            lastWorkerUserId: req.lastWorkerUserId,
+            lastWorkerColor: req.lastWorkerColor,
+            lastWorkerStaffId: req.lastWorkerUserId ? (await storage.getUserById(req.lastWorkerUserId))?.staffId : undefined
+          });
+        }
+
+        const product = productMap.get(key);
+        product.qty += req.requiredQty;
+        product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
+        product.isComplete = product.isComplete && req.isComplete;
+
+        if (req.lastWorkerUserId) {
+          product.lastWorkerUserId = req.lastWorkerUserId;
+          product.lastWorkerColor = req.lastWorkerColor;
+        }
+      });
+
+      const transformedProducts = Array.from(productMap.values());
+
+      // Get worker performance data
+      const workerPerformance = await storage.getJobWorkerPerformance(jobId, req.user!.id);
+
+      // Send real-time update with complete data to eliminate client-side API calls
       broadcastToJob(String(jobId), {
-        type: 'scan_event',
+        type: "scan_update",
         data: {
-          ...scanEvent,
-          sessionId: session.id,
-          userId: session.userId,
-          userName: session.userName,
-          workerColor: session.workerColor,
-          workerStaffId: session.workerStaffId,
-          products: updatedProducts,
-          performance: workerPerformance
+          scanEvent: {
+            ...scanEvent,
+            sessionId: sessionId,
+            userId: req.user!.id,
+            userName: req.user!.name,
+            workerColor: workerAssignment?.assignedColor || '#3B82F6',
+            workerStaffId: req.user!.staffId
+          },
+          products: transformedProducts,
+          performance: workerPerformance,
+          boxNumber: scanEvent.boxNumber,
+          jobId: String(jobId)
         },
         jobId: String(jobId)
       });

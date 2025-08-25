@@ -77,7 +77,7 @@ export default function WorkerScanner() {
     enabled: !!user,
     retry: 3,
     retryDelay: 1000,
-    // No polling - WebSocket provides real-time updates
+    // PHASE 1 OPTIMIZATION: No polling - WebSocket provides real-time updates
   });
 
   // Fetch job details
@@ -96,7 +96,7 @@ export default function WorkerScanner() {
   const { data: jobPerformanceData } = useQuery({
     queryKey: ["/api/jobs", jobId, "worker-performance", user?.id],
     enabled: !!jobId && !!user?.id,
-    // No polling - WebSocket provides real-time performance updates
+    // PHASE 1 OPTIMIZATION: No polling - WebSocket provides real-time performance updates
   });
 
   // Connect to WebSocket 
@@ -263,28 +263,10 @@ export default function WorkerScanner() {
         return;
       }
 
-      // Send WebSocket update for successful scans
-      sendMessage({
-        type: "scan_event",
-        data: data.scanEvent,
-        jobId,
-        sessionId: activeSession?.id || '',
-      });
-
-      // Job performance will be updated via the query refetch
-      // Local stats are no longer needed as we use real job performance data
-
-      // Box switching will be handled after data invalidation with delay
-
       // Set visual feedback for successful scan
       if (data.scanEvent?.boxNumber && data.scanEvent?.customerName && data.scanEvent?.productName) {
-        // For successful scans, only use lastScanEvent (which shows detailed box with progress)
-        // Do NOT set scanResult for successful scans - scanResult is only for extra items
-        
         // Update last scanned box for highlighting
         setLastScannedBoxNumber(data.scanEvent.boxNumber);
-
-        // lastScanEvent will persist until next scan and shows the correct detailed box design
       }
 
       // Flash success feedback
@@ -296,9 +278,10 @@ export default function WorkerScanner() {
         barcodeInputRef.current.focus();
       }
 
-      // WebSocket updates handle data refresh - no invalidation needed to prevent double fetching
+      // PHASE 1 OPTIMIZATION: Remove all query invalidations - WebSocket handles updates
+      // No longer invalidating queries to prevent 3+ API calls per scan
       
-      // Delay box switching to ensure fresh data is loaded for mobile mode
+      // Delay box switching for mobile mode - reduced from 100ms to 50ms
       if (runtimeSingleBoxMode && data.scanEvent?.customerName) {
         setTimeout(() => {
           const customers = getUniqueCustomers();
@@ -306,7 +289,7 @@ export default function WorkerScanner() {
           if (newBoxIndex !== -1 && newBoxIndex !== currentBoxIndex) {
             setCurrentBoxIndex(newBoxIndex);
           }
-        }, 50); // Optimized delay for faster UI response
+        }, 50);
       }
     },
     onError: (error: Error) => {
@@ -361,7 +344,8 @@ export default function WorkerScanner() {
         description,
       });
 
-      // WebSocket updates handle data refresh - no invalidation needed
+      // PHASE 1 OPTIMIZATION: Remove query invalidations - WebSocket handles all updates
+      // This eliminates the additional API calls after undo operations
 
       // Handle undo display for this worker
       if ((window as any).handleUndoSuccess) {
