@@ -175,6 +175,9 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         if (message.data.progress) {
           queryClient.setQueryData([`/api/jobs/${jobId}/progress`], message.data.progress);
         }
+        
+        // Invalidate Manager Dashboard jobs list to update progress bars
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
         break;
       
       case "scan_event":
@@ -217,8 +220,9 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         }
         
         // Invalidate query cache to update all monitoring interfaces
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // Manager Dashboard progress bars
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] }); // Supervisor View progress bars
         
         // Invalidate worker performance data if we know which user performed the undo
         if (message.data.userId) {
