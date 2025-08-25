@@ -71,13 +71,13 @@ export default function WorkerScanner() {
   const isMobileMode = runtimeSingleBoxMode || (window.innerWidth < 800);
   const isDesktopAndMobile = runtimeSingleBoxMode && window.innerWidth >= 800;
 
-  // Fetch worker's job assignments with real-time updates for progress
+  // Fetch worker's job assignments - WebSocket handles real-time updates
   const { data: assignmentsData, isLoading: isAssignmentsLoading, error: assignmentsError } = useQuery({
     queryKey: ["/api/users/me/assignments"],
     enabled: !!user,
     retry: 3,
     retryDelay: 1000,
-    refetchInterval: 10000, // 10-second polling for real-time job progress updates
+    // No polling - WebSocket provides real-time updates
   });
 
   // Fetch job details
@@ -92,11 +92,11 @@ export default function WorkerScanner() {
     enabled: !!user,
   });
 
-  // Fetch job-specific worker performance
+  // Fetch job-specific worker performance - WebSocket handles real-time updates
   const { data: jobPerformanceData } = useQuery({
     queryKey: ["/api/jobs", jobId, "worker-performance", user?.id],
     enabled: !!jobId && !!user?.id,
-    refetchInterval: 5000, // Update every 5 seconds for real-time updates
+    // No polling - WebSocket provides real-time performance updates
   });
 
   // Connect to WebSocket 
@@ -296,9 +296,7 @@ export default function WorkerScanner() {
         barcodeInputRef.current.focus();
       }
 
-      // Invalidate job data and performance to get updated progress and then switch boxes after a small delay
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "worker-performance", user?.id] });
+      // WebSocket updates handle data refresh - no invalidation needed to prevent double fetching
       
       // Delay box switching to ensure fresh data is loaded for mobile mode
       if (runtimeSingleBoxMode && data.scanEvent?.customerName) {
@@ -308,7 +306,7 @@ export default function WorkerScanner() {
           if (newBoxIndex !== -1 && newBoxIndex !== currentBoxIndex) {
             setCurrentBoxIndex(newBoxIndex);
           }
-        }, 100); // Small delay to ensure data is fresh
+        }, 50); // Optimized delay for faster UI response
       }
     },
     onError: (error: Error) => {
@@ -363,9 +361,7 @@ export default function WorkerScanner() {
         description,
       });
 
-      // Invalidate job performance query to get updated stats
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "worker-performance", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+      // WebSocket updates handle data refresh - no invalidation needed
 
       // Handle undo display for this worker
       if ((window as any).handleUndoSuccess) {

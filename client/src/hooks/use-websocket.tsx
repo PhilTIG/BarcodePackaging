@@ -143,19 +143,37 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         break;
         
       case "scan_update":
-        // Invalidate relevant queries to refresh data
+        // Direct data update without query invalidation
         console.log("[WebSocket] Scan update received:", message.data);
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+        if (message.data.products) {
+          queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
+            ...oldData,
+            products: message.data.products
+          }));
+        }
+        if (message.data.progress) {
+          queryClient.setQueryData([`/api/jobs/${jobId}/progress`], message.data.progress);
+        }
         break;
       
       case "scan_event":
-        // Real-time scan event received
+        // Real-time scan event with direct data updates
         console.log("[WebSocket] Scan event received:", message.data);
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+        
+        // Update product data directly if provided
+        if (message.data.products) {
+          queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
+            ...oldData,
+            products: message.data.products
+          }));
+        }
+        
+        // Update performance data directly if provided
+        if (message.data.performance && message.data.userId) {
+          queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", message.data.userId], {
+            performance: message.data.performance
+          });
+        }
         
         // Trigger box highlighting update for worker box highlighting
         if (onWorkerBoxUpdate && message.data.boxNumber && message.data.userId) {
@@ -169,11 +187,19 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         break;
       
       case "undo_event":
-        // Undo operation received
+        // Direct data update for undo operations
         console.log("[WebSocket] Undo event received:", message.data);
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+        if (message.data.products) {
+          queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
+            ...oldData,
+            products: message.data.products
+          }));
+        }
+        if (message.data.performance && message.data.userId) {
+          queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", message.data.userId], {
+            performance: message.data.performance
+          });
+        }
         break;
       
       case "job_status_update":
@@ -231,6 +257,16 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", message.data.jobId] });
         queryClient.invalidateQueries({ queryKey: ["/api/users/me/assignments"] });
+        break;
+
+      case "performance_update":
+        // Real-time performance statistics update
+        console.log("[WebSocket] Performance update received:", message.data);
+        if (message.data.userId && message.data.performance) {
+          queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", message.data.userId], {
+            performance: message.data.performance
+          });
+        }
         break;
       
       default:

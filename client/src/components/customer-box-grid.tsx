@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Lock } from "lucide-react";
@@ -33,7 +33,7 @@ interface CustomerBoxGridProps {
   filterByGroups?: string[]; // Array of group names to filter by
 }
 
-export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount, filterByProducts = [], filterByGroups = [] }: CustomerBoxGridProps) {
+const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount, filterByProducts = [], filterByGroups = [] }: CustomerBoxGridProps) {
   
   // Use filtered box data when filtering is requested
   const { boxData: filteredBoxData, availableProducts, isLoading: filterDataLoading } = useFilteredBoxData(
@@ -362,4 +362,17 @@ export function CustomerBoxGrid({ products, jobId, supervisorView = false, lastS
       />
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function to prevent unnecessary re-renders
+  return (
+    prevProps.jobId === nextProps.jobId &&
+    prevProps.supervisorView === nextProps.supervisorView &&
+    prevProps.lastScannedBoxNumber === nextProps.lastScannedBoxNumber &&
+    JSON.stringify(prevProps.filterByProducts) === JSON.stringify(nextProps.filterByProducts) &&
+    JSON.stringify(prevProps.filterByGroups) === JSON.stringify(nextProps.filterByGroups) &&
+    // Deep compare products array for actual changes
+    JSON.stringify(prevProps.products) === JSON.stringify(nextProps.products)
+  );
+});
+
+export { CustomerBoxGridComponent as CustomerBoxGrid };
