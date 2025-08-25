@@ -634,12 +634,12 @@ export default function Settings() {
                 value={preferences.maxBoxesPerRow}
                 onChange={(e) => updatePreference("maxBoxesPerRow", parseInt(e.target.value) || 12)}
                 min="4"
-                max="16"
+                max="48"
                 className="mt-2"
                 data-testid="input-max-boxes-per-row"
               />
               <p className="text-sm text-gray-600 mt-1">
-                Sets maximum boxes displayed per row on wide screens (4-16). Layout automatically adjusts for smaller screens.
+                Sets maximum boxes displayed per row on wide screens (4-48). Values above 16 use simplified box design. Layout automatically adjusts for smaller screens.
               </p>
             </div>
           </CardContent>

@@ -165,6 +165,9 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     return Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
   }, [products, preferences.maxBoxesPerRow, filterByProducts, filterByGroups, filteredBoxData]);
 
+  // Determine if we should use simplified design (when > 16 boxes per row)
+  const isSimplifiedMode = preferences.maxBoxesPerRow > 16;
+
   // Create responsive grid classes based on actual box count and user preference
   const getGridClasses = () => {
     const actualBoxCount = boxData.length;
@@ -173,8 +176,12 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     // Base classes for mobile (always 2 columns)
     let gridClasses = "grid grid-cols-2 gap-3";
     
+    // Reduce gap for simplified mode
+    if (isSimplifiedMode) {
+      gridClasses = "grid grid-cols-2 gap-2";
+    }
+    
     // Tablet and desktop responsive classes based on maxBoxesPerRow preference
-    // but limited by actual box count for optimal display
     if (maxCols <= 4 || actualBoxCount <= 4) {
       gridClasses += " md:grid-cols-4";
     } else if (maxCols <= 6 || actualBoxCount <= 6) {
@@ -183,8 +190,14 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       gridClasses += " md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8";
     } else if (maxCols <= 12 || actualBoxCount <= 12) {
       gridClasses += " md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12";
-    } else {
+    } else if (maxCols <= 16 || actualBoxCount <= 16) {
       gridClasses += " md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 2xl:grid-cols-16";
+    } else if (maxCols <= 24 || actualBoxCount <= 24) {
+      gridClasses += " md:grid-cols-8 lg:grid-cols-12 xl:grid-cols-16 2xl:grid-cols-24";
+    } else if (maxCols <= 32 || actualBoxCount <= 32) {
+      gridClasses += " md:grid-cols-8 lg:grid-cols-12 xl:grid-cols-20 2xl:grid-cols-32";
+    } else {
+      gridClasses += " md:grid-cols-8 lg:grid-cols-12 xl:grid-cols-24 2xl:grid-cols-48";
     }
     
     return gridClasses;
@@ -223,8 +236,20 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
           borderColor: highlighting.borderColor,
         } : {};
         
+        // Dynamic box sizing and styling based on mode
+        const getBoxHeight = () => {
+          if (!isSimplifiedMode) return '150px';
+          return preferences.maxBoxesPerRow <= 32 ? '100px' : '80px';
+        };
+        
+        const getPadding = () => {
+          if (!isSimplifiedMode) return 'p-3';
+          return preferences.maxBoxesPerRow <= 32 ? 'p-2' : 'p-1';
+        };
+
         const boxClasses = [
-          "border rounded-lg p-3 relative transition-all duration-200 cursor-pointer hover:shadow-lg",
+          "border rounded-lg relative transition-all duration-200 cursor-pointer hover:shadow-lg group",
+          getPadding(),
           !highlighting.backgroundColor.startsWith('rgba') ? highlighting.backgroundColor : '',
           !highlighting.borderColor.startsWith('rgba') ? highlighting.borderColor : '',
         ].filter(Boolean).join(" ");
@@ -245,104 +270,174 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
           <div
             key={box.boxNumber}
             className={boxClasses}
-            style={{ minHeight: '150px', ...customStyle }}
+            style={{ minHeight: getBoxHeight(), ...customStyle }}
             data-testid={`box-${box.boxNumber}`}
             onClick={handleBoxClick}
+            title={isSimplifiedMode ? `Customer: ${box.customerName}\nQty: ${displayScannedQty}/${displayTotalQty}` : undefined}
           >
-            {/* Lock icon for 100% completed boxes */}
-            {box.isComplete && (
-              <div className="absolute top-1 right-1">
-                <Lock className={`w-5 h-5 ${highlighting.textColor}`} />
-              </div>
-            )}
-
-            {/* Green indicator for just-scanned box */}
-            {isLastScanned && !box.isComplete && (
-              <div className="absolute top-1 left-1">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              </div>
-            )}
-
-            {/* Customer name spanning full width with proper spacing */}
-            <div className="mb-4 pr-2">
-              <h3 className={`font-medium text-sm truncate ${highlighting.textColor}`} data-testid={`customer-name-${box.boxNumber}`}>
-                {box.customerName === "Unassigned" ? "Unassigned" : box.customerName}
-              </h3>
-              {supervisorView && box.assignedWorker && (
-                <p className={`text-xs truncate ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`}>Worker: {box.assignedWorker}</p>
-              )}
-            </div>
-
-            {/* Box Number Badge - Top Right with spacing from customer name */}
-            <div className="absolute top-10 right-2">
-              <div 
-                className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
-                  box.lastWorkerColor ? '' : 'bg-primary'
-                }`}
-                style={box.lastWorkerColor ? { 
-                  backgroundColor: box.lastWorkerColor
-                } : undefined}
-              >
-                {box.boxNumber}
-              </div>
-              
-              {/* Check status indicator under box number */}
-              {getCheckStatus(box.boxNumber) && (
-                <div className="absolute top-14 right-2" data-testid={`check-status-${box.boxNumber}`}>
-                  {getCheckStatus(box.boxNumber) === 'completed' ? (
-                    <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+            {isSimplifiedMode ? (
+              /* SIMPLIFIED MODE - Box number and percentage only */
+              <>
+                {/* Lock icon for completed boxes */}
+                {box.isComplete && (
+                  <div className="absolute top-1 right-1 z-10">
+                    <Lock className={`w-3 h-3 ${highlighting.textColor}`} />
+                  </div>
+                )}
+                
+                {/* Green indicator for just-scanned box */}
+                {isLastScanned && !box.isComplete && (
+                  <div className="absolute top-1 left-1 z-10">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  </div>
+                )}
+                
+                {/* Simplified layout: Box number badge (center top) and percentage (center bottom) */}
+                <div className="flex flex-col items-center justify-between h-full">
+                  {/* Box Number Badge */}
+                  <div className="flex-shrink-0 mt-1">
+                    <div 
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border border-white shadow text-white ${
+                        box.lastWorkerColor ? '' : 'bg-primary'
+                      }`}
+                      style={box.lastWorkerColor ? { 
+                        backgroundColor: box.lastWorkerColor
+                      } : undefined}
+                    >
+                      {box.boxNumber}
                     </div>
-                  ) : getCheckStatus(box.boxNumber) === 'rejected' ? (
-                    <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                    
+                    {/* Check status indicator with higher z-index */}
+                    {getCheckStatus(box.boxNumber) && (
+                      <div className="absolute top-10 left-1/2 transform -translate-x-1/2 z-20" data-testid={`check-status-${box.boxNumber}`}>
+                        {getCheckStatus(box.boxNumber) === 'completed' ? (
+                          <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        ) : getCheckStatus(box.boxNumber) === 'rejected' ? (
+                          <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Percentage */}
+                  <div className="flex-shrink-0 mb-1">
+                    {box.isComplete ? (
+                      <div className="bg-red-500 text-white px-1 py-0.5 rounded text-xs font-medium">
+                        100%
+                      </div>
+                    ) : (
+                      <p className={`text-xs font-medium ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-700'}`} data-testid={`percentage-${box.boxNumber}`}>
+                        {completionPercentage}%
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* STANDARD MODE - Full box content */
+              <>
+                {/* Lock icon for 100% completed boxes */}
+                {box.isComplete && (
+                  <div className="absolute top-1 right-1">
+                    <Lock className={`w-5 h-5 ${highlighting.textColor}`} />
+                  </div>
+                )}
+
+                {/* Green indicator for just-scanned box */}
+                {isLastScanned && !box.isComplete && (
+                  <div className="absolute top-1 left-1">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  </div>
+                )}
+
+                {/* Customer name spanning full width with proper spacing */}
+                <div className="mb-4 pr-2">
+                  <h3 className={`font-medium text-sm truncate ${highlighting.textColor}`} data-testid={`customer-name-${box.boxNumber}`}>
+                    {box.customerName === "Unassigned" ? "Unassigned" : box.customerName}
+                  </h3>
+                  {supervisorView && box.assignedWorker && (
+                    <p className={`text-xs truncate ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`}>Worker: {box.assignedWorker}</p>
+                  )}
+                </div>
+
+                {/* Box Number Badge - Top Right with spacing from customer name */}
+                <div className="absolute top-10 right-2">
+                  <div 
+                    className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
+                      box.lastWorkerColor ? '' : 'bg-primary'
+                    }`}
+                    style={box.lastWorkerColor ? { 
+                      backgroundColor: box.lastWorkerColor
+                    } : undefined}
+                  >
+                    {box.boxNumber}
+                  </div>
+                  
+                  {/* Check status indicator under box number */}
+                  {getCheckStatus(box.boxNumber) && (
+                    <div className="absolute top-14 right-2" data-testid={`check-status-${box.boxNumber}`}>
+                      {getCheckStatus(box.boxNumber) === 'completed' ? (
+                        <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      ) : getCheckStatus(box.boxNumber) === 'rejected' ? (
+                        <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Quantity fraction - Left side at same height as box number */}
-            <div className="absolute top-12 left-2">
-              <div className={`text-lg font-bold ${highlighting.textColor}`} data-testid={`quantity-${box.boxNumber}`}>
-                {displayScannedQty}/{displayTotalQty}
-              </div>
-              {/* Worker staffId under quantity if available */}
-              {highlighting.workerStaffId && (
-                <div className={`text-xs font-medium mt-1 ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-700'}`} data-testid={`worker-code-${box.boxNumber}`}>
-                  {highlighting.workerStaffId}
+                {/* Quantity fraction - Left side at same height as box number */}
+                <div className="absolute top-12 left-2">
+                  <div className={`text-lg font-bold ${highlighting.textColor}`} data-testid={`quantity-${box.boxNumber}`}>
+                    {displayScannedQty}/{displayTotalQty}
+                  </div>
+                  {/* Worker staffId under quantity if available */}
+                  {highlighting.workerStaffId && (
+                    <div className={`text-xs font-medium mt-1 ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-700'}`} data-testid={`worker-code-${box.boxNumber}`}>
+                      {highlighting.workerStaffId}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Centered percentage text and progress bar at bottom */}
-            <div className="absolute bottom-3 left-0 right-0 flex flex-col items-center">
-              {box.isComplete ? (
-                <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium mb-1">
-                  100%
+                {/* Centered percentage text and progress bar at bottom */}
+                <div className="absolute bottom-3 left-0 right-0 flex flex-col items-center">
+                  {box.isComplete ? (
+                    <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium mb-1">
+                      100%
+                    </div>
+                  ) : (
+                    <p className={`text-xs text-center mb-1 ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
+                      {completionPercentage}%
+                    </p>
+                  )}
+                  
+                  {/* Centered progress bar */}
+                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-300 ${
+                        isLastScanned ? 'bg-red-500' : 'bg-green-500'
+                      }`}
+                      style={{ width: `${completionPercentage}%` }}
+                    ></div>
+                  </div>
                 </div>
-              ) : (
-                <p className={`text-xs text-center mb-1 ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
-                  {completionPercentage}%
-                </p>
-              )}
-              
-              {/* Centered progress bar */}
-              <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-300 ${
-                    isLastScanned ? 'bg-red-500' : 'bg-green-500'
-                  }`}
-                  style={{ width: `${completionPercentage}%` }}
-                ></div>
-              </div>
-            </div>
-
-            
+              </>
+            )}
           </div>
         );
       })}
