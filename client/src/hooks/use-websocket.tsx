@@ -166,8 +166,8 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
           onWorkerBoxUpdate(
             Number(message.data.scanEvent.boxNumber),
             String(message.data.scanEvent.userId),
-            message.data.scanEvent.workerColor as string,
-            message.data.scanEvent.workerStaffId as string
+            message.data.scanEvent.workerColor || '',
+            message.data.scanEvent.workerStaffId || ''
           );
         }
         
@@ -178,6 +178,9 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         
         // Invalidate Manager Dashboard jobs list to update progress bars
         queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+        
+        // CRITICAL FIX: Invalidate box-requirements to update Box Details Modal individual product progress bars
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "box-requirements"] });
         break;
       
       case "scan_event":
@@ -208,6 +211,9 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             message.data.workerStaffId as string
           );
         }
+        
+        // CRITICAL FIX: Invalidate box-requirements to update Box Details Modal individual product progress bars
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "box-requirements"] });
         break;
       
       case "undo_event":
@@ -251,6 +257,9 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             performance: message.data.performance
           });
         }
+        
+        // CRITICAL FIX: Invalidate box-requirements to update Box Details Modal individual product progress bars
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "box-requirements"] });
         break;
       
       case "job_status_update":
@@ -267,6 +276,10 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
         queryClient.invalidateQueries({ queryKey: ["/api/check-sessions"] });
+        
+        // CRITICAL FIX: Invalidate box-requirements and CheckCount sessions with jobId
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "box-requirements"] });
+        queryClient.invalidateQueries({ queryKey: [`/api/check-sessions?jobId=${jobId}`] });
         
         // Show user feedback about the CheckCount correction
         if (message.data && message.data.applyCorrections && Array.isArray(message.data.corrections) && message.data.corrections.length > 0) {
