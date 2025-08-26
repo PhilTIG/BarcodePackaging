@@ -1885,7 +1885,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/jobs/:jobId/boxes/:boxNumber/empty', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId, boxNumber } = req.params;
-      const { reason } = req.body;
       
       // Check permissions
       const userPreferences = await storage.getUserPreferences(req.user!.id);
@@ -1912,7 +1911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Perform empty operation with automatic reallocation
-      const history = await storage.emptyBox(jobId, boxNum, req.user!.id, reason);
+      const emptyResult = await storage.emptyBox(jobId, boxNum, req.user!.id);
       
       // Broadcast real-time update
       broadcastToJob(jobId, {
@@ -1927,8 +1926,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         success: true, 
-        message: `Box ${boxNum} emptied successfully`,
-        history 
+        message: emptyResult.message,
+        history: emptyResult.history,
+        reallocation: emptyResult.reallocation
       });
     } catch (error: any) {
       console.error('Box empty error:', error);
@@ -1942,7 +1942,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/jobs/:jobId/boxes/:boxNumber/transfer', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId, boxNumber } = req.params;
-      const { targetGroup, reason } = req.body;
       
       // Check permissions
       const userPreferences = await storage.getUserPreferences(req.user!.id);
@@ -1950,10 +1949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Insufficient permissions to transfer boxes' });
       }
 
-      // Validate input
-      if (!targetGroup) {
-        return res.status(400).json({ message: 'Target group is required' });
-      }
+      // Auto-detect customer's group from database - no manual selection required
 
       // Validate job exists
       const job = await storage.getJobById(jobId);
@@ -1973,21 +1969,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Box not found or empty' });
       }
 
-      // Validate that groups exist in this job
-      const jobGroups = await storage.getJobGroups(jobId);
-      if (jobGroups.length === 0) {
-        return res.status(400).json({ message: 'No groups found in this job. Cannot transfer boxes.' });
+      // Auto-detect customer's group from existing data
+      const customerGroup = boxRequirements[0]?.groupName;
+      if (!customerGroup) {
+        return res.status(400).json({ message: 'Customer has no group assigned from CSV data. Cannot transfer.' });
       }
 
       // Perform transfer operation with automatic reallocation
-      const history = await storage.transferBoxToGroup(jobId, boxNum, targetGroup, req.user!.id, reason);
+      const transferResult = await storage.transferBoxToGroup(jobId, boxNum, customerGroup, req.user!.id);
       
       // Broadcast real-time update
       broadcastToJob(jobId, {
         type: 'box_transferred',
         data: { 
           boxNumber: boxNum, 
-          targetGroup,
+          targetGroup: customerGroup,
           performedBy: req.user!.name,
           timestamp: new Date().toISOString(),
           jobId
@@ -1996,8 +1992,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         success: true, 
-        message: `Box ${boxNum} transferred to group '${targetGroup}' successfully`,
-        history 
+        message: transferResult.message,
+        history: transferResult.history,
+        reallocation: transferResult.reallocation
       });
     } catch (error: any) {
       console.error('Box transfer error:', error);
@@ -2193,72 +2190,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============== BOX EMPTY/TRANSFER API ENDPOINTS ==============
-
-  // Empty a completed box
-  app.post('/api/jobs/:jobId/boxes/:boxNumber/empty', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
-    try {
-      const { jobId, boxNumber } = req.params;
-      const { reason } = req.body;
-
-      const history = await storage.emptyBox(jobId, parseInt(boxNumber), req.user!.id, reason);
-
-      // Broadcast box empty event to all clients
-      broadcastToJob(jobId, {
-        type: 'box_emptied',
-        data: {
-          boxNumber: parseInt(boxNumber),
-          performedBy: req.user!.name,
-          timestamp: new Date().toISOString(),
-          reason
-        }
-      });
-
-      res.json({ 
-        success: true,
-        history,
-        message: `Box ${boxNumber} has been emptied successfully`
-      });
-    } catch (error) {
-      console.error('Failed to empty box:', error);
-      res.status(500).json({ message: 'Failed to empty box' });
-    }
-  });
-
-  // Transfer a box to a group
-  app.post('/api/jobs/:jobId/boxes/:boxNumber/transfer', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
-    try {
-      const { jobId, boxNumber } = req.params;
-      const { targetGroup, reason } = req.body;
-
-      if (!targetGroup) {
-        return res.status(400).json({ message: 'Target group is required' });
-      }
-
-      const history = await storage.transferBoxToGroup(jobId, parseInt(boxNumber), targetGroup, req.user!.id, reason);
-
-      // Broadcast box transfer event to all clients
-      broadcastToJob(jobId, {
-        type: 'box_transferred',
-        data: {
-          boxNumber: parseInt(boxNumber),
-          targetGroup,
-          performedBy: req.user!.name,
-          timestamp: new Date().toISOString(),
-          reason
-        }
-      });
-
-      res.json({
-        success: true,
-        history,
-        message: `Box ${boxNumber} has been transferred to group "${targetGroup}"`
-      });
-    } catch (error) {
-      console.error('Failed to transfer box:', error);
-      res.status(500).json({ message: 'Failed to transfer box' });
-    }
-  });
+  // ============== DUPLICATE ENDPOINTS REMOVED ==============
+  // Box Empty/Transfer endpoints are defined above with automatic reallocation
 
   // Get box history for a job
   app.get('/api/jobs/:jobId/box-history', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {

@@ -231,7 +231,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         
         // POC-style highlighting with worker color support
         const isLastScanned = lastScannedBoxNumber === box.boxNumber;
-        const highlighting = getBoxHighlight(box.boxNumber, box.isComplete);
+        const highlighting = getBoxHighlight(box.boxNumber, box.isComplete, box.customerName);
         
         // Handle custom background colors (rgba) vs Tailwind classes
         const customStyle = highlighting.backgroundColor.startsWith('rgba') ? {
@@ -364,7 +364,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                 {/* Customer name spanning full width with proper spacing */}
                 <div className="mb-4 pr-2">
                   <h3 className={`font-medium text-sm truncate ${highlighting.textColor}`} data-testid={`customer-name-${box.boxNumber}`}>
-                    {box.customerName === "Unassigned" ? "Unassigned" : box.customerName}
+                    {(box.customerName === "Empty" || box.customerName === "Unassigned" || !box.customerName) ? "Empty" : box.customerName}
                   </h3>
                   {supervisorView && box.assignedWorker && (
                     <p className={`text-xs truncate ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`}>Worker: {box.assignedWorker}</p>
@@ -375,9 +375,11 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                 <div className="absolute top-10 right-2">
                   <div 
                     className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
-                      box.lastWorkerColor ? '' : 'bg-primary'
+                      highlighting.badgeColor?.startsWith('#') ? '' : highlighting.badgeColor || 'bg-primary'
                     }`}
-                    style={box.lastWorkerColor ? { 
+                    style={highlighting.badgeColor?.startsWith('#') ? { 
+                      backgroundColor: highlighting.badgeColor
+                    } : box.lastWorkerColor ? { 
                       backgroundColor: box.lastWorkerColor
                     } : undefined}
                   >

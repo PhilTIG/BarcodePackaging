@@ -59,7 +59,7 @@ import {
   type InsertPutAsideItem
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, ne, desc, sql, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, or, ne, desc, sql, inArray, isNotNull, isNull } from "drizzle-orm";
 
 /**
  * Utility function to normalize barcodes by converting scientific notation to full numeric strings
@@ -206,8 +206,8 @@ export interface IStorage {
   getDiscrepancyReport(jobId: string): Promise<any>;
 
   // Box Empty/Transfer methods
-  emptyBox(jobId: string, boxNumber: number, performedBy: string, reason?: string): Promise<BoxHistory>;
-  transferBoxToGroup(jobId: string, boxNumber: number, targetGroup: string, performedBy: string, reason?: string): Promise<BoxHistory>;
+  emptyBox(jobId: string, boxNumber: number, performedBy: string): Promise<{message: string, history: BoxHistory, reallocation?: any}>;
+  transferBoxToGroup(jobId: string, boxNumber: number, targetGroup: string, performedBy: string): Promise<{message: string, history: BoxHistory, reallocation?: any}>;
   getBoxHistory(jobId: string): Promise<BoxHistory[]>;
   getBoxHistoryByBoxNumber(jobId: string, boxNumber: number): Promise<BoxHistory[]>;
   
@@ -946,7 +946,7 @@ export class DatabaseStorage implements IStorage {
               barCode: insertEvent.barCode,
               productName: unallocatedRequirement[0].productName,
               customerName: unallocatedRequirement[0].customerName,
-              originalBoxNumber: null, // No box assigned yet
+              originalBoxNumber: 0, // No box assigned yet
               quantity: 1,
               status: 'pending',
               putAsideBy: session.userId,
@@ -2422,7 +2422,7 @@ export class DatabaseStorage implements IStorage {
         .groupBy(boxRequirements.customerName, boxRequirements.groupName)
         .orderBy(boxRequirements.customerName);
 
-      return unallocatedData.map(item => ({
+      return unallocatedData.map((item: any) => ({
         customerName: item.customerName,
         totalItems: item.totalItems || 0,
         productCount: item.productCount || 0,
@@ -2519,9 +2519,10 @@ export class DatabaseStorage implements IStorage {
         .where(eq(boxRequirements.jobId, originalJobId));
 
       // Delete products (legacy table)
+      // Delete box requirements for this job  
       await this.db
-        .delete(products)
-        .where(eq(products.jobId, originalJobId));
+        .delete(boxRequirements)
+        .where(eq(boxRequirements.jobId, originalJobId));
 
       // Delete any scan events that directly reference the job (extra items)
       await this.db
@@ -2792,9 +2793,10 @@ export class DatabaseStorage implements IStorage {
         .where(eq(boxRequirements.jobId, originalJobId));
 
       // Delete products (legacy table)
+      // Delete box requirements for this job  
       await this.db
-        .delete(products)
-        .where(eq(products.jobId, originalJobId));
+        .delete(boxRequirements)
+        .where(eq(boxRequirements.jobId, originalJobId));
 
       // Delete any scan events that directly reference the job (extra items)
       await this.db
@@ -2879,7 +2881,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async emptyBox(jobId: string, boxNumber: number, performedBy: string, reason?: string): Promise<BoxHistory> {
+  async emptyBox(jobId: string, boxNumber: number, performedBy: string): Promise<{message: string, history: BoxHistory, reallocation?: any}> {
     try {
       // Get box snapshot before emptying
       const boxItems = await this.getBoxRequirementsByBoxNumber(jobId, boxNumber);
@@ -2888,6 +2890,9 @@ export class DatabaseStorage implements IStorage {
         itemsProcessed: boxItems.reduce((sum, item) => sum + (item.scannedQty || 0), 0)
       };
 
+      // Get customer name before emptying
+      const customerName = boxItems[0]?.customerName || 'Unknown';
+      
       // Create box history record
       const [history] = await this.db
         .insert(boxHistory)
@@ -2896,7 +2901,7 @@ export class DatabaseStorage implements IStorage {
           boxNumber,
           action: 'emptied',
           performedBy,
-          reason,
+          reason: null,
           itemsProcessed: boxSnapshot.itemsProcessed,
           boxSnapshot
         })
@@ -2920,20 +2925,27 @@ export class DatabaseStorage implements IStorage {
       // Seamlessly reallocate the box to next unallocated customer
       const reallocationResult = await this.reallocateBoxToNextCustomer(jobId, boxNumber);
       
+      let message: string;
       if (reallocationResult.success) {
+        message = `Box ${boxNumber}: Customer ${customerName} emptied | Customer ${reallocationResult.customerName} assigned`;
         console.log(`[Empty Box] ${reallocationResult.message}`);
       } else {
+        message = `Box ${boxNumber}: Customer ${customerName} emptied | No customers available - Box Empty`;
         console.log(`[Empty Box] Box ${boxNumber} emptied but no unallocated customers available`);
       }
 
-      return history;
+      return {
+        message,
+        history,
+        reallocation: reallocationResult
+      };
     } catch (error) {
       console.error('Error emptying box:', error);
       throw error;
     }
   }
 
-  async transferBoxToGroup(jobId: string, boxNumber: number, targetGroup: string, performedBy: string, reason?: string): Promise<BoxHistory> {
+  async transferBoxToGroup(jobId: string, boxNumber: number, targetGroup: string, performedBy: string): Promise<{message: string, history: BoxHistory, reallocation?: any}> {
     try {
       // Get box snapshot before transfer
       const boxItems = await this.getBoxRequirementsByBoxNumber(jobId, boxNumber);
@@ -2943,6 +2955,9 @@ export class DatabaseStorage implements IStorage {
         itemsProcessed: boxItems.reduce((sum, item) => sum + (item.scannedQty || 0), 0)
       };
 
+      // Get customer name before transfer
+      const customerName = boxItems[0]?.customerName || 'Unknown';
+      
       // Create box history record
       const [history] = await this.db
         .insert(boxHistory)
@@ -2952,7 +2967,7 @@ export class DatabaseStorage implements IStorage {
           action: 'transferred',
           performedBy,
           targetGroup,
-          reason,
+          reason: null,
           itemsProcessed: boxSnapshot.itemsProcessed,
           boxSnapshot
         })
@@ -2977,13 +2992,20 @@ export class DatabaseStorage implements IStorage {
       // Seamlessly reallocate the box to next unallocated customer
       const reallocationResult = await this.reallocateBoxToNextCustomer(jobId, boxNumber);
       
+      let message: string;
       if (reallocationResult.success) {
+        message = `Box ${boxNumber}: Customer ${customerName} → Group ${targetGroup} | Customer ${reallocationResult.customerName} assigned`;
         console.log(`[Transfer Box] ${reallocationResult.message}`);
       } else {
+        message = `Box ${boxNumber}: Customer ${customerName} → Group ${targetGroup} | No customers available - Box Empty`;
         console.log(`[Transfer Box] Box ${boxNumber} transferred to group '${targetGroup}' but no unallocated customers available`);
       }
 
-      return history;
+      return {
+        message,
+        history,
+        reallocation: reallocationResult
+      };
     } catch (error) {
       console.error('Error transferring box to group:', error);
       throw error;
@@ -3056,7 +3078,7 @@ export class DatabaseStorage implements IStorage {
         putAsideAt: putAsideItems.putAsideAt,
         reallocatedBy: putAsideItems.reallocatedBy,
         reallocatedAt: putAsideItems.reallocatedAt,
-        reallocatedToBoxNumber: putAsideItems.reallocatedToBoxNumber,
+        reallocatedToBox: putAsideItems.reallocatedToBox,
         sourceEventId: putAsideItems.sourceEventId,
         // Join with jobs for job name
         jobName: jobs.name,

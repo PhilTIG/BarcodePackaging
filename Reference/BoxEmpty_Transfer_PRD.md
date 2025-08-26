@@ -3,7 +3,7 @@
 
 ## Executive Summary
 
-This PRD defines the comprehensive Box Empty/Transfer system that enables workers to empty completed boxes and transfer box contents to group views. The system includes automatic box reallocation with background processing, "Put Aside" functionality for items that can't be immediately placed, and seamless integration with the existing warehouse sorting application.
+This PRD defines the comprehensive Box Empty/Transfer system that provides instant automatic actions: Empty Box removes current customer and automatically assigns next unallocated customer, Transfer Box moves customer to their designated CSV group and automatically assigns next unallocated customer. When no unallocated customers exist, boxes display "Empty" status as grey boxes with full history access. The system eliminates all manual workflows and provides seamless automatic operations with no confirmation dialogs.
 
 ## Business Objectives
 
@@ -40,18 +40,19 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 ### 1. Box Empty Functionality
 
 #### 1.1 Empty Button Availability
-- **Trigger**: Appears when box is 100% complete
-- **Permissions**: Controlled by new `canEmptyBoxes` user preference
+- **Trigger**: Appears when box is 100% complete AND customer has no groupName from CSV
+- **Permissions**: Controlled by `canEmptyAndTransfer` user preference
 - **Context**: Available in Box Details Modal for completed boxes
-- **Behavior**: Simple empty operation when no groups exist for the job
+- **Behavior**: Instant automatic empty operation with no confirmation dialogs
+- **Exclusivity**: Never shown simultaneously with Transfer button
 
 #### 1.2 Automatic Box Reallocation
 - **Trigger**: When box is emptied and job has `boxNumber: NULL` customers (unallocated due to box limit)
 - **Process**: Automatically assign next unallocated customer to that specific box number
 - **Selection**: First unallocated customer (FIFO order from original CSV sequence)
 - **Database Update**: Change `boxNumber` from `NULL` to the emptied box number for all products of that customer
-- **Transition**: Seamless - no "empty" status, direct assignment to new customer
-- **Notification**: Simple notification to user about reallocation ("Box 5 now assigned to Customer ABC")
+- **Transition**: If unallocated customers exist: seamless assignment to new customer. If no unallocated customers: box shows "Empty" status
+- **Notification**: Detailed notification format: "Box 5: Customer A emptied | Customer C assigned" or "Box 5: Customer A emptied | No customers available - Box Empty"
 - **Worker Impact**: Workers skip NULL boxes and recalculate their sequence dynamically
 - **Box Number Retention**: Emptied/transferred boxes retain their box number for history tracking
 
@@ -64,10 +65,11 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 ### 2. Transfer to Group Functionality
 
 #### 2.1 Transfer Button Logic
-- **Availability**: When groups exist in the CSV and box is 100% complete
-- **Action**: Move box contents to group view while maintaining box number
-- **Data Structure**: Track original box number and transfer timestamps
-- **Real-time Updates**: Group views update immediately upon transfer
+- **Availability**: When customer has groupName from CSV AND box is 100% complete
+- **Action**: Instant automatic transfer to customer's existing CSV group (no manual selection)
+- **API Logic**: Auto-detect customer's groupName from database, no targetGroup parameter required
+- **Exclusivity**: Never shown simultaneously with Empty button
+- **No Manual Selection**: Group assignment is automatic based on existing CSV data
 
 #### 2.2 Group View Integration
 - **Display**: Show transferred boxes with original box numbers preserved
@@ -192,8 +194,8 @@ ALTER TABLE jobs ADD COLUMN box_limit INTEGER DEFAULT NULL;
 ALTER TABLE box_requirements ADD COLUMN box_status VARCHAR(20) DEFAULT 'active';
 -- Values: 'active', 'emptied', 'transferred_to_group'
 
--- Add empty/transfer permission
-ALTER TABLE user_preferences ADD COLUMN can_empty_boxes BOOLEAN DEFAULT FALSE;
+-- Add empty/transfer permission (already exists as canEmptyAndTransfer)
+-- ALTER TABLE user_preferences ADD COLUMN can_empty_and_transfer BOOLEAN DEFAULT FALSE;
 
 -- Enhanced scan events for put aside
 ALTER TABLE scan_events ADD COLUMN put_aside_item_id UUID REFERENCES put_aside_items(id);
@@ -206,9 +208,9 @@ ALTER TABLE put_aside_items ADD COLUMN version INTEGER DEFAULT 1;
 ### API Endpoints
 
 #### Box Operations
-- `POST /api/jobs/{jobId}/boxes/{boxNumber}/empty` - Empty a completed box
-- `POST /api/jobs/{jobId}/boxes/{boxNumber}/transfer` - Transfer box to group
-- `GET /api/jobs/{jobId}/boxes/{boxNumber}/history` - Get box history
+- `POST /api/jobs/{jobId}/boxes/{boxNumber}/empty` - Empty a completed box (no reason parameter)
+- `POST /api/jobs/{jobId}/boxes/{boxNumber}/transfer` - Transfer box to group (auto-detect groupName, no targetGroup parameter)
+- `GET /api/jobs/{jobId}/boxes/{boxNumber}/history` - Get box history with customer timeline
 
 #### Put Aside Management
 - `POST /api/jobs/{jobId}/put-aside` - Create put aside item
@@ -237,10 +239,10 @@ type BoxTransferEvents =
 
 ### Worker/Supervisor Workflow  
 1. **Box Completion**: Scan final item → Box shows 100% complete
-2. **Box Actions**: Click Box Details → See Empty/Transfer buttons
-3. **Empty Action**: Click Empty → Automatic reallocation (if enabled) → Notification
-4. **Transfer Action**: Click Transfer → Select Group → Immediate transfer
-5. **Put Aside**: See notification → Click details → Scan available items
+2. **Box Actions**: Click Box Details → See Empty OR Transfer button (never both)
+3. **Empty Action**: Click Empty → Instant automatic reallocation → Detailed notification
+4. **Transfer Action**: Click Transfer → Instant automatic transfer to CSV group → Detailed notification
+5. **Empty Box Display**: Grey box with black circle, white number, "Empty" text, clickable for history
 
 ### Put Aside Item Lifecycle
 1. **Creation**: Item needs box → No suitable box → "Put Aside" scan

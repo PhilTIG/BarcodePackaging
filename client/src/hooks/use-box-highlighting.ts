@@ -109,7 +109,8 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
   // Get box highlight style based on priority system
   const getBoxHighlight = useCallback((
     boxNumber: number,
-    isComplete: boolean
+    isComplete: boolean,
+    customerName?: string
   ): {
     backgroundColor: string;
     borderColor: string;
@@ -120,7 +121,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
     const workerColor = highlighting.workerColors.get(boxNumber);
     const workerStaffId = highlighting.workerStaffIds.get(boxNumber);
     
-    // NEW Priority: Worker Color (50% transparent) > Complete > Default
+    // Priority: Worker Color (50% transparent) > Empty Box > Complete > Default
     // Worker color IS the "just scanned" state now
     if (workerColor) {
       // Convert hex color to CSS with 50% transparency
@@ -136,6 +137,16 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
       }
     }
     
+    // Empty box styling (grey background with black circle)
+    if (customerName === 'Empty' || customerName === 'Unassigned' || !customerName) {
+      return {
+        backgroundColor: 'bg-gray-300', // Grey background for empty boxes
+        borderColor: 'border-gray-400',
+        textColor: 'text-gray-700',
+        badgeColor: '#000000', // Black circle for empty box numbers
+      };
+    }
+    
     if (isComplete) {
       return {
         backgroundColor: 'bg-red-50',
@@ -145,7 +156,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
       };
     }
     
-    // Default grey for empty/unassigned
+    // Default grey for normal boxes
     return {
       backgroundColor: 'bg-gray-50',
       borderColor: 'border-gray-200',

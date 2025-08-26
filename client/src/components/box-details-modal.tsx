@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -8,7 +8,8 @@ import { CheckCircle, XCircle, Users, ClipboardCheck, PackageOpen, ArrowRight } 
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
-import { BoxEmptyTransferModal } from './box-empty-transfer-modal';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 import type { BoxRequirement as SchemaBoxRequirement } from '@shared/schema';
 
 interface BoxDetailsModalProps {
@@ -57,13 +58,12 @@ export function BoxDetailsModal({
   lastWorkerColor,
   onCheckCount
 }: BoxDetailsModalProps) {
-
-  // State for Empty/Transfer modal
-  const [showEmptyTransferModal, setShowEmptyTransferModal] = useState(false);
   
   // User authentication and preferences
   const { user } = useAuth();
   const { preferences } = useUserPreferences();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   // Fetch box requirements for this specific box using the default query function
   const { data: boxRequirementsResponse, isLoading } = useQuery({
     queryKey: [`/api/jobs/${jobId}/box-requirements`],
@@ -198,14 +198,69 @@ export function BoxDetailsModal({
     return user?.role === 'worker' && preferences?.canEmptyAndTransfer === true;
   };
 
-  const handleEmptyTransferAction = () => {
-    setShowEmptyTransferModal(true);
-  };
+  // Empty Box mutation
+  const emptyBoxMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/jobs/${jobId}/boxes/${boxNumber}/empty`, 'POST', {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Box Emptied Successfully",
+        description: data.message || `Box ${boxNumber} has been emptied and reassigned.`,
+        variant: "default"
+      });
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Empty Box",
+        description: error.message || "An error occurred while emptying the box.",
+        variant: "destructive"
+      });
+    }
+  });
 
-  const handleEmptyTransferClose = () => {
-    setShowEmptyTransferModal(false);
-    // Optionally close the main modal too
-    // onClose();
+  // Transfer Box mutation
+  const transferBoxMutation = useMutation({
+    mutationFn: async () => {
+      // Auto-detect target group from current customer's groupName
+      // The API will automatically determine the target group from CSV data
+      return apiRequest(`/api/jobs/${jobId}/boxes/${boxNumber}/transfer`, 'POST', {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Box Transferred Successfully",
+        description: data.message || `Box ${boxNumber} has been transferred and reassigned.`,
+        variant: "default"
+      });
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Transfer Box",
+        description: error.message || "An error occurred while transferring the box.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleEmptyTransferAction = () => {
+    const jobGroups = (jobGroupsResponse as { groups?: string[] })?.groups || [];
+    const hasGroups = jobGroups.length > 0;
+    
+    if (hasGroups) {
+      // Transfer to group with automatic assignment
+      transferBoxMutation.mutate();
+    } else {
+      // Empty box with automatic assignment
+      emptyBoxMutation.mutate();
+    }
   };
 
   // Get theme color for button styling
@@ -295,12 +350,13 @@ export function BoxDetailsModal({
                     return (
                       <Button
                         onClick={handleEmptyTransferAction}
+                        disabled={transferBoxMutation.isPending}
                         className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity ml-4"
                         style={{ backgroundColor: getThemeColor() }}
                         data-testid="transfer-box-button"
                       >
                         <ArrowRight className="w-4 h-4" />
-                        Transfer Box
+                        {transferBoxMutation.isPending ? 'Transferring...' : 'Transfer Box'}
                       </Button>
                     );
                   } else {
@@ -308,12 +364,13 @@ export function BoxDetailsModal({
                     return (
                       <Button
                         onClick={handleEmptyTransferAction}
+                        disabled={emptyBoxMutation.isPending}
                         className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity ml-4"
                         style={{ backgroundColor: getThemeColor() }}
                         data-testid="empty-box-button"
                       >
                         <PackageOpen className="w-4 h-4" />
-                        Empty Box
+                        {emptyBoxMutation.isPending ? 'Emptying...' : 'Empty Box'}
                       </Button>
                     );
                   }
@@ -411,19 +468,7 @@ export function BoxDetailsModal({
       </DialogContent>
     </Dialog>
 
-    {/* Box Empty/Transfer Modal */}
-    <BoxEmptyTransferModal
-      isOpen={showEmptyTransferModal}
-      onClose={handleEmptyTransferClose}
-      boxNumber={boxNumber}
-      jobId={jobId}
-      customerName={customerName}
-      isComplete={isComplete}
-      onAction={() => {
-        // Refresh data when action is performed
-        // The modal will handle its own closing
-      }}
-    />
+    {/* Removed BoxEmptyTransferModal - using direct API calls with automatic reallocation */}
     </>
   );
 }
