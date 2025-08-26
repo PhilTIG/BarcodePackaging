@@ -14,6 +14,8 @@ import SupervisorView from "@/pages/supervisor-view";
 import WorkerScanner from "@/pages/worker-scanner";
 import CheckCountPage from "@/pages/check-count";
 import QADashboard from "@/pages/qa-dashboard";
+import { GroupViewPage } from "@/pages/group-view";
+import { PutAsideManagerPage } from "@/pages/put-aside-manager";
 import Archives from "@/pages/archives";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
@@ -28,6 +30,8 @@ function Router() {
       <Route path="/scanner/:jobId?" component={WorkerScanner} />
       <Route path="/check-count/:jobId/:boxNumber" component={CheckCountPage} />
       <Route path="/qa-dashboard/:jobId?" component={QADashboard} />
+      <Route path="/group/:jobId/:groupName" component={GroupViewPage} />
+      <Route path="/put-aside-manager" component={PutAsideManagerPage} />
       <Route path="/archives" component={Archives} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />

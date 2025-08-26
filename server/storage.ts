@@ -16,6 +16,9 @@ import {
   checkSessions,
   checkEvents,
   checkResults,
+  // Box Empty/Transfer tables
+  boxHistory,
+  putAsideItems,
   type User, 
   type InsertUser,
   type Job,
@@ -48,7 +51,12 @@ import {
   type CheckEvent,
   type InsertCheckEvent,
   type CheckResult,
-  type InsertCheckResult
+  type InsertCheckResult,
+  // Box Empty/Transfer types
+  type BoxHistory,
+  type InsertBoxHistory,
+  type PutAsideItem,
+  type InsertPutAsideItem
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, ne, desc, sql, inArray } from "drizzle-orm";
@@ -193,6 +201,24 @@ export interface IStorage {
   // QA reporting methods
   getJobQAReport(jobId: string): Promise<any>;
   getDiscrepancyReport(jobId: string): Promise<any>;
+
+  // Box Empty/Transfer methods
+  emptyBox(jobId: string, boxNumber: number, performedBy: string, reason?: string): Promise<BoxHistory>;
+  transferBoxToGroup(jobId: string, boxNumber: number, targetGroup: string, performedBy: string, reason?: string): Promise<BoxHistory>;
+  getBoxHistory(jobId: string): Promise<BoxHistory[]>;
+  getBoxHistoryByBoxNumber(jobId: string, boxNumber: number): Promise<BoxHistory[]>;
+  
+  // Put Aside methods
+  createPutAsideItem(item: InsertPutAsideItem): Promise<PutAsideItem>;
+  getPutAsideItems(jobId: string): Promise<PutAsideItem[]>;
+  getPutAsideItemsByStatus(jobId: string, status: string): Promise<PutAsideItem[]>;
+  getAllPutAsideItems(status?: string): Promise<PutAsideItem[]>;
+  reallocatePutAsideItem(itemId: string, targetBoxNumber: number, reallocatedBy: string): Promise<PutAsideItem | undefined>;
+  
+  // Group management methods
+  getGroupCustomers(jobId: string, groupName: string): Promise<BoxRequirement[]>;
+  getJobGroups(jobId: string): Promise<string[]>;
+  updateBoxRequirementsGroup(jobId: string, boxNumber: number, groupName: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2697,6 +2723,225 @@ export class DatabaseStorage implements IStorage {
       console.error('Error purging job data:', error);
       return false;
     }
+  }
+
+  // Box Empty/Transfer Implementation
+  async emptyBox(jobId: string, boxNumber: number, performedBy: string, reason?: string): Promise<BoxHistory> {
+    try {
+      // Get box snapshot before emptying
+      const boxItems = await this.getBoxRequirementsByBoxNumber(jobId, boxNumber);
+      const boxSnapshot = {
+        items: boxItems,
+        itemsProcessed: boxItems.reduce((sum, item) => sum + (item.scannedQty || 0), 0)
+      };
+
+      // Create box history record
+      const [history] = await this.db
+        .insert(boxHistory)
+        .values({
+          jobId,
+          boxNumber,
+          action: 'emptied',
+          performedBy,
+          reason,
+          itemsProcessed: boxSnapshot.itemsProcessed,
+          boxSnapshot
+        })
+        .returning();
+
+      // Reset all box requirements for this box
+      await this.db
+        .update(boxRequirements)
+        .set({ 
+          scannedQty: 0, 
+          isComplete: false,
+          lastWorkerUserId: null,
+          lastWorkerColor: null
+        })
+        .where(and(
+          eq(boxRequirements.jobId, jobId),
+          eq(boxRequirements.boxNumber, boxNumber)
+        ));
+
+      return history;
+    } catch (error) {
+      console.error('Error emptying box:', error);
+      throw error;
+    }
+  }
+
+  async transferBoxToGroup(jobId: string, boxNumber: number, targetGroup: string, performedBy: string, reason?: string): Promise<BoxHistory> {
+    try {
+      // Get box snapshot before transfer
+      const boxItems = await this.getBoxRequirementsByBoxNumber(jobId, boxNumber);
+      const boxSnapshot = {
+        items: boxItems,
+        targetGroup,
+        itemsProcessed: boxItems.reduce((sum, item) => sum + (item.scannedQty || 0), 0)
+      };
+
+      // Create box history record
+      const [history] = await this.db
+        .insert(boxHistory)
+        .values({
+          jobId,
+          boxNumber,
+          action: 'transferred',
+          performedBy,
+          targetGroup,
+          reason,
+          itemsProcessed: boxSnapshot.itemsProcessed,
+          boxSnapshot
+        })
+        .returning();
+
+      // Update box requirements to set group
+      await this.db
+        .update(boxRequirements)
+        .set({ groupName: targetGroup })
+        .where(and(
+          eq(boxRequirements.jobId, jobId),
+          eq(boxRequirements.boxNumber, boxNumber)
+        ));
+
+      return history;
+    } catch (error) {
+      console.error('Error transferring box to group:', error);
+      throw error;
+    }
+  }
+
+  async getBoxHistory(jobId: string): Promise<BoxHistory[]> {
+    const history = await this.db
+      .select()
+      .from(boxHistory)
+      .where(eq(boxHistory.jobId, jobId))
+      .orderBy(desc(boxHistory.timestamp));
+    return history;
+  }
+
+  async getBoxHistoryByBoxNumber(jobId: string, boxNumber: number): Promise<BoxHistory[]> {
+    const history = await this.db
+      .select()
+      .from(boxHistory)
+      .where(and(
+        eq(boxHistory.jobId, jobId),
+        eq(boxHistory.boxNumber, boxNumber)
+      ))
+      .orderBy(desc(boxHistory.timestamp));
+    return history;
+  }
+
+  // Put Aside Implementation
+  async createPutAsideItem(item: InsertPutAsideItem): Promise<PutAsideItem> {
+    const [putAsideItem] = await this.db
+      .insert(putAsideItems)
+      .values(item)
+      .returning();
+    return putAsideItem;
+  }
+
+  async getPutAsideItems(jobId: string): Promise<PutAsideItem[]> {
+    const items = await this.db
+      .select()
+      .from(putAsideItems)
+      .where(eq(putAsideItems.jobId, jobId))
+      .orderBy(desc(putAsideItems.putAsideAt));
+    return items;
+  }
+
+  async getPutAsideItemsByStatus(jobId: string, status: string): Promise<PutAsideItem[]> {
+    const items = await this.db
+      .select()
+      .from(putAsideItems)
+      .where(and(
+        eq(putAsideItems.jobId, jobId),
+        eq(putAsideItems.status, status)
+      ))
+      .orderBy(desc(putAsideItems.putAsideAt));
+    return items;
+  }
+
+  async getAllPutAsideItems(status?: string): Promise<PutAsideItem[]> {
+    let query = this.db
+      .select({
+        id: putAsideItems.id,
+        jobId: putAsideItems.jobId,
+        barCode: putAsideItems.barCode,
+        productName: putAsideItems.productName,
+        customerName: putAsideItems.customerName,
+        originalBoxNumber: putAsideItems.originalBoxNumber,
+        quantity: putAsideItems.quantity,
+        status: putAsideItems.status,
+        putAsideBy: putAsideItems.putAsideBy,
+        putAsideAt: putAsideItems.putAsideAt,
+        reallocatedBy: putAsideItems.reallocatedBy,
+        reallocatedAt: putAsideItems.reallocatedAt,
+        reallocatedToBoxNumber: putAsideItems.reallocatedToBoxNumber,
+        sourceEventId: putAsideItems.sourceEventId,
+        // Join with jobs for job name
+        jobName: jobs.name,
+        // Join with users for worker name
+        putAsideWorkerName: users.name
+      })
+      .from(putAsideItems)
+      .leftJoin(jobs, eq(putAsideItems.jobId, jobs.id))
+      .leftJoin(users, eq(putAsideItems.putAsideBy, users.id));
+
+    if (status) {
+      query = query.where(eq(putAsideItems.status, status));
+    }
+
+    const items = await query.orderBy(desc(putAsideItems.putAsideAt));
+    return items;
+  }
+
+  async reallocatePutAsideItem(itemId: string, targetBoxNumber: number, reallocatedBy: string): Promise<PutAsideItem | undefined> {
+    const [item] = await this.db
+      .update(putAsideItems)
+      .set({
+        status: 'reallocated',
+        reallocatedToBox: targetBoxNumber,
+        reallocatedAt: new Date(),
+        reallocatedBy
+      })
+      .where(eq(putAsideItems.id, itemId))
+      .returning();
+    return item || undefined;
+  }
+
+  // Group Management Implementation
+  async getGroupCustomers(jobId: string, groupName: string): Promise<BoxRequirement[]> {
+    const customers = await this.db
+      .select()
+      .from(boxRequirements)
+      .where(and(
+        eq(boxRequirements.jobId, jobId),
+        eq(boxRequirements.groupName, groupName)
+      ));
+    return customers;
+  }
+
+  async getJobGroups(jobId: string): Promise<string[]> {
+    const result = await this.db
+      .selectDistinct({ groupName: boxRequirements.groupName })
+      .from(boxRequirements)
+      .where(and(
+        eq(boxRequirements.jobId, jobId),
+        sql`${boxRequirements.groupName} IS NOT NULL`
+      ));
+    
+    return result.map((r: any) => r.groupName).filter((name: any): name is string => name !== null);
+  }
+
+  async updateBoxRequirementsGroup(jobId: string, boxNumber: number, groupName: string): Promise<void> {
+    await this.db
+      .update(boxRequirements)
+      .set({ groupName })
+      .where(and(
+        eq(boxRequirements.jobId, jobId),
+        eq(boxRequirements.boxNumber, boxNumber)
+      ));
   }
 }
 

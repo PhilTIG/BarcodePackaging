@@ -4,10 +4,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Users, ClipboardCheck } from 'lucide-react';
+import { CheckCircle, XCircle, Users, ClipboardCheck, Trash2, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
+import { BoxEmptyTransferModal } from './box-empty-transfer-modal';
 import type { BoxRequirement as SchemaBoxRequirement } from '@shared/schema';
 
 interface BoxDetailsModalProps {
@@ -57,6 +58,8 @@ export function BoxDetailsModal({
   onCheckCount
 }: BoxDetailsModalProps) {
 
+  // State for Empty/Transfer modal
+  const [showEmptyTransferModal, setShowEmptyTransferModal] = useState(false);
   
   // User authentication and preferences
   const { user } = useAuth();
@@ -181,6 +184,22 @@ export function BoxDetailsModal({
     }
   };
 
+  // Check if user can perform Empty/Transfer actions (managers/supervisors only)
+  const canEmptyTransfer = () => {
+    return user?.role === 'manager' || user?.role === 'supervisor';
+  };
+
+  const handleEmptyTransferAction = () => {
+    // Close the box details modal and open empty/transfer modal
+    setShowEmptyTransferModal(true);
+  };
+
+  const handleEmptyTransferClose = () => {
+    setShowEmptyTransferModal(false);
+    // Optionally close the main modal too
+    // onClose();
+  };
+
   // Get theme color for button styling
   const getThemeColor = () => {
     const themeColorMap: Record<string, string> = {
@@ -253,6 +272,30 @@ export function BoxDetailsModal({
                 >
                   <ClipboardCheck className="w-4 h-4" />
                   Check Count
+                </Button>
+              </div>
+            )}
+
+            {/* Empty/Transfer Buttons - Only shown for completed boxes and managers/supervisors */}
+            {isComplete && canEmptyTransfer() && (
+              <div className="flex justify-center gap-2 pt-2">
+                <Button
+                  onClick={handleEmptyTransferAction}
+                  variant="outline"
+                  className="flex items-center gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+                  data-testid="empty-transfer-button"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Empty Box
+                </Button>
+                <Button
+                  onClick={handleEmptyTransferAction}
+                  variant="outline"
+                  className="flex items-center gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+                  data-testid="transfer-box-button"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  Transfer Box
                 </Button>
               </div>
             )}
@@ -346,6 +389,20 @@ export function BoxDetailsModal({
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Box Empty/Transfer Modal */}
+    <BoxEmptyTransferModal
+      isOpen={showEmptyTransferModal}
+      onClose={handleEmptyTransferClose}
+      boxNumber={boxNumber}
+      jobId={jobId}
+      customerName={customerName}
+      isComplete={isComplete}
+      onAction={() => {
+        // Refresh data when action is performed
+        // The modal will handle its own closing
+      }}
+    />
     </>
   );
 }

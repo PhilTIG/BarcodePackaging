@@ -1963,5 +1963,286 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============== BOX EMPTY/TRANSFER API ENDPOINTS ==============
+
+  // Empty a completed box
+  app.post('/api/jobs/:jobId/boxes/:boxNumber/empty', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, boxNumber } = req.params;
+      const { reason } = req.body;
+
+      const history = await storage.emptyBox(jobId, parseInt(boxNumber), req.user!.id, reason);
+
+      // Broadcast box empty event to all clients
+      broadcastToJob(jobId, {
+        type: 'box_emptied',
+        data: {
+          boxNumber: parseInt(boxNumber),
+          performedBy: req.user!.name,
+          timestamp: new Date().toISOString(),
+          reason
+        }
+      });
+
+      res.json({ 
+        success: true,
+        history,
+        message: `Box ${boxNumber} has been emptied successfully`
+      });
+    } catch (error) {
+      console.error('Failed to empty box:', error);
+      res.status(500).json({ message: 'Failed to empty box' });
+    }
+  });
+
+  // Transfer a box to a group
+  app.post('/api/jobs/:jobId/boxes/:boxNumber/transfer', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, boxNumber } = req.params;
+      const { targetGroup, reason } = req.body;
+
+      if (!targetGroup) {
+        return res.status(400).json({ message: 'Target group is required' });
+      }
+
+      const history = await storage.transferBoxToGroup(jobId, parseInt(boxNumber), targetGroup, req.user!.id, reason);
+
+      // Broadcast box transfer event to all clients
+      broadcastToJob(jobId, {
+        type: 'box_transferred',
+        data: {
+          boxNumber: parseInt(boxNumber),
+          targetGroup,
+          performedBy: req.user!.name,
+          timestamp: new Date().toISOString(),
+          reason
+        }
+      });
+
+      res.json({
+        success: true,
+        history,
+        message: `Box ${boxNumber} has been transferred to group "${targetGroup}"`
+      });
+    } catch (error) {
+      console.error('Failed to transfer box:', error);
+      res.status(500).json({ message: 'Failed to transfer box' });
+    }
+  });
+
+  // Get box history for a job
+  app.get('/api/jobs/:jobId/box-history', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId } = req.params;
+      const history = await storage.getBoxHistory(jobId);
+      res.json({ history });
+    } catch (error) {
+      console.error('Failed to fetch box history:', error);
+      res.status(500).json({ message: 'Failed to fetch box history' });
+    }
+  });
+
+  // Get box history for a specific box
+  app.get('/api/jobs/:jobId/boxes/:boxNumber/history', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, boxNumber } = req.params;
+      const history = await storage.getBoxHistoryByBoxNumber(jobId, parseInt(boxNumber));
+      res.json({ history });
+    } catch (error) {
+      console.error('Failed to fetch box history:', error);
+      res.status(500).json({ message: 'Failed to fetch box history' });
+    }
+  });
+
+  // Create put aside item
+  app.post('/api/jobs/:jobId/put-aside', requireAuth, requireRole(['worker']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId } = req.params;
+      const { barCode, productName, customerName, originalBoxNumber, quantity, sourceEventId } = req.body;
+
+      const putAsideItem = await storage.createPutAsideItem({
+        jobId,
+        barCode,
+        productName,
+        customerName,
+        originalBoxNumber: parseInt(originalBoxNumber),
+        quantity: parseInt(quantity) || 1,
+        putAsideBy: req.user!.id,
+        sourceEventId
+      });
+
+      // Broadcast put aside event
+      broadcastToJob(jobId, {
+        type: 'item_put_aside',
+        data: {
+          item: putAsideItem,
+          performedBy: req.user!.name,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      res.status(201).json({ 
+        success: true,
+        item: putAsideItem,
+        message: 'Item successfully put aside'
+      });
+    } catch (error) {
+      console.error('Failed to create put aside item:', error);
+      res.status(500).json({ message: 'Failed to create put aside item' });
+    }
+  });
+
+  // Get put aside items for a job
+  app.get('/api/jobs/:jobId/put-aside', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId } = req.params;
+      const { status } = req.query;
+      
+      let items;
+      if (status) {
+        items = await storage.getPutAsideItemsByStatus(jobId, status as string);
+      } else {
+        items = await storage.getPutAsideItems(jobId);
+      }
+      
+      res.json({ items });
+    } catch (error) {
+      console.error('Failed to fetch put aside items:', error);
+      res.status(500).json({ message: 'Failed to fetch put aside items' });
+    }
+  });
+
+  // Get all put aside items across all jobs (for managers/supervisors)
+  app.get('/api/put-aside/all', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status } = req.query;
+      
+      // This would need a new storage method to get all put aside items
+      const items = await storage.getAllPutAsideItems(status as string);
+      
+      res.json({ items });
+    } catch (error) {
+      console.error('Failed to fetch all put aside items:', error);
+      res.status(500).json({ message: 'Failed to fetch all put aside items' });
+    }
+  });
+
+  // Reallocate put aside item to a box
+  app.post('/api/put-aside/:itemId/reallocate', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { itemId } = req.params;
+      const { targetBoxNumber } = req.body;
+
+      if (!targetBoxNumber) {
+        return res.status(400).json({ message: 'Target box number is required' });
+      }
+
+      const item = await storage.reallocatePutAsideItem(itemId, parseInt(targetBoxNumber), req.user!.id);
+
+      if (!item) {
+        return res.status(404).json({ message: 'Put aside item not found' });
+      }
+
+      // Broadcast reallocation event
+      if (item.jobId) {
+        broadcastToJob(item.jobId, {
+          type: 'item_reallocated',
+          data: {
+            item,
+            targetBoxNumber: parseInt(targetBoxNumber),
+            performedBy: req.user!.name,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+
+      res.json({
+        success: true,
+        item,
+        message: `Item reallocated to box ${targetBoxNumber}`
+      });
+    } catch (error) {
+      console.error('Failed to reallocate put aside item:', error);
+      res.status(500).json({ message: 'Failed to reallocate put aside item' });
+    }
+  });
+
+  // Get job groups
+  app.get('/api/jobs/:jobId/groups', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId } = req.params;
+      const groups = await storage.getJobGroups(jobId);
+      res.json({ groups });
+    } catch (error) {
+      console.error('Failed to fetch job groups:', error);
+      res.status(500).json({ message: 'Failed to fetch job groups' });
+    }
+  });
+
+  // Get customers in a group
+  app.get('/api/jobs/:jobId/groups/:groupName/customers', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, groupName } = req.params;
+      const customers = await storage.getGroupCustomers(jobId, groupName);
+      res.json({ customers });
+    } catch (error) {
+      console.error('Failed to fetch group customers:', error);
+      res.status(500).json({ message: 'Failed to fetch group customers' });
+    }
+  });
+
+  // Export group data to Excel
+  app.get('/api/jobs/:jobId/groups/:groupName/export', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, groupName } = req.params;
+      
+      // Get all customers in the group
+      const customers = await storage.getGroupCustomers(jobId, groupName);
+      
+      if (customers.length === 0) {
+        return res.status(404).json({ message: 'No customers found in this group' });
+      }
+
+      // Group customers by CustomName
+      const groupedCustomers = customers.reduce((acc: any, customer) => {
+        const key = customer.customerName;
+        if (!acc[key]) {
+          acc[key] = [];
+        }
+        acc[key].push({
+          BarCode: customer.barCode,
+          ProductName: customer.productName,
+          Qty: customer.requiredQty,
+          ScannedQty: customer.scannedQty || 0,
+          BoxNumber: customer.boxNumber
+        });
+        return acc;
+      }, {});
+
+      // Format for Excel export
+      const exportData = Object.entries(groupedCustomers).map(([customName, items]) => ({
+        GroupName: groupName,
+        CustomName: customName,
+        Items: items,
+        TotalQty: (items as any[]).reduce((sum, item) => sum + item.Qty, 0),
+        TotalScanned: (items as any[]).reduce((sum, item) => sum + item.ScannedQty, 0)
+      }));
+
+      res.json({ 
+        groupName,
+        exportData,
+        summary: {
+          totalCustomers: Object.keys(groupedCustomers).length,
+          totalItems: customers.length,
+          totalQty: customers.reduce((sum, c) => sum + c.requiredQty, 0),
+          totalScanned: customers.reduce((sum, c) => sum + (c.scannedQty || 0), 0)
+        }
+      });
+    } catch (error) {
+      console.error('Failed to export group data:', error);
+      res.status(500).json({ message: 'Failed to export group data' });
+    }
+  });
+
   return httpServer;
 }

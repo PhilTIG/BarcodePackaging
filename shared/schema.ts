@@ -248,6 +248,43 @@ export const checkResults = pgTable("check_results", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Box Empty/Transfer System Tables
+export const boxHistory = pgTable("box_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
+  boxNumber: integer("box_number").notNull(),
+  action: text("action").notNull(), // 'emptied', 'transferred'
+  performedBy: varchar("performed_by").notNull().references(() => users.id),
+  targetGroup: text("target_group"), // Group name for transfers
+  reason: text("reason"), // Optional reason/notes
+  itemsProcessed: integer("items_processed").notNull().default(0),
+  timestamp: timestamp("timestamp").default(sql`now()`),
+  
+  // Snapshot of box state at time of action
+  boxSnapshot: jsonb("box_snapshot"), // Complete box requirements snapshot
+});
+
+export const putAsideItems = pgTable("put_aside_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
+  barCode: text("bar_code").notNull(),
+  productName: text("product_name").notNull(),
+  customerName: text("customer_name").notNull(),
+  originalBoxNumber: integer("original_box_number").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  putAsideBy: varchar("put_aside_by").notNull().references(() => users.id),
+  putAsideAt: timestamp("put_aside_at").default(sql`now()`),
+  
+  // Status tracking
+  status: text("status").notNull().default('available'), // 'available', 'reallocated', 'archived'
+  reallocatedToBox: integer("reallocated_to_box"),
+  reallocatedAt: timestamp("reallocated_at"),
+  reallocatedBy: varchar("reallocated_by").references(() => users.id),
+  
+  // Reference to source scan event if applicable
+  sourceEventId: varchar("source_event_id").references(() => scanEvents.id),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   createdJobs: many(jobs, { relationName: "creator" }),
@@ -260,6 +297,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   workerBoxAssignments: many(workerBoxAssignments),
   archivedJobs: many(jobArchives),
   checkSessions: many(checkSessions), // NEW
+  boxHistoryPerformed: many(boxHistory), // NEW
+  putAsideItemsPerformed: many(putAsideItems, { relationName: "putAsideBy" }), // NEW
+  putAsideItemsReallocated: many(putAsideItems, { relationName: "reallocatedBy" }), // NEW
 }));
 
 export const jobTypesRelations = relations(jobTypes, ({ one, many }) => ({
@@ -315,6 +355,8 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
   assignments: many(jobAssignments),
   workerBoxAssignments: many(workerBoxAssignments),
   checkSessions: many(checkSessions), // NEW
+  boxHistory: many(boxHistory), // NEW
+  putAsideItems: many(putAsideItems), // NEW
 }));
 
 export const boxRequirementsRelations = relations(boxRequirements, ({ one, many }) => ({
@@ -426,6 +468,39 @@ export const archiveWorkerStatsRelations = relations(archiveWorkerStats, ({ one 
   }),
 }));
 
+// Box Empty/Transfer Relations
+export const boxHistoryRelations = relations(boxHistory, ({ one }) => ({
+  job: one(jobs, {
+    fields: [boxHistory.jobId],
+    references: [jobs.id],
+  }),
+  performer: one(users, {
+    fields: [boxHistory.performedBy],
+    references: [users.id],
+  }),
+}));
+
+export const putAsideItemsRelations = relations(putAsideItems, ({ one }) => ({
+  job: one(jobs, {
+    fields: [putAsideItems.jobId],
+    references: [jobs.id],
+  }),
+  putAsideBy: one(users, {
+    fields: [putAsideItems.putAsideBy],
+    references: [users.id],
+    relationName: "putAsideBy",
+  }),
+  reallocatedBy: one(users, {
+    fields: [putAsideItems.reallocatedBy],
+    references: [users.id],
+    relationName: "reallocatedBy",
+  }),
+  sourceEvent: one(scanEvents, {
+    fields: [putAsideItems.sourceEventId],
+    references: [scanEvents.id],
+  }),
+}));
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -508,10 +583,28 @@ export const insertArchiveWorkerStatsSchema = createInsertSchema(archiveWorkerSt
   createdAt: true,
 });
 
+// Box Empty/Transfer Schemas
+export const insertBoxHistorySchema = createInsertSchema(boxHistory).omit({
+  id: true,
+  timestamp: true,
+});
+
+export const insertPutAsideItemSchema = createInsertSchema(putAsideItems).omit({
+  id: true,
+  putAsideAt: true,
+  reallocatedAt: true,
+});
+
 export type InsertJobArchive = z.infer<typeof insertJobArchiveSchema>;
 export type JobArchive = typeof jobArchives.$inferSelect;
 export type InsertArchiveWorkerStats = z.infer<typeof insertArchiveWorkerStatsSchema>;
 export type ArchiveWorkerStats = typeof archiveWorkerStats.$inferSelect;
+
+// Box Empty/Transfer Types
+export type InsertBoxHistory = z.infer<typeof insertBoxHistorySchema>;
+export type BoxHistory = typeof boxHistory.$inferSelect;
+export type InsertPutAsideItem = z.infer<typeof insertPutAsideItemSchema>;
+export type PutAsideItem = typeof putAsideItems.$inferSelect;
 
 // User Preferences Schema
 export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
