@@ -15,7 +15,7 @@ interface Product {
   customerName: string;
   qty: number;
   scannedQty: number;
-  boxNumber: number;
+  boxNumber: string;
   isComplete: boolean;
   lastWorkerUserId?: string;
   lastWorkerColor?: string;
@@ -26,9 +26,9 @@ interface CustomerBoxGridProps {
   products: Product[];
   jobId: string;
   supervisorView?: boolean;
-  lastScannedBoxNumber?: number | null; // For POC-style single box highlighting
-  onBoxScanUpdate?: (boxNumber: number, workerId?: string, workerColor?: string, workerStaffId?: string) => void;
-  onCheckCount?: (boxNumber: number, jobId: string) => void;
+  lastScannedBoxNumber?: string | null; // For POC-style single box highlighting
+  onBoxScanUpdate?: (boxNumber: string, workerId?: string, workerColor?: string, workerStaffId?: string) => void;
+  onCheckCount?: (boxNumber: string, jobId: string) => void;
   filterByProducts?: string[]; // Array of product names to filter by
   filterByGroups?: string[]; // Array of group names to filter by
 }
@@ -43,7 +43,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
   );
   // State for box details modal
   const [selectedBox, setSelectedBox] = useState<{
-    boxNumber: number;
+    boxNumber: string;
     customerName: string;
     totalQty: number;
     scannedQty: number;
@@ -62,7 +62,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
   const { user } = useAuth();
 
   // WebSocket handler for real-time highlighting
-  const handleWebSocketUpdate = (boxNumber: number, workerId: string, workerColor?: string, workerStaffId?: string) => {
+  const handleWebSocketUpdate = (boxNumber: string, workerId: string, workerColor?: string, workerStaffId?: string) => {
     console.log(`[CustomerBoxGrid] WebSocket scan update: Box ${boxNumber}, Worker ${workerId}`, {
       workerColor, 
       workerStaffId,

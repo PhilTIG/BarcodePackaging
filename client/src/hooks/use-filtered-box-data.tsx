@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 interface BoxRequirement {
   id: string;
   jobId: string;
-  boxNumber: number;
+  boxNumber: string;
   customerName: string;
   barCode: string;
   productName: string;
@@ -17,7 +17,7 @@ interface BoxRequirement {
 }
 
 interface FilteredBoxData {
-  boxNumber: number;
+  boxNumber: string;
   customerName: string;
   totalQty: number;
   scannedQty: number;
@@ -59,7 +59,7 @@ export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [
     const availableGroups = Array.from(groupNamesSet).sort() as string[];
 
     // Process box data
-    const boxes: { [key: number]: FilteredBoxData } = {};
+    const boxes: { [key: string]: FilteredBoxData } = {};
     const isFiltering = filterByProducts.length > 0 || filterByGroups.length > 0;
 
     boxRequirements.forEach(requirement => {
@@ -112,8 +112,12 @@ export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [
       boxList = boxList.filter(box => (box.filteredTotalQty || 0) > 0);
     }
 
-    // Sort by box number
-    boxList = boxList.sort((a, b) => a.boxNumber - b.boxNumber);
+    // Sort by box number (handle decimal box numbers)
+    boxList = boxList.sort((a, b) => {
+      const aNum = parseFloat(a.boxNumber);
+      const bNum = parseFloat(b.boxNumber);
+      return aNum - bNum;
+    });
 
     return {
       boxData: boxList,

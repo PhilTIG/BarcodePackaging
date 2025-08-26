@@ -81,6 +81,38 @@ function normalizeBarcodeFormat(barCode: string): string {
   return barCode; // Return as-is if not scientific notation
 }
 
+/**
+ * Helper function to generate next decimal box number for transfers
+ * Example: getNextDecimalBoxNumber(2, jobId) returns "2.1", "2.2", etc.
+ */
+async function getNextDecimalBoxNumber(baseBoxNumber: number, jobId: string, db: any): Promise<string> {
+  const boxNumberPattern = `${baseBoxNumber}.%`;
+  
+  // Find existing decimal versions of this box
+  const existingDecimalBoxes = await db
+    .select({ boxNumber: boxRequirements.boxNumber })
+    .from(boxRequirements)
+    .where(and(
+      eq(boxRequirements.jobId, jobId),
+      sql`${boxRequirements.boxNumber} LIKE ${boxNumberPattern}`
+    ))
+    .orderBy(desc(boxRequirements.boxNumber));
+    
+  if (existingDecimalBoxes.length === 0) {
+    // First transfer, return x.1
+    return `${baseBoxNumber}.1`;
+  }
+  
+  // Find highest decimal and increment
+  const highestDecimal = existingDecimalBoxes[0].boxNumber;
+  if (highestDecimal) {
+    const decimalPart = parseFloat(highestDecimal.split('.')[1] || '0');
+    return `${baseBoxNumber}.${decimalPart + 1}`;
+  }
+  
+  return `${baseBoxNumber}.1`;
+}
+
 export interface IStorage {
   // User methods
   getUserById(id: string): Promise<User | undefined>;
@@ -112,7 +144,7 @@ export interface IStorage {
   // Box requirement methods - NEW SCANNING LOGIC
   createBoxRequirements(requirements: InsertBoxRequirement[]): Promise<BoxRequirement[]>;
   getBoxRequirementsByJobId(jobId: string): Promise<BoxRequirement[]>;
-  getBoxRequirementsByBoxNumber(jobId: string, boxNumber: number): Promise<BoxRequirement[]>;
+  getBoxRequirementsByBoxNumber(jobId: string, boxNumber: number | string): Promise<BoxRequirement[]>;
   findNextTargetBox(barCode: string, jobId: string, workerId: string): Promise<number | null>;
   updateBoxRequirementScannedQty(boxNumber: number, barCode: string, jobId: string, workerId: string, workerColor: string): Promise<BoxRequirement | undefined>;
   
@@ -183,7 +215,7 @@ export interface IStorage {
   createCheckSession(session: InsertCheckSession): Promise<CheckSession>;
   getCheckSessionById(id: string): Promise<CheckSession | undefined>;
   getCheckSessionsByJobId(jobId: string): Promise<CheckSession[]>;
-  getCheckSessionsByBoxNumber(jobId: string, boxNumber: number): Promise<CheckSession[]>;
+  getCheckSessionsByBoxNumber(jobId: string, boxNumber: number | string): Promise<CheckSession[]>;
   updateCheckSessionStatus(id: string, status: string): Promise<CheckSession | undefined>;
   completeCheckSession(id: string, endTime: Date, discrepanciesFound: number, correctionsApplied?: boolean): Promise<CheckSession | undefined>;
 
@@ -207,9 +239,9 @@ export interface IStorage {
 
   // Box Empty/Transfer methods
   emptyBox(jobId: string, boxNumber: number, performedBy: string): Promise<{message: string, history: BoxHistory, reallocation?: any}>;
-  transferBoxToGroup(jobId: string, boxNumber: number, targetGroup: string, performedBy: string): Promise<{message: string, history: BoxHistory, reallocation?: any}>;
+  transferBoxToGroup(jobId: string, boxNumber: number | string, targetGroup: string, performedBy: string): Promise<{message: string, history: BoxHistory, reallocation?: any}>;
   getBoxHistory(jobId: string): Promise<BoxHistory[]>;
-  getBoxHistoryByBoxNumber(jobId: string, boxNumber: number): Promise<BoxHistory[]>;
+  getBoxHistoryByBoxNumber(jobId: string, boxNumber: number | string): Promise<BoxHistory[]>;
   
   // Put Aside methods
   createPutAsideItem(item: InsertPutAsideItem): Promise<PutAsideItem>;
@@ -915,7 +947,7 @@ export class DatabaseStorage implements IStorage {
             .where(and(
               eq(boxRequirements.jobId, session.jobId),
               eq(boxRequirements.barCode, insertEvent.barCode),
-              eq(boxRequirements.boxNumber, targetBox)
+              eq(boxRequirements.boxNumber, targetBox.toString())
             ))
             .limit(1);
 
@@ -946,7 +978,7 @@ export class DatabaseStorage implements IStorage {
               barCode: insertEvent.barCode,
               productName: unallocatedRequirement[0].productName,
               customerName: unallocatedRequirement[0].customerName,
-              originalBoxNumber: 0, // No box assigned yet
+              originalBoxNumber: '0', // No box assigned yet
               quantity: 1,
               status: 'pending',
               putAsideBy: session.userId,
@@ -1569,13 +1601,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(boxRequirements.boxNumber, boxRequirements.barCode);
   }
 
-  async getBoxRequirementsByBoxNumber(jobId: string, boxNumber: number): Promise<BoxRequirement[]> {
+  async getBoxRequirementsByBoxNumber(jobId: string, boxNumber: number | string): Promise<BoxRequirement[]> {
     return await this.db
       .select()
       .from(boxRequirements)
       .where(and(
         eq(boxRequirements.jobId, jobId),
-        eq(boxRequirements.boxNumber, boxNumber)
+        eq(boxRequirements.boxNumber, boxNumber.toString())
       ))
       .orderBy(boxRequirements.barCode);
   }
@@ -1687,7 +1719,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(boxRequirements.jobId, jobId),
         sql`(${boxRequirements.barCode} = ${barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`,
-        eq(boxRequirements.boxNumber, boxNumber)
+        eq(boxRequirements.boxNumber, boxNumber.toString())
       ))
       .limit(1);
 
@@ -1863,13 +1895,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(checkSessions.startTime));
   }
 
-  async getCheckSessionsByBoxNumber(jobId: string, boxNumber: number): Promise<CheckSession[]> {
+  async getCheckSessionsByBoxNumber(jobId: string, boxNumber: number | string): Promise<CheckSession[]> {
     return await this.db
       .select()
       .from(checkSessions)
       .where(and(
         eq(checkSessions.jobId, jobId),
-        eq(checkSessions.boxNumber, boxNumber)
+        eq(checkSessions.boxNumber, boxNumber.toString())
       ))
       .orderBy(desc(checkSessions.startTime));
   }
@@ -2187,7 +2219,7 @@ export class DatabaseStorage implements IStorage {
         })
         .where(and(
           eq(boxRequirements.jobId, jobId),
-          eq(boxRequirements.boxNumber, boxNumber),
+          eq(boxRequirements.boxNumber, boxNumber.toString()),
           eq(boxRequirements.barCode, correction.barCode)
         ));
 
@@ -2900,7 +2932,7 @@ export class DatabaseStorage implements IStorage {
         .insert(boxHistory)
         .values({
           jobId,
-          boxNumber,
+          boxNumber: boxNumber.toString(),
           action: 'emptied',
           performedBy,
           reason: null,
@@ -2921,7 +2953,7 @@ export class DatabaseStorage implements IStorage {
         })
         .where(and(
           eq(boxRequirements.jobId, jobId),
-          eq(boxRequirements.boxNumber, boxNumber)
+          eq(boxRequirements.boxNumber, boxNumber.toString())
         ));
 
       // Seamlessly reallocate the box to next unallocated customer
@@ -2947,7 +2979,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async transferBoxToGroup(jobId: string, boxNumber: number, targetGroup: string, performedBy: string): Promise<{message: string, history: BoxHistory, reallocation?: any}> {
+  async transferBoxToGroup(jobId: string, boxNumber: number | string, targetGroup: string, performedBy: string): Promise<{message: string, history: BoxHistory, reallocation?: any}> {
     try {
       // Get box snapshot before transfer
       const boxItems = await this.getBoxRequirementsByBoxNumber(jobId, boxNumber);
@@ -2965,7 +2997,7 @@ export class DatabaseStorage implements IStorage {
         .insert(boxHistory)
         .values({
           jobId,
-          boxNumber,
+          boxNumber: boxNumber.toString(),
           action: 'transferred',
           performedBy,
           targetGroup,
@@ -2975,21 +3007,25 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
 
-      // Transfer box contents to group (permanently exclude from reallocation)
+      // DECIMAL TRANSFER LOGIC: Create decimal box number (2.1, 2.2, etc.) for transferred customer
+      const decimalBoxNumber = await getNextDecimalBoxNumber(boxNumber, jobId, this.db);
+      console.log(`[Transfer Box] Creating decimal box ${decimalBoxNumber} for transferred customer`);
+      
+      // Transfer box contents to decimal box with group assignment
       await this.db
         .update(boxRequirements)
         .set({ 
-          boxNumber: null, // Unassign customer from box
+          boxNumber: decimalBoxNumber, // Assign to decimal box (2.1, 2.2, etc.)
           groupName: targetGroup, // Assign to target group
-          isTransferred: true, // Mark as transferred (permanently excluded from reallocation)
+          isTransferred: true, // Mark as transferred (archived status)
           scannedQty: boxItems.reduce((sum, item) => sum + (item.scannedQty || 0), 0), // Preserve scan progress
-          isComplete: false, // Reset completion status
+          isComplete: true, // Mark as complete (archived)
           lastWorkerUserId: null,
           lastWorkerColor: null
         })
         .where(and(
           eq(boxRequirements.jobId, jobId),
-          eq(boxRequirements.boxNumber, boxNumber)
+          eq(boxRequirements.boxNumber, boxNumber.toString())
         ));
 
       // Seamlessly reallocate the box to next unallocated customer
@@ -2997,11 +3033,11 @@ export class DatabaseStorage implements IStorage {
       
       let message: string;
       if (reallocationResult.success) {
-        message = `Box ${boxNumber}: Customer ${customerName} → Group ${targetGroup} | Customer ${reallocationResult.customerName} assigned`;
-        console.log(`[Transfer Box] ${reallocationResult.message}`);
+        message = `Box ${boxNumber}: Customer ${customerName} → Box ${decimalBoxNumber} (${targetGroup}) | Customer ${reallocationResult.customerName} assigned`;
+        console.log(`[Transfer Box] Customer ${customerName} transferred to decimal box ${decimalBoxNumber} | ${reallocationResult.message}`);
       } else {
-        message = `Box ${boxNumber}: Customer ${customerName} → Group ${targetGroup} | No customers available - Box Empty`;
-        console.log(`[Transfer Box] Box ${boxNumber} transferred to group '${targetGroup}' but no unallocated customers available`);
+        message = `Box ${boxNumber}: Customer ${customerName} → Box ${decimalBoxNumber} (${targetGroup}) | No customers available - Box Empty`;
+        console.log(`[Transfer Box] Customer ${customerName} transferred to decimal box ${decimalBoxNumber} but no unallocated customers available`);
       }
 
       return {
@@ -3024,13 +3060,13 @@ export class DatabaseStorage implements IStorage {
     return history;
   }
 
-  async getBoxHistoryByBoxNumber(jobId: string, boxNumber: number): Promise<BoxHistory[]> {
+  async getBoxHistoryByBoxNumber(jobId: string, boxNumber: number | string): Promise<BoxHistory[]> {
     const history = await this.db
       .select()
       .from(boxHistory)
       .where(and(
         eq(boxHistory.jobId, jobId),
-        eq(boxHistory.boxNumber, boxNumber)
+        eq(boxHistory.boxNumber, boxNumber.toString())
       ))
       .orderBy(desc(boxHistory.timestamp));
     return history;
@@ -3144,7 +3180,7 @@ export class DatabaseStorage implements IStorage {
       .set({ groupName })
       .where(and(
         eq(boxRequirements.jobId, jobId),
-        eq(boxRequirements.boxNumber, boxNumber)
+        eq(boxRequirements.boxNumber, boxNumber.toString())
       ));
   }
 }

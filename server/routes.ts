@@ -507,7 +507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requiredQty: product.qty,
         customerName: product.customerName,
         groupName: product.groupName,
-        boxNumber: product.boxNumber,
+        boxNumber: product.boxNumber ? product.boxNumber.toString() : null,
         scannedQty: 0,
         isComplete: false
       }));
@@ -1268,7 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const sessionData = {
         jobId,
-        boxNumber: parseInt(boxNumber),
+        boxNumber: boxNumber.toString(),
         userId: req.user!.id,
         totalItemsExpected: parseInt(totalItemsExpected),
         status: 'active'
@@ -1343,7 +1343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (corrections && corrections.length > 0) {
         if (applyCorrections) {
           // Apply corrections and update box requirements
-          await storage.applyCheckCorrections(session.jobId, session.boxNumber, corrections, session.userId, (req as AuthenticatedRequest).user!.id);
+          await storage.applyCheckCorrections(session.jobId, parseFloat(session.boxNumber), corrections, session.userId, (req as AuthenticatedRequest).user!.id);
         } else {
           // Create check results for rejected corrections
           await storage.createRejectedCheckResults(session.id, corrections, (req as AuthenticatedRequest).user!.id);
@@ -2196,7 +2196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/jobs/:jobId/boxes/:boxNumber/history', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId, boxNumber } = req.params;
-      const history = await storage.getBoxHistoryByBoxNumber(jobId, parseInt(boxNumber));
+      const history = await storage.getBoxHistoryByBoxNumber(jobId, boxNumber);
       res.json({ history });
     } catch (error) {
       console.error('Failed to fetch box history:', error);
@@ -2215,7 +2215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         barCode,
         productName,
         customerName,
-        originalBoxNumber: parseInt(originalBoxNumber),
+        originalBoxNumber: originalBoxNumber.toString(),
         quantity: parseInt(quantity) || 1,
         putAsideBy: req.user!.id,
         sourceEventId
