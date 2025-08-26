@@ -184,13 +184,15 @@ export function BoxDetailsModal({
     }
   };
 
-  // Check if user can perform Empty/Transfer actions (managers/supervisors only)
+  // Check if user can perform Empty/Transfer actions
   const canEmptyTransfer = () => {
-    return user?.role === 'manager' || user?.role === 'supervisor';
+    // Managers and supervisors always have access
+    if (user?.role === 'manager' || user?.role === 'supervisor') return true;
+    // Workers need explicit permission
+    return user?.role === 'worker' && preferences?.canEmptyAndTransfer === true;
   };
 
   const handleEmptyTransferAction = () => {
-    // Close the box details modal and open empty/transfer modal
     setShowEmptyTransferModal(true);
   };
 

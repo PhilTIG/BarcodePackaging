@@ -184,6 +184,7 @@ export const userPreferences = pgTable("user_preferences", {
   
   // CheckCount Preferences (NEW)
   checkBoxEnabled: boolean("check_box_enabled").default(false), // Worker permission to perform checks
+  canEmptyAndTransfer: boolean("can_empty_and_transfer").default(false), // Worker permission to empty/transfer boxes
   
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
@@ -645,6 +646,9 @@ export interface UserPreferences {
   
   // CheckCount Preferences (NEW)
   checkBoxEnabled: boolean;
+  
+  // Box Management Preferences (NEW)
+  canEmptyAndTransfer: boolean;
 }
 
 // Remove duplicate schemas that were already defined earlier

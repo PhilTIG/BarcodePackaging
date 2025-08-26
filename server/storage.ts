@@ -924,28 +924,66 @@ export class DatabaseStorage implements IStorage {
             customerName = boxReq[0].customerName;
           }
         } else if (insertEvent.eventType === 'scan') {
-          // Check if this is a known product anywhere in the job (excess quantity)
-          const existingProduct = await this.db
+          // BARCODE FIX: Normalize barcode for put aside checks
+          const normalizedBarCode = normalizeBarcodeFormat(insertEvent.barCode);
+          
+          // STEP 1: Check if unallocated customers (boxNumber: NULL) need this item
+          const unallocatedRequirement = await this.db
             .select()
             .from(boxRequirements)
             .where(and(
               eq(boxRequirements.jobId, session.jobId),
-              eq(boxRequirements.barCode, insertEvent.barCode)
+              sql`(${boxRequirements.barCode} = ${insertEvent.barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`,
+              isNull(boxRequirements.boxNumber), // Unallocated customers
+              sql`${boxRequirements.scannedQty} < ${boxRequirements.requiredQty}` // Still need items
             ))
             .limit(1);
 
-          if (existingProduct.length > 0) {
-            // This is a known product but all quantities fulfilled - mark as EXTRA ITEM (duplicate/consumed)
-            console.log(`Duplicate/consumed barcode ${insertEvent.barCode} scanned - all quantities fulfilled - marking as extra item`);
-            insertEvent.eventType = 'extra_item';
-            productName = existingProduct[0].productName;
-            customerName = existingProduct[0].customerName;
+          if (unallocatedRequirement.length > 0) {
+            // CREATE PUT ASIDE ENTRY: Unallocated customer needs this item
+            const putAsideData = {
+              jobId: session.jobId,
+              barCode: insertEvent.barCode,
+              productName: unallocatedRequirement[0].productName,
+              customerName: unallocatedRequirement[0].customerName,
+              originalBoxNumber: null, // No box assigned yet
+              quantity: 1,
+              status: 'pending',
+              putAsideBy: session.userId,
+              sourceEventId: null // Will be set after scan event creation
+            };
+
+            console.log(`[Put Aside] Creating put aside entry for unallocated customer "${unallocatedRequirement[0].customerName}" - item: ${unallocatedRequirement[0].productName}`);
+            await this.createPutAsideItem(putAsideData);
+            
+            // Mark scan event as put aside type with descriptive message format
+            insertEvent.eventType = 'put_aside';
+            productName = `Put ${unallocatedRequirement[0].productName} Aside`;
+            customerName = unallocatedRequirement[0].customerName;
           } else {
-            // Completely unknown barcode - mark as extra item with "Unknown" name
-            console.log(`Unknown barcode ${insertEvent.barCode} scanned - marking as extra item`);
-            insertEvent.eventType = 'extra_item';
-            productName = 'Unknown';
-            customerName = 'Unassigned';
+            // STEP 2: Check if this is a known product anywhere in the job (excess quantity)
+            const existingProduct = await this.db
+              .select()
+              .from(boxRequirements)
+              .where(and(
+                eq(boxRequirements.jobId, session.jobId),
+                sql`(${boxRequirements.barCode} = ${insertEvent.barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`
+              ))
+              .limit(1);
+
+            if (existingProduct.length > 0) {
+              // This is a known product but all quantities fulfilled - mark as EXTRA ITEM (duplicate/consumed)
+              console.log(`Duplicate/consumed barcode ${insertEvent.barCode} scanned - all quantities fulfilled - marking as extra item`);
+              insertEvent.eventType = 'extra_item';
+              productName = existingProduct[0].productName;
+              customerName = existingProduct[0].customerName;
+            } else {
+              // Completely unknown barcode - mark as extra item with "Unknown" name
+              console.log(`Unknown barcode ${insertEvent.barCode} scanned - marking as extra item`);
+              insertEvent.eventType = 'extra_item';
+              productName = 'Unknown';
+              customerName = 'Unassigned';
+            }
           }
         }
       } else {
@@ -1329,6 +1367,7 @@ export class DatabaseStorage implements IStorage {
       mobileModePreference: result.mobileModePreference || false,
       singleBoxMode: result.singleBoxMode || false,
       checkBoxEnabled: result.checkBoxEnabled || false,
+      canEmptyAndTransfer: result.canEmptyAndTransfer || false,
     };
   }
 
@@ -1357,6 +1396,7 @@ export class DatabaseStorage implements IStorage {
       mobileModePreference: result.mobileModePreference || false,
       singleBoxMode: result.singleBoxMode || false,
       checkBoxEnabled: result.checkBoxEnabled || false,
+      canEmptyAndTransfer: result.canEmptyAndTransfer || false,
     };
   }
 
@@ -1395,6 +1435,7 @@ export class DatabaseStorage implements IStorage {
       mobileModePreference: result.mobileModePreference || false,
       singleBoxMode: result.singleBoxMode || false,
       checkBoxEnabled: result.checkBoxEnabled || false,
+      canEmptyAndTransfer: result.canEmptyAndTransfer || false,
     };
   }
 
@@ -2782,6 +2823,62 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Box Empty/Transfer Implementation
+  
+  // Core reallocation algorithm for both Empty and Transfer actions
+  async reallocateBoxToNextCustomer(jobId: string, boxNumber: number): Promise<{success: boolean, customerName?: string, message?: string}> {
+    try {
+      // Find the next unallocated customer (boxNumber: NULL) in FIFO order
+      const unallocatedCustomer = await this.db
+        .selectDistinct({ customerName: boxRequirements.customerName })
+        .from(boxRequirements)
+        .where(and(
+          eq(boxRequirements.jobId, jobId),
+          isNull(boxRequirements.boxNumber)
+        ))
+        .orderBy(boxRequirements.customerName) // FIFO order based on original CSV sequence
+        .limit(1);
+
+      if (unallocatedCustomer.length === 0) {
+        return { success: false, message: "No unallocated customers available for reallocation" };
+      }
+
+      const customerName = unallocatedCustomer[0].customerName;
+
+      // Update all box requirements for this customer to assign them to the box
+      const result = await this.db
+        .update(boxRequirements)
+        .set({ 
+          boxNumber,
+          // Reset scanned quantities for fresh start
+          scannedQty: 0,
+          isComplete: false,
+          lastWorkerUserId: null,
+          lastWorkerColor: null
+        })
+        .where(and(
+          eq(boxRequirements.jobId, jobId),
+          eq(boxRequirements.customerName, customerName),
+          isNull(boxRequirements.boxNumber)
+        ))
+        .returning();
+
+      if (result.length === 0) {
+        return { success: false, message: "Failed to update customer box assignments" };
+      }
+
+      console.log(`[Reallocation] Successfully assigned customer "${customerName}" to box ${boxNumber} (${result.length} products)`);
+      return { 
+        success: true, 
+        customerName, 
+        message: `Box ${boxNumber} now assigned to Customer ${customerName}` 
+      };
+
+    } catch (error) {
+      console.error('[Reallocation] Error:', error);
+      return { success: false, message: "Database error during reallocation" };
+    }
+  }
+
   async emptyBox(jobId: string, boxNumber: number, performedBy: string, reason?: string): Promise<BoxHistory> {
     try {
       // Get box snapshot before emptying
@@ -2805,10 +2902,11 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
 
-      // Reset all box requirements for this box
+      // Clear the box by removing customer assignment (set to NULL)
       await this.db
         .update(boxRequirements)
         .set({ 
+          boxNumber: null, // Unassign customer from box
           scannedQty: 0, 
           isComplete: false,
           lastWorkerUserId: null,
@@ -2818,6 +2916,15 @@ export class DatabaseStorage implements IStorage {
           eq(boxRequirements.jobId, jobId),
           eq(boxRequirements.boxNumber, boxNumber)
         ));
+
+      // Seamlessly reallocate the box to next unallocated customer
+      const reallocationResult = await this.reallocateBoxToNextCustomer(jobId, boxNumber);
+      
+      if (reallocationResult.success) {
+        console.log(`[Empty Box] ${reallocationResult.message}`);
+      } else {
+        console.log(`[Empty Box] Box ${boxNumber} emptied but no unallocated customers available`);
+      }
 
       return history;
     } catch (error) {
@@ -2851,14 +2958,30 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
 
-      // Update box requirements to set group
+      // Transfer box contents to group (unassign from box)
       await this.db
         .update(boxRequirements)
-        .set({ groupName: targetGroup })
+        .set({ 
+          boxNumber: null, // Unassign customer from box
+          groupName: targetGroup, // Assign to target group
+          scannedQty: boxItems.reduce((sum, item) => sum + (item.scannedQty || 0), 0), // Preserve scan progress
+          isComplete: false, // Reset completion status
+          lastWorkerUserId: null,
+          lastWorkerColor: null
+        })
         .where(and(
           eq(boxRequirements.jobId, jobId),
           eq(boxRequirements.boxNumber, boxNumber)
         ));
+
+      // Seamlessly reallocate the box to next unallocated customer
+      const reallocationResult = await this.reallocateBoxToNextCustomer(jobId, boxNumber);
+      
+      if (reallocationResult.success) {
+        console.log(`[Transfer Box] ${reallocationResult.message}`);
+      } else {
+        console.log(`[Transfer Box] Box ${boxNumber} transferred to group '${targetGroup}' but no unallocated customers available`);
+      }
 
       return history;
     } catch (error) {

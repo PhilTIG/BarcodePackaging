@@ -15,6 +15,7 @@ interface UserPreferences {
   singleBoxMode: boolean;
   theme: string;
   checkBoxEnabled: boolean;
+  canEmptyAndTransfer: boolean;
 }
 
 interface UserPreferencesContextType {
@@ -38,6 +39,7 @@ const defaultPreferences: UserPreferences = {
   singleBoxMode: false,
   theme: "blue",
   checkBoxEnabled: false,
+  canEmptyAndTransfer: false,
 };
 
 export function UserPreferencesProvider({ children }: { children: ReactNode }) {

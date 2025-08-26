@@ -1870,6 +1870,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
+  // BOX EMPTY/TRANSFER ROUTES
+  // ========================
+
+  // Permission check helper for box management
+  const canEmptyAndTransfer = (user: any, userPreferences: any) => {
+    // Managers and supervisors always have access
+    if (user.role === 'manager' || user.role === 'supervisor') return true;
+    // Workers need explicit permission
+    return user.role === 'worker' && userPreferences?.canEmptyAndTransfer === true;
+  };
+
+  // Empty box endpoint
+  app.post('/api/jobs/:jobId/boxes/:boxNumber/empty', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, boxNumber } = req.params;
+      const { reason } = req.body;
+      
+      // Check permissions
+      const userPreferences = await storage.getUserPreferences(req.user!.id);
+      if (!canEmptyAndTransfer(req.user!, userPreferences)) {
+        return res.status(403).json({ message: 'Insufficient permissions to empty boxes' });
+      }
+
+      // Validate job exists
+      const job = await storage.getJobById(jobId);
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Validate box number
+      const boxNum = parseInt(boxNumber);
+      if (isNaN(boxNum) || boxNum <= 0) {
+        return res.status(400).json({ message: 'Invalid box number' });
+      }
+
+      // Check if box has content to empty
+      const boxRequirements = await storage.getBoxRequirementsByBoxNumber(jobId, boxNum);
+      if (boxRequirements.length === 0) {
+        return res.status(404).json({ message: 'Box not found or empty' });
+      }
+
+      // Perform empty operation with automatic reallocation
+      const history = await storage.emptyBox(jobId, boxNum, req.user!.id, reason);
+      
+      // Broadcast real-time update
+      broadcastToJob(jobId, {
+        type: 'box_emptied',
+        data: { 
+          boxNumber: boxNum, 
+          performedBy: req.user!.name,
+          timestamp: new Date().toISOString(),
+          jobId
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Box ${boxNum} emptied successfully`,
+        history 
+      });
+    } catch (error: any) {
+      console.error('Box empty error:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to empty box'
+      });
+    }
+  });
+
+  // Transfer box to group endpoint
+  app.post('/api/jobs/:jobId/boxes/:boxNumber/transfer', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, boxNumber } = req.params;
+      const { targetGroup, reason } = req.body;
+      
+      // Check permissions
+      const userPreferences = await storage.getUserPreferences(req.user!.id);
+      if (!canEmptyAndTransfer(req.user!, userPreferences)) {
+        return res.status(403).json({ message: 'Insufficient permissions to transfer boxes' });
+      }
+
+      // Validate input
+      if (!targetGroup) {
+        return res.status(400).json({ message: 'Target group is required' });
+      }
+
+      // Validate job exists
+      const job = await storage.getJobById(jobId);
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Validate box number
+      const boxNum = parseInt(boxNumber);
+      if (isNaN(boxNum) || boxNum <= 0) {
+        return res.status(400).json({ message: 'Invalid box number' });
+      }
+
+      // Check if box has content to transfer
+      const boxRequirements = await storage.getBoxRequirementsByBoxNumber(jobId, boxNum);
+      if (boxRequirements.length === 0) {
+        return res.status(404).json({ message: 'Box not found or empty' });
+      }
+
+      // Validate that groups exist in this job
+      const jobGroups = await storage.getJobGroups(jobId);
+      if (jobGroups.length === 0) {
+        return res.status(400).json({ message: 'No groups found in this job. Cannot transfer boxes.' });
+      }
+
+      // Perform transfer operation with automatic reallocation
+      const history = await storage.transferBoxToGroup(jobId, boxNum, targetGroup, req.user!.id, reason);
+      
+      // Broadcast real-time update
+      broadcastToJob(jobId, {
+        type: 'box_transferred',
+        data: { 
+          boxNumber: boxNum, 
+          targetGroup,
+          performedBy: req.user!.name,
+          timestamp: new Date().toISOString(),
+          jobId
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Box ${boxNum} transferred to group '${targetGroup}' successfully`,
+        history 
+      });
+    } catch (error: any) {
+      console.error('Box transfer error:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to transfer box'
+      });
+    }
+  });
+
+  // Get box history endpoint
+  app.get('/api/jobs/:jobId/boxes/:boxNumber/history', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, boxNumber } = req.params;
+      
+      // Validate job exists
+      const job = await storage.getJobById(jobId);
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Validate box number
+      const boxNum = parseInt(boxNumber);
+      if (isNaN(boxNum) || boxNum <= 0) {
+        return res.status(400).json({ message: 'Invalid box number' });
+      }
+
+      // Get box history
+      const history = await storage.getBoxHistoryByBoxNumber(jobId, boxNum);
+      
+      res.json({ 
+        success: true,
+        boxNumber: boxNum,
+        history 
+      });
+    } catch (error: any) {
+      console.error('Box history fetch error:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to fetch box history'
+      });
+    }
+  });
+
+  // Update user preferences to include canEmptyAndTransfer
+  app.patch('/api/users/:id/preferences', requireAuth, requireRole(['manager']), async (req, res) => {
+    try {
+      const { checkBoxEnabled, canEmptyAndTransfer } = req.body;
+      const updates: any = {};
+      
+      if (checkBoxEnabled !== undefined) updates.checkBoxEnabled = checkBoxEnabled;
+      if (canEmptyAndTransfer !== undefined) updates.canEmptyAndTransfer = canEmptyAndTransfer;
+      
+      const preferences = await storage.updateUserPreferences(req.params.id, updates);
+
+      if (!preferences) {
+        return res.status(404).json({ message: 'User preferences not found' });
+      }
+
+      res.json({ preferences });
+    } catch (error) {
+      console.error('Failed to update user preferences:', error);
+      res.status(500).json({ message: 'Failed to update user preferences' });
+    }
+  });
+
+  // ========================
   // JOB ARCHIVE ROUTES
   // ========================
 
