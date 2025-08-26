@@ -1544,7 +1544,6 @@ export class DatabaseStorage implements IStorage {
    * Logic: Find the appropriate box based on worker pattern and current progress
    */
   async findNextTargetBox(barCode: string, jobId: string, workerId: string): Promise<number | null> {
-    console.log(`🔥 FINDNEXTTARGETBOX CALLED - barCode: ${barCode}, jobId: ${jobId}, workerId: ${workerId}`);
     // PHASE 3: Get worker assignment pattern from job_assignments (primary source)
     const jobAssignment = await this.db
       .select()
