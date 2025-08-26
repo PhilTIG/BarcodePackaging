@@ -1565,7 +1565,10 @@ export class DatabaseStorage implements IStorage {
     return await this.db
       .select()
       .from(boxRequirements)
-      .where(eq(boxRequirements.jobId, jobId))
+      .where(and(
+        eq(boxRequirements.jobId, jobId),
+        eq(boxRequirements.transferSequence, 0) // Only show active assignments
+      ))
       .orderBy(boxRequirements.boxNumber, boxRequirements.barCode);
   }
 
@@ -1575,7 +1578,8 @@ export class DatabaseStorage implements IStorage {
       .from(boxRequirements)
       .where(and(
         eq(boxRequirements.jobId, jobId),
-        eq(boxRequirements.boxNumber, boxNumber)
+        eq(boxRequirements.boxNumber, boxNumber),
+        eq(boxRequirements.transferSequence, 0) // Only show active assignments
       ))
       .orderBy(boxRequirements.barCode);
   }
@@ -1617,7 +1621,8 @@ export class DatabaseStorage implements IStorage {
         eq(boxRequirements.jobId, jobId),
         sql`(${boxRequirements.barCode} = ${barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`,
         sql`${boxRequirements.scannedQty} < ${boxRequirements.requiredQty}`,
-        isNotNull(boxRequirements.boxNumber) // CRITICAL FIX: Filter out unallocated customers
+        isNotNull(boxRequirements.boxNumber), // CRITICAL FIX: Filter out unallocated customers
+        eq(boxRequirements.transferSequence, 0) // Only show active assignments
       ))
       .orderBy(boxRequirements.boxNumber);
 
@@ -1687,7 +1692,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(boxRequirements.jobId, jobId),
         sql`(${boxRequirements.barCode} = ${barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`,
-        eq(boxRequirements.boxNumber, boxNumber)
+        eq(boxRequirements.boxNumber, boxNumber),
+        eq(boxRequirements.transferSequence, 0) // Only update active assignments
       ))
       .limit(1);
 
@@ -2829,13 +2835,14 @@ export class DatabaseStorage implements IStorage {
   // Core reallocation algorithm for both Empty and Transfer actions
   async reallocateBoxToNextCustomer(jobId: string, boxNumber: number): Promise<{success: boolean, customerName?: string, message?: string}> {
     try {
-      // Find the next unallocated customer (boxNumber: NULL, not transferred) in FIFO order
+      // Find the next unallocated customer using transferSequence system
       const unallocatedCustomer = await this.db
         .selectDistinct({ customerName: boxRequirements.customerName })
         .from(boxRequirements)
         .where(and(
           eq(boxRequirements.jobId, jobId),
           isNull(boxRequirements.boxNumber),
+          eq(boxRequirements.transferSequence, 0), // Only active (not archived) customers
           or(isNull(boxRequirements.isTransferred), eq(boxRequirements.isTransferred, false)) // Exclude transferred customers
         ))
         .orderBy(boxRequirements.customerName) // FIFO order based on original CSV sequence
@@ -2852,6 +2859,7 @@ export class DatabaseStorage implements IStorage {
         .update(boxRequirements)
         .set({ 
           boxNumber,
+          transferSequence: 0, // Ensure active assignment
           // Reset scanned quantities for fresh start
           scannedQty: 0,
           isComplete: false,
@@ -2862,6 +2870,7 @@ export class DatabaseStorage implements IStorage {
           eq(boxRequirements.jobId, jobId),
           eq(boxRequirements.customerName, customerName),
           isNull(boxRequirements.boxNumber),
+          eq(boxRequirements.transferSequence, 0), // Only assign to active customers
           or(isNull(boxRequirements.isTransferred), eq(boxRequirements.isTransferred, false)) // Ensure not transferred
         ))
         .returning();
@@ -2909,19 +2918,19 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
 
-      // Clear the box by removing customer assignment (set to NULL)
+      // Archive current customer assignment using transferSequence
       await this.db
         .update(boxRequirements)
         .set({ 
-          boxNumber: null, // Unassign customer from box
-          scannedQty: 0, 
+          transferSequence: 1, // Archive this assignment (increment from 0 to 1)
           isComplete: false,
           lastWorkerUserId: null,
           lastWorkerColor: null
         })
         .where(and(
           eq(boxRequirements.jobId, jobId),
-          eq(boxRequirements.boxNumber, boxNumber)
+          eq(boxRequirements.boxNumber, boxNumber),
+          eq(boxRequirements.transferSequence, 0) // Only archive currently active assignment
         ));
 
       // Seamlessly reallocate the box to next unallocated customer
@@ -2975,21 +2984,21 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
 
-      // Transfer box contents to group (permanently exclude from reallocation)
+      // Archive current customer assignment using transferSequence
       await this.db
         .update(boxRequirements)
         .set({ 
-          boxNumber: null, // Unassign customer from box
+          transferSequence: 1, // Archive this assignment (increment from 0 to 1)
           groupName: targetGroup, // Assign to target group
           isTransferred: true, // Mark as transferred (permanently excluded from reallocation)
-          scannedQty: boxItems.reduce((sum, item) => sum + (item.scannedQty || 0), 0), // Preserve scan progress
           isComplete: false, // Reset completion status
           lastWorkerUserId: null,
           lastWorkerColor: null
         })
         .where(and(
           eq(boxRequirements.jobId, jobId),
-          eq(boxRequirements.boxNumber, boxNumber)
+          eq(boxRequirements.boxNumber, boxNumber),
+          eq(boxRequirements.transferSequence, 0) // Only archive currently active assignment
         ));
 
       // Seamlessly reallocate the box to next unallocated customer

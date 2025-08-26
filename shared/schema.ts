@@ -43,6 +43,7 @@ export const boxRequirements = pgTable("box_requirements", {
   scannedQty: integer("scanned_qty").default(0),
   isComplete: boolean("is_complete").default(false),
   isTransferred: boolean("is_transferred").default(false), // NEW: Tracks customers transferred to groups (excluded from reallocation)
+  transferSequence: integer("transfer_sequence").default(0), // NEW: Transfer tracking (0 = active, 1+ = archived transfers)
   groupName: text("group_name"), // NEW: Group information for filtering
   boxStatus: varchar("box_status", { length: 20 }).default('active'), // BOX STATUS: 'active', 'emptied', 'transferred_to_group'
   
