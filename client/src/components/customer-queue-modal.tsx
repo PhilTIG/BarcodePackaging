@@ -121,17 +121,6 @@ export function CustomerQueueModal({ isOpen, onClose, jobId, jobName }: Customer
                         <Badge variant="secondary" data-testid={`badge-items-${customer.customerName}`}>
                           {customer.totalItems} items
                         </Badge>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          data-testid={`button-assign-${customer.customerName}`}
-                          onClick={() => {
-                            // TODO: Future functionality - manual box assignment
-                            console.log(`Assign ${customer.customerName} to box`);
-                          }}
-                        >
-                          Assign to Box
-                        </Button>
                       </div>
                     </div>
                   </CardContent>

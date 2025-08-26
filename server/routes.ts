@@ -455,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check for box limit warning (< 80% of customers)
       let warningMessage = null;
       if (boxLimit && boxLimit < Math.ceil(totalCustomers * 0.8)) {
-        warningMessage = `Warning: Box limit (${boxLimit}) is less than 80% of unique customers (${totalCustomers}). ${totalCustomers - boxLimit} customers will be unallocated and require manual assignment.`;
+        warningMessage = `Warning: Box limit (${boxLimit}) is less than 80% of unique customers (${totalCustomers}). ${totalCustomers - boxLimit} customers will be unallocated and be assigned to a box when made available.`;
       }
       
       const customerToBoxMap = new Map<string, number | null>();
