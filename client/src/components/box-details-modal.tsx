@@ -171,7 +171,7 @@ export function BoxDetailsModal({
     
     // Workers need the checkBoxEnabled preference
     if (user.role === 'worker') {
-      return preferences.checkBoxEnabled;
+      return preferences?.checkBoxEnabled || false;
     }
     
     return false;
@@ -273,7 +273,7 @@ export function BoxDetailsModal({
       red: '#ef4444',
       dark: '#374151'
     };
-    return themeColorMap[preferences.theme] || themeColorMap.blue;
+    return themeColorMap[preferences?.theme || 'blue'] || themeColorMap.blue;
   };
 
   return (
