@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Users, ClipboardCheck, Trash2, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle, Users, ClipboardCheck, PackageOpen, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
@@ -67,6 +67,12 @@ export function BoxDetailsModal({
   // Fetch box requirements for this specific box using the default query function
   const { data: boxRequirementsResponse, isLoading } = useQuery({
     queryKey: [`/api/jobs/${jobId}/box-requirements`],
+    enabled: isOpen && boxNumber !== null
+  });
+
+  // Fetch job groups to determine if Empty or Transfer button should show
+  const { data: jobGroupsResponse } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/groups`],
     enabled: isOpen && boxNumber !== null
   });
 
@@ -263,42 +269,55 @@ export function BoxDetailsModal({
               </div>
             )}
 
-            {/* CheckCount Button */}
-            {canCheckCount() && (
-              <div className="flex justify-center pt-2">
-                <Button
-                  onClick={handleCheckCount}
-                  className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: getThemeColor() }}
-                  data-testid="check-count-button"
-                >
-                  <ClipboardCheck className="w-4 h-4" />
-                  Check Count
-                </Button>
-              </div>
-            )}
+            {/* Action Buttons Row */}
+            {(canCheckCount() || (completionPercentage === 100 && canEmptyTransfer())) && (
+              <div className="flex justify-between items-center pt-2">
+                {/* CheckCount Button */}
+                {canCheckCount() && (
+                  <Button
+                    onClick={handleCheckCount}
+                    className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity"
+                    style={{ backgroundColor: getThemeColor() }}
+                    data-testid="check-count-button"
+                  >
+                    <ClipboardCheck className="w-4 h-4" />
+                    Check Count
+                  </Button>
+                )}
 
-            {/* Empty/Transfer Buttons - Only shown for completed boxes and managers/supervisors */}
-            {isComplete && canEmptyTransfer() && (
-              <div className="flex justify-center gap-2 pt-2">
-                <Button
-                  onClick={handleEmptyTransferAction}
-                  variant="outline"
-                  className="flex items-center gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
-                  data-testid="empty-transfer-button"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Empty Box
-                </Button>
-                <Button
-                  onClick={handleEmptyTransferAction}
-                  variant="outline"
-                  className="flex items-center gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
-                  data-testid="transfer-box-button"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                  Transfer Box
-                </Button>
+                {/* Empty/Transfer Button - Only one shows based on job groups */}
+                {completionPercentage === 100 && canEmptyTransfer() && (() => {
+                  const jobGroups = (jobGroupsResponse as { groups?: string[] })?.groups || [];
+                  const hasGroups = jobGroups.length > 0;
+                  
+                  if (hasGroups) {
+                    // Show Transfer Box button when job has groups
+                    return (
+                      <Button
+                        onClick={handleEmptyTransferAction}
+                        className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity ml-4"
+                        style={{ backgroundColor: getThemeColor() }}
+                        data-testid="transfer-box-button"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                        Transfer Box
+                      </Button>
+                    );
+                  } else {
+                    // Show Empty Box button when job has no groups
+                    return (
+                      <Button
+                        onClick={handleEmptyTransferAction}
+                        className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity ml-4"
+                        style={{ backgroundColor: getThemeColor() }}
+                        data-testid="empty-box-button"
+                      >
+                        <PackageOpen className="w-4 h-4" />
+                        Empty Box
+                      </Button>
+                    );
+                  }
+                })()}
               </div>
             )}
           </CardContent>
