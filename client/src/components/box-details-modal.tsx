@@ -139,7 +139,13 @@ export function BoxDetailsModal({
   // Filter box requirements for this specific box number
   const boxRequirementsData = boxRequirementsResponse as { boxRequirements: BoxRequirement[], workers: Record<string, { id: string, name: string, staffId: string }> } | undefined;
   const allBoxRequirements: BoxRequirement[] = boxRequirementsData?.boxRequirements || [];
-  const boxRequirements = allBoxRequirements.filter((req: BoxRequirement) => req.boxNumber === boxNumber);
+  // TYPE FIX: Handle both string and number box numbers (4.0 string vs 4 number)
+  const boxRequirements = allBoxRequirements.filter((req: BoxRequirement) => {
+    // Convert both to numbers for comparison to handle "4.0" === 4
+    const reqBoxNum = typeof req.boxNumber === 'string' ? parseFloat(req.boxNumber) : req.boxNumber;
+    const targetBoxNum = typeof boxNumber === 'string' ? parseFloat(boxNumber) : boxNumber;
+    return reqBoxNum === targetBoxNum;
+  });
   
   // Get workers data for name mapping from the box requirements response
   const workersData = boxRequirementsData?.workers || {};
