@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { Settings, LogOut, Users, Package, ChevronLeft } from "lucide-react";
@@ -24,6 +26,7 @@ export default function SupervisorView() {
   const [isCustomerQueueModalOpen, setIsCustomerQueueModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [showArchivedCustomers, setShowArchivedCustomers] = useState(false);
 
   // Fetch all jobs for supervisor (job selection) with real-time updates
   const { data: allJobsData } = useQuery({
@@ -385,6 +388,19 @@ export default function SupervisorView() {
                 </Button>
               </div>
             </div>
+
+            {/* Show Archived Customers Toggle */}
+            <div className="flex items-center space-x-2 mt-4">
+              <Switch 
+                id="show-archived" 
+                checked={showArchivedCustomers} 
+                onCheckedChange={setShowArchivedCustomers}
+                data-testid="toggle-archived-customers"
+              />
+              <Label htmlFor="show-archived" className="text-sm text-gray-600">
+                Show Archived Customers
+              </Label>
+            </div>
           </CardContent>
         </Card>
 
@@ -400,6 +416,7 @@ export default function SupervisorView() {
               supervisorView={true}
               filterByProducts={selectedProducts}
               filterByGroups={selectedGroups}
+              showArchivedCustomers={showArchivedCustomers}
               onCheckCount={(boxNumber, jobId) => {
                 // Navigate to dedicated CheckCount page
                 setLocation(`/check-count/${jobId}/${boxNumber}`);

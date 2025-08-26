@@ -32,9 +32,10 @@ interface CustomerBoxGridProps {
   onCheckCount?: (boxNumber: string, jobId: string) => void;
   filterByProducts?: string[]; // Array of product names to filter by
   filterByGroups?: string[]; // Array of group names to filter by
+  showArchivedCustomers?: boolean; // Toggle to show/hide decimal boxes
 }
 
-const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount, filterByProducts = [], filterByGroups = [] }: CustomerBoxGridProps) {
+const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount, filterByProducts = [], filterByGroups = [], showArchivedCustomers = false }: CustomerBoxGridProps) {
   
   // Use filtered box data when filtering is requested
   const { boxData: filteredBoxData, availableProducts, isLoading: filterDataLoading } = useFilteredBoxData(
@@ -116,7 +117,18 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     
     // When filtering is active, use the filtered box data
     if (isFiltering && filteredBoxData.length > 0) {
-      return filteredBoxData;
+      const sortedFilteredBoxes = filteredBoxData.sort((a, b) => a.boxNumber - b.boxNumber);
+      
+      // Apply archived customer filtering to filtered data too
+      if (!showArchivedCustomers) {
+        return sortedFilteredBoxes.filter(box => {
+          // Keep only boxes that are whole numbers (no decimal part or ends with .0)
+          const isWholeNumber = box.boxNumber % 1 === 0;
+          return isWholeNumber;
+        });
+      }
+      
+      return sortedFilteredBoxes;
     }
     
     // Otherwise, use legacy product-based calculation
@@ -166,8 +178,19 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       }
     });
 
-    return Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
-  }, [products, preferences.maxBoxesPerRow, filterByProducts, filterByGroups, filteredBoxData]);
+    const sortedBoxes = Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
+    
+    // Filter out archived customers (decimal boxes) if toggle is off
+    if (!showArchivedCustomers) {
+      return sortedBoxes.filter(box => {
+        // Keep only boxes that are whole numbers (no decimal part or ends with .0)
+        const isWholeNumber = box.boxNumber % 1 === 0;
+        return isWholeNumber;
+      });
+    }
+    
+    return sortedBoxes;
+  }, [products, preferences.maxBoxesPerRow, filterByProducts, filterByGroups, filteredBoxData, showArchivedCustomers]);
 
   // Determine if we should use simplified design (when > 16 boxes per row)
   const isSimplifiedMode = preferences.maxBoxesPerRow > 16;
@@ -230,15 +253,27 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         const displayScannedQty = isFiltering ? (box.filteredScannedQty || 0) : box.scannedQty;
         const completionPercentage = displayTotalQty > 0 ? Math.round((displayScannedQty / displayTotalQty) * 100) : 0;
         
+        // Check if this is an archived customer (decimal box number)
+        const isArchivedCustomer = showArchivedCustomers && (box.boxNumber % 1 !== 0);
+        
         // POC-style highlighting with worker color support
         const isLastScanned = lastScannedBoxNumber === box.boxNumber;
         const highlighting = getBoxHighlight(box.boxNumber, box.isComplete, box.customerName);
         
         // Handle custom background colors (rgba) vs Tailwind classes
-        const customStyle = highlighting.backgroundColor.startsWith('rgba') ? {
-          backgroundColor: highlighting.backgroundColor,
-          borderColor: highlighting.borderColor,
-        } : {};
+        // Override styling for archived customers
+        let customStyle = {};
+        if (isArchivedCustomer) {
+          customStyle = {
+            backgroundColor: 'rgb(243, 244, 246)', // gray-100
+            borderColor: 'rgb(156, 163, 175)', // gray-400
+          };
+        } else if (highlighting.backgroundColor.startsWith('rgba')) {
+          customStyle = {
+            backgroundColor: highlighting.backgroundColor,
+            borderColor: highlighting.borderColor,
+          };
+        }
         
         // Dynamic box sizing and styling based on mode
         const getBoxHeight = () => {
@@ -302,11 +337,11 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                   <div className="flex-shrink-0 mt-1">
                     <div 
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border border-white shadow text-white ${
-                        box.lastWorkerColor ? '' : 'bg-primary'
+                        isArchivedCustomer ? 'bg-black' : (box.lastWorkerColor ? '' : 'bg-primary')
                       }`}
-                      style={box.lastWorkerColor ? { 
+                      style={isArchivedCustomer ? undefined : (box.lastWorkerColor ? { 
                         backgroundColor: box.lastWorkerColor
-                      } : undefined}
+                      } : undefined)}
                     >
                       {formatBoxNumber(box.boxNumber)}
                     </div>
@@ -376,13 +411,13 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                 <div className="absolute top-10 right-2">
                   <div 
                     className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
-                      highlighting.badgeColor?.startsWith('#') ? '' : highlighting.badgeColor || 'bg-primary'
+                      isArchivedCustomer ? 'bg-black' : (highlighting.badgeColor?.startsWith('#') ? '' : highlighting.badgeColor || 'bg-primary')
                     }`}
-                    style={highlighting.badgeColor?.startsWith('#') ? { 
+                    style={isArchivedCustomer ? undefined : (highlighting.badgeColor?.startsWith('#') ? { 
                       backgroundColor: highlighting.badgeColor
                     } : box.lastWorkerColor ? { 
                       backgroundColor: box.lastWorkerColor
-                    } : undefined}
+                    } : undefined)}
                   >
                     {box.boxNumber}
                   </div>
