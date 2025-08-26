@@ -107,11 +107,12 @@ export function BoxDetailsModal({
     mutationFn: async () => {
       // Auto-detect target group from current customer's groupName
       // The API will automatically determine the target group from CSV data
-      return apiRequest('POST', `/api/jobs/${jobId}/boxes/${boxNumber}/transfer`, {});
+      const response = await apiRequest('POST', `/api/jobs/${jobId}/boxes/${boxNumber}/transfer`, {});
+      return await response.json();
     },
     onSuccess: (data: any) => {
       toast({
-        title: "Box Transferred Successfully",
+        title: "Box Transferred Successfully", 
         description: data.message || `Box ${boxNumber} has been transferred and reassigned.`,
         variant: "default"
       });

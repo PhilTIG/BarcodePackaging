@@ -336,6 +336,15 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         }
         break;
       
+      case "box_transferred":
+        // Handle box transfer events - refresh specific box data only
+        console.log("[WebSocket] Box transfer event received:", message.data);
+        
+        // Invalidate box-specific queries to refresh UI immediately
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+        break;
+      
       default:
         console.log("[WebSocket] Unknown message type received:", message.type, message.data);
     }

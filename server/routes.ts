@@ -596,20 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/auth/me', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      res.json({ 
-        user: {
-          id: req.user!.id,
-          staffId: req.user!.staffId,
-          name: req.user!.name,
-          role: req.user!.role,
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to get user info' });
-    }
-  });
+  // Duplicate /api/auth/me endpoint removed - see line 226 for the main implementation
 
   app.get('/api/jobs', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
