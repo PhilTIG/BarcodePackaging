@@ -80,7 +80,7 @@ export function BoxDetailsModal({
   // Empty Box mutation - MUST be called before early return
   const emptyBoxMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/jobs/${jobId}/boxes/${boxNumber}/empty`, 'POST', {});
+      return apiRequest('POST', `/api/jobs/${jobId}/boxes/${boxNumber}/empty`, {});
     },
     onSuccess: (data: any) => {
       toast({
@@ -107,7 +107,7 @@ export function BoxDetailsModal({
     mutationFn: async () => {
       // Auto-detect target group from current customer's groupName
       // The API will automatically determine the target group from CSV data
-      return apiRequest(`/api/jobs/${jobId}/boxes/${boxNumber}/transfer`, 'POST', {});
+      return apiRequest('POST', `/api/jobs/${jobId}/boxes/${boxNumber}/transfer`, {});
     },
     onSuccess: (data: any) => {
       toast({

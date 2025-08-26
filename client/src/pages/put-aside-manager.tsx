@@ -90,7 +90,7 @@ export function PutAsideManagerPage() {
   // Reallocate mutation
   const reallocationMutation = useMutation({
     mutationFn: async ({ itemId, targetBoxNumber }: { itemId: string; targetBoxNumber: number }) => {
-      return apiRequest(`/api/put-aside/${itemId}/reallocate`, 'POST', {
+      return apiRequest('POST', `/api/put-aside/${itemId}/reallocate`, {
         targetBoxNumber
       });
     },
