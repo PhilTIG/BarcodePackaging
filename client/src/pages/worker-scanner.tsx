@@ -15,6 +15,7 @@ import { Settings, LogOut, Package, Undo, RotateCcw, Save, Check, Camera } from 
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { BarcodeScanner } from "@/components/barcode-scanner";
 import { MobileScannerInterface } from "@/components/mobile-scanner-interface";
+import { PutAsideNotification } from "@/components/put-aside-notification";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export default function WorkerScanner() {
@@ -763,6 +764,7 @@ export default function WorkerScanner() {
           setLocation("/login");
         }}
         userStaffId={user.staffId}
+        jobId={jobId!}
       />
     );
   }
@@ -819,6 +821,8 @@ export default function WorkerScanner() {
               )}
               
               {/* Single Box Mode Toggle - Always Visible */}
+              <PutAsideNotification jobId={jobId!} className="mr-2" />
+              
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-600">Single Box</span>
                 <label className="relative inline-flex items-center cursor-pointer">

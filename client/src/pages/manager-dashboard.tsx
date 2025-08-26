@@ -19,8 +19,9 @@ import { useErrorContext } from "@/lib/error-context";
 import { ErrorDialog } from "@/components/ui/error-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2, Archive, Box } from "lucide-react";
+import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2, Archive, Box, Clock } from "lucide-react";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
+import { PutAsideModal } from "@/components/put-aside-modal";
 import { QASummaryPanel } from "@/components/qa-summary-panel";
 import { z } from "zod";
 import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPattern } from "../../../lib/worker-allocation";
@@ -34,15 +35,17 @@ const uploadFormSchema = z.object({
 
 type UploadForm = z.infer<typeof uploadFormSchema>;
 
-// Component for Extra Items and Boxes Complete buttons
+// Component for Extra Items, Put Aside, and Boxes Complete buttons
 function ExtraItemsAndBoxesButtons({
   jobId,
   onExtraItemsClick,
-  onBoxesCompleteClick
+  onBoxesCompleteClick,
+  onPutAsideClick
 }: {
   jobId: string;
   onExtraItemsClick: () => void;
   onBoxesCompleteClick: () => void;
+  onPutAsideClick: () => void;
 }) {
   // Connect to WebSocket for real-time updates (same as Job Monitoring)
   const { isConnected } = useWebSocket(jobId);
@@ -58,6 +61,8 @@ function ExtraItemsAndBoxesButtons({
   const extraItemsCount = (progressData as any)?.progress?.extraItemsCount || 0;
   const completedBoxes = (progressData as any)?.progress?.completedBoxes || 0;
   const totalBoxes = (progressData as any)?.progress?.totalBoxes || 0;
+  const putAsideTotal = (progressData as any)?.progress?.putAsideItemsTotal || 0;
+  const putAsideWithBoxes = (progressData as any)?.progress?.putAsideItemsWithBoxes || 0;
 
   return (
     <>
@@ -70,6 +75,23 @@ function ExtraItemsAndBoxesButtons({
       >
         <Package className="mr-1 h-4 w-4" />
         {extraItemsCount} Extra Items
+      </Button>
+
+      {/* Put Aside Items Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onPutAsideClick}
+        data-testid={`button-put-aside-${jobId}`}
+        className={putAsideWithBoxes > 0 ? 'border-green-300 bg-green-50 text-green-700' : ''}
+      >
+        <Clock className="mr-1 h-4 w-4" />
+        {putAsideTotal} Put Aside
+        {putAsideWithBoxes > 0 && (
+          <span className="ml-1 text-xs bg-green-600 text-white px-1 rounded-full">
+            {putAsideWithBoxes}
+          </span>
+        )}
       </Button>
 
       {/* Boxes Complete Button */}
@@ -196,6 +218,8 @@ export default function ManagerDashboard() {
   const [extraItemsJobId, setExtraItemsJobId] = useState<string | null>(null);
   const [isCompletedBoxesModalOpen, setIsCompletedBoxesModalOpen] = useState(false);
   const [completedBoxesJobId, setCompletedBoxesJobId] = useState<string | null>(null);
+  const [isPutAsideModalOpen, setIsPutAsideModalOpen] = useState(false);
+  const [putAsideJobId, setPutAsideJobId] = useState<string | null>(null);
 
   // Assignment form state
   const [assignForm, setAssignForm] = useState({
@@ -969,11 +993,15 @@ export default function ManagerDashboard() {
                           Export
                         </Button>
 
-                        {/* Extra Items and Boxes buttons now inline with other action buttons */}
+                        {/* Extra Items, Put Aside and Boxes buttons now inline with other action buttons */}
                         <ExtraItemsAndBoxesButtons jobId={job.id}
                           onExtraItemsClick={() => {
                             setExtraItemsJobId(job.id);
                             setIsExtraItemsModalOpen(true);
+                          }}
+                          onPutAsideClick={() => {
+                            setPutAsideJobId(job.id);
+                            setIsPutAsideModalOpen(true);
                           }}
                           onBoxesCompleteClick={() => {
                             setCompletedBoxesJobId(job.id);
@@ -1203,6 +1231,18 @@ export default function ManagerDashboard() {
             setCompletedBoxesJobId(null);
           }}
           jobId={completedBoxesJobId}
+        />
+      )}
+
+      {/* Put Aside Modal */}
+      {putAsideJobId && (
+        <PutAsideModal
+          isOpen={isPutAsideModalOpen}
+          onClose={() => {
+            setIsPutAsideModalOpen(false);
+            setPutAsideJobId(null);
+          }}
+          jobId={putAsideJobId}
         />
       )}
     </div>

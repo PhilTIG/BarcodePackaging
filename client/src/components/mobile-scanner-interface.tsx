@@ -5,55 +5,38 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Camera, CameraOff, Package, Undo, Settings, RefreshCw, Target, Clock, TrendingUp, LogOut } from "lucide-react";
+import { Camera, CameraOff, Package, Undo, Settings, RefreshCw, Target, Clock, TrendingUp, LogOut, Users } from "lucide-react";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { PutAsideNotification } from '@/components/put-aside-notification';
 
 interface MobileScannerInterfaceProps {
-  currentCustomer?: string;
-  currentBoxNumber?: number;
-  assignedColor?: string;
-  totalBoxes?: number;
-  completedBoxes?: number;
-  currentBoxProgress?: { completed: number; total: number };
+  currentCustomer: string;
+  currentBoxNumber: number;
+  assignedColor: string;
+  totalBoxes: number;
+  completedBoxes: number;
+  currentBoxProgress: { completed: number; total: number };
   scanStats: {
     totalScans: number;
     scansPerHour: number;
     accuracy: number;
     score: number;
   };
-  lastScanEvent?: {
-    productName: string;
-    barCode: string;
-    customerName: string;
-    boxNumber: number;
-    scanTime?: string;
-  } | null;
+  lastScanEvent: any;
   onScan: (barcode: string) => void;
-  onUndo?: () => void;
-  onSwitchSession?: () => void;
-  isUndoAvailable?: boolean;
-  isConnected?: boolean;
-  scanError?: string | null;
-  scanResult?: {
-    boxNumber: number | null;
-    customerName: string;
-    productName: string;
-    progress: string | null;
-    isExtraItem?: boolean;
-    timestamp?: string;
-  } | null;
-  undoDisplay?: Array<{
-    productName: string;
-    barCode: string;
-    customerName: string;
-    boxNumber: number | null;
-    timestamp: string;
-  }> | null;
-  runtimeSingleBoxMode?: boolean;
-  onRuntimeToggle?: (enabled: boolean) => void;
-  onLogout?: () => void;
+  isPaused: boolean;
+  onUndo: () => void;
+  onSwitchSession: () => void;
+  isUndoAvailable: boolean;
+  isConnected: boolean;
+  scanError: string | null;
+  scanResult: any;
+  undoDisplay: any;
+  runtimeSingleBoxMode: boolean;
+  onRuntimeToggle: (enabled: boolean) => void;
+  onLogout: () => void;
   userStaffId: string;
-  isPaused?: boolean;
+  jobId: string;
 }
 
 export function MobileScannerInterface({
@@ -77,12 +60,13 @@ export function MobileScannerInterface({
   onRuntimeToggle,
   onLogout,
   userStaffId,
-  isPaused = false,
+  jobId,
 }: MobileScannerInterfaceProps) {
   const [, setLocation] = useLocation();
   const { preferences, updatePreference } = useUserPreferences();
   const [barcodeInput, setBarcodeInput] = useState("");
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const [showSettings, setShowSettings] = useState(false); // State to control settings modal
 
   // Auto-focus input for mobile scanning
   useEffect(() => {
@@ -159,6 +143,9 @@ export function MobileScannerInterface({
               </label>
             </div>
 
+            {/* PutAsideNotification added here */}
+            <PutAsideNotification jobId={jobId} className="mr-1" />
+
             <Button
               variant="ghost"
               size="sm"
@@ -234,7 +221,7 @@ export function MobileScannerInterface({
 
       {/* Main content area - Large box number display */}
       <div className="flex-1 flex flex-col justify-center items-center px-4 py-8 bg-gray-50">
-        
+
         {/* Show paused message instead of box content when paused */}
         {isPaused ? (
           <div className="text-center">
@@ -259,7 +246,7 @@ export function MobileScannerInterface({
               if (undoDisplay && undoDisplay.length > 0) {
                 return 'text-red-500';
               }
-              
+
               const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
               const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
               return (scanResult && scanResult.isExtraItem && scanResultTime >= lastScanTime) ? 'text-orange-500' : 'text-blue-500';
@@ -295,7 +282,7 @@ export function MobileScannerInterface({
               if (undoDisplay && undoDisplay.length > 0) {
                 return 'text-red-600';
               }
-              
+
               const scanResultTime = scanResult?.timestamp ? new Date(scanResult.timestamp).getTime() : 0;
               const lastScanTime = lastScanEvent?.scanTime ? new Date(lastScanEvent.scanTime).getTime() : 0;
               return (scanResult && scanResult.isExtraItem && scanResultTime >= lastScanTime) ? 'text-orange-600' : 'text-gray-900';
