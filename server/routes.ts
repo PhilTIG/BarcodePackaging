@@ -670,33 +670,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         for (const req of boxRequirements) {
-          const key = `${req.customerName}-${req.boxNumber}`;
-          if (!productMap.has(key)) {
-            const worker = req.lastWorkerUserId ? workers.get(req.lastWorkerUserId) : null;
-            productMap.set(key, {
-              id: `${req.customerName}-${req.boxNumber}`, // Synthetic ID for UI
-              customerName: req.customerName,
-              qty: 0,
-              scannedQty: 0,
-              boxNumber: req.boxNumber,
-              isComplete: true,
-              lastWorkerUserId: req.lastWorkerUserId,
-              lastWorkerColor: req.lastWorkerColor,
-              lastWorkerStaffId: worker?.staffId // Add staffId for UI display
-            });
-          }
+          // DECIMAL BOX FIX: Only process requirements that have a valid boxNumber (not NULL)
+          // This includes both integer boxes (1, 2, 3) and decimal boxes (1.1, 2.1, etc.)
+          if (req.boxNumber !== null && req.boxNumber !== undefined) {
+            const key = `${req.customerName}-${req.boxNumber}`;
+            if (!productMap.has(key)) {
+              const worker = req.lastWorkerUserId ? workers.get(req.lastWorkerUserId) : null;
+              productMap.set(key, {
+                id: `${req.customerName}-${req.boxNumber}`, // Synthetic ID for UI
+                customerName: req.customerName,
+                qty: 0,
+                scannedQty: 0,
+                boxNumber: parseFloat(req.boxNumber), // Convert to number for UI compatibility
+                isComplete: true,
+                lastWorkerUserId: req.lastWorkerUserId,
+                lastWorkerColor: req.lastWorkerColor,
+                lastWorkerStaffId: worker?.staffId // Add staffId for UI display
+              });
+            }
 
-          const product = productMap.get(key);
-          product.qty += req.requiredQty;
-          product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
-          product.isComplete = product.isComplete && req.isComplete;
+            const product = productMap.get(key);
+            product.qty += req.requiredQty;
+            product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
+            product.isComplete = product.isComplete && req.isComplete;
 
-          // Update worker info if this requirement has more recent worker data
-          if (req.lastWorkerUserId) {
-            const worker = workers.get(req.lastWorkerUserId);
-            product.lastWorkerUserId = req.lastWorkerUserId;
-            product.lastWorkerColor = req.lastWorkerColor;
-            product.lastWorkerStaffId = worker?.staffId;
+            // Update worker info if this requirement has more recent worker data
+            if (req.lastWorkerUserId) {
+              const worker = workers.get(req.lastWorkerUserId);
+              product.lastWorkerUserId = req.lastWorkerUserId;
+              product.lastWorkerColor = req.lastWorkerColor;
+              product.lastWorkerStaffId = worker?.staffId;
+            }
           }
         }
 
