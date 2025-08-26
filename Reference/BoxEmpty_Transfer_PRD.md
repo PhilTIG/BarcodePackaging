@@ -46,11 +46,13 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 - **Behavior**: Simple empty operation when no groups exist for the job
 
 #### 1.2 Automatic Box Reallocation
-- **Process**: Background assignment of next unallocated customerName to emptied box
+- **Trigger**: When box is emptied and job has `boxNumber: NULL` customers (unallocated due to box limit)
+- **Process**: Automatically assign next unallocated customer to that specific box number
+- **Selection**: First unallocated customer (FIFO order from original CSV sequence)
+- **Database Update**: Change `boxNumber` from `NULL` to the emptied box number for all products of that customer
 - **Transition**: Seamless - no "empty" status, direct assignment to new customer
-- **Notification**: Simple notification to user about reallocation
-- **Conditions**: Only when box limit is active and unallocated customerNames exist
-- **Source**: Takes from available customerNames that couldn't get boxes due to limit
+- **Notification**: Simple notification to user about reallocation ("Box 5 now assigned to Customer ABC")
+- **Worker Impact**: Workers continue following their allocation patterns with newly assigned boxes
 
 #### 1.3 Box History System
 - **Scope**: Show all previous contents for the specific box number across the job
@@ -97,14 +99,20 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 
 ### 4. Manager Configuration
 
-#### 4.1 Box Limit Setting
-- **Location**: Job-level setting during CSV upload process
+#### 4.1 Box Limit Setting (FOUNDATION FEATURE)
+- **Location**: Optional field in job creation/CSV upload form ("Max Boxes: [50]" or "No Limit")
+- **Default**: "No Limit" - system creates boxes for all customers as before
 - **Function**: Hard limit that stops creation of new boxes for customers beyond the limit
-- **Behavior**: Leaves unallocated customerNames available for assignment to emptied/transferred boxes
-- **Scope**: Per-job configuration with optional global default
-- **Storage**: Add `boxLimit` field to jobs table
+- **Processing**: Continues processing CSV but sets `boxNumber` to `NULL` for unallocated customers
+- **Validation**: Shows warning if limit is much smaller than total unique customers
+- **Storage**: `box_limit INTEGER DEFAULT NULL` in jobs table
+- **Unallocated Storage**: Customers beyond limit stored as `boxNumber: NULL` in `box_requirements`
 
-#### 4.2 Monitoring Dashboard
+#### 4.2 Manager Dashboard Integration
+- **Unallocated Customers Section**: New section showing customers with `boxNumber: NULL`
+- **Customer Details**: Display each unallocated customer with their required products
+- **Product Preview**: Similar to Box Details screen, showing BarCode, Product Name, Qty
+- **Auto-Assignment Status**: Show when customers get automatically assigned to emptied boxes
 - **Put Aside Count**: Show total count of items with available boxes (green tick)
 - **Transfer Tracking**: Monitor group transfers and box reallocation
 - **Worker Performance**: Track empty/transfer operations per worker
