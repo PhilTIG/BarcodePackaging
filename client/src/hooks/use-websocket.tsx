@@ -275,14 +275,16 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
       case "check_count_update":
         // CheckCount corrections applied - update all monitoring interfaces
         console.log("[WebSocket] CheckCount update received:", message.data);
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/check-sessions"] });
         
-        // CRITICAL FIX: Invalidate box-requirements and CheckCount sessions with jobId
+        // FIXED: Match exact query keys used by components
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/check-sessions?jobId=${jobId}`] });
+        
+        // Force refetch for box grids and dashboard components
+        queryClient.refetchQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+        queryClient.refetchQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
         
         // Show user feedback about the CheckCount correction
         if (message.data && message.data.applyCorrections && Array.isArray(message.data.corrections) && message.data.corrections.length > 0) {
