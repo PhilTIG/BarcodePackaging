@@ -46,10 +46,11 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 - **Behavior**: Simple empty operation when no groups exist for the job
 
 #### 1.2 Automatic Box Reallocation
-- **Process**: Background automatic assignment of next unallocated customer
+- **Process**: Background assignment of next unallocated customerName to emptied box
 - **Transition**: Seamless - no "empty" status, direct assignment to new customer
 - **Notification**: Simple notification to user about reallocation
-- **Conditions**: Only when Manager has set box limit for the job
+- **Conditions**: Only when box limit is active and unallocated customerNames exist
+- **Source**: Takes from available customerNames that couldn't get boxes due to limit
 
 #### 1.3 Box History System
 - **Scope**: Show all previous contents for the specific box number across the job
@@ -67,9 +68,11 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 
 #### 2.2 Group View Integration
 - **Display**: Show transferred boxes with original box numbers preserved
+- **Permanence**: Transferred boxes remain permanently in group view
 - **Updates**: Static after transfer (no real-time scanning updates)
 - **History**: Maintain complete transfer chain for audit purposes
 - **Organization**: Group boxes by transfer date and original assignment
+- **Archival**: All group/transfer data archived with job, purged when job is purged
 
 ### 3. Put Aside System
 
@@ -86,16 +89,18 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 - **Item Details**: Show product name and availability status
 
 #### 3.3 Put Aside Item Allocation
-- **Process**: When item code scanned, allocate to first available box
+- **Process**: When put aside item scanned, allocate following worker's allocation pattern rules
+- **Priority**: Put aside items are prioritized and taken from list first during allocation
 - **Worker Instruction**: Manager directs worker to scan put aside items
 - **Removal**: Auto-remove from put aside list once allocated
-- **System Integration**: Use existing box allocation logic
+- **System Integration**: Use existing worker-based box allocation logic
 
 ### 4. Manager Configuration
 
 #### 4.1 Box Limit Setting
 - **Location**: Job-level setting during CSV upload process
-- **Function**: Enable/disable automatic box reallocation
+- **Function**: Hard limit that stops creation of new boxes for customers beyond the limit
+- **Behavior**: Leaves unallocated customerNames available for assignment to emptied/transferred boxes
 - **Scope**: Per-job configuration with optional global default
 - **Storage**: Add `boxLimit` field to jobs table
 
@@ -105,15 +110,23 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 - **Worker Performance**: Track empty/transfer operations per worker
 - **System Health**: Monitor automatic reallocation success rates
 
-### 5. Worker Interface Enhancements
+### 5. Concurrency Control
 
-#### 5.1 Permission System
+#### 5.1 Optimistic Locking Strategy
+- **Method**: First-wins approach for concurrent operations
+- **Scope**: Box emptying, transferring, and put aside allocation operations
+- **Implementation**: Version-based conflict detection and resolution
+- **User Experience**: Clear error messages when operations conflict
+
+### 6. Worker Interface Enhancements
+
+#### 6.1 Permission System
 - **Granularity**: Combined "Empty/Transfer" permission (single toggle)
 - **Scope**: No restrictions based on worker involvement in box
 - **Job Status**: Available for any active or completed job
 - **Role-based**: Managers and Supervisors have automatic access
 
-#### 5.2 Put Aside Notifications
+#### 6.2 Put Aside Notifications
 - **Display**: Count of items with available boxes on worker screen
 - **Interaction**: Click for details modal showing available items
 - **Action**: Standard scanning process - direct worker to appropriate box
@@ -162,6 +175,10 @@ ALTER TABLE user_preferences ADD COLUMN can_empty_boxes BOOLEAN DEFAULT FALSE;
 
 -- Enhanced scan events for put aside
 ALTER TABLE scan_events ADD COLUMN put_aside_item_id UUID REFERENCES put_aside_items(id);
+
+-- Add version column for optimistic locking
+ALTER TABLE box_requirements ADD COLUMN version INTEGER DEFAULT 1;
+ALTER TABLE put_aside_items ADD COLUMN version INTEGER DEFAULT 1;
 ```
 
 ### API Endpoints
@@ -228,7 +245,10 @@ type BoxTransferEvents =
 - [ ] Implement put aside item creation and management
 - [ ] Add box limit configuration endpoints
 - [ ] Create group listing endpoint for transfers
-- [ ] Add automatic box allocation algorithm
+- [ ] Add automatic box allocation algorithm with customerName priority queue
+- [ ] Implement optimistic locking with version control
+- [ ] Add conflict detection and resolution for concurrent operations
+- [ ] Implement put aside priority allocation in worker allocation logic
 - [ ] Implement WebSocket events for real-time updates
 - [ ] Add permission checking middleware
 - [ ] Create comprehensive error handling
@@ -292,6 +312,9 @@ type BoxTransferEvents =
 - [ ] Create backup and recovery procedures
 - [ ] Add compliance reporting features
 - [ ] Implement data anonymization for sensitive information
+- [ ] Create permanent group view storage architecture
+- [ ] Implement group/transfer data archival with job archival
+- [ ] Add group/transfer data purging when jobs are purged
 
 ### Phase 8: Testing and Quality Assurance (Week 4-5)
 - [ ] Unit tests for box allocation algorithms
@@ -302,6 +325,8 @@ type BoxTransferEvents =
 - [ ] Performance testing with high box counts
 - [ ] Mobile interface testing on various devices
 - [ ] Concurrent user testing
+- [ ] Optimistic locking conflict resolution testing
+- [ ] Race condition testing for box allocation
 - [ ] Error handling and edge case testing
 - [ ] User acceptance testing with warehouse workers
 
