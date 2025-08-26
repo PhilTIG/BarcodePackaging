@@ -118,7 +118,11 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     
     // When filtering is active, use the filtered box data
     if (isFiltering && filteredBoxData.length > 0) {
-      const sortedFilteredBoxes = filteredBoxData.sort((a, b) => a.boxNumber - b.boxNumber);
+      const sortedFilteredBoxes = filteredBoxData.sort((a, b) => {
+        const aNum = typeof a.boxNumber === 'string' ? parseFloat(a.boxNumber) : a.boxNumber;
+        const bNum = typeof b.boxNumber === 'string' ? parseFloat(b.boxNumber) : b.boxNumber;
+        return aNum - bNum;
+      });
       
       // Apply archived customer filtering to filtered data too
       if (!showArchivedCustomers) {
@@ -180,7 +184,11 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       }
     });
 
-    const sortedBoxes = Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
+    const sortedBoxes = Object.values(boxes).sort((a, b) => {
+      const aNum = typeof a.boxNumber === 'string' ? parseFloat(a.boxNumber) : a.boxNumber;
+      const bNum = typeof b.boxNumber === 'string' ? parseFloat(b.boxNumber) : b.boxNumber;
+      return aNum - bNum;
+    });
     console.log(`[Debug] Found ${sortedBoxes.length} total boxes:`, sortedBoxes.map(b => b.boxNumber));
     console.log(`[Debug] Decimal boxes:`, sortedBoxes.filter(box => box.boxNumber % 1 !== 0).map(b => b.boxNumber));
     

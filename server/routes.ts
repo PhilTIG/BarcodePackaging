@@ -681,7 +681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 customerName: req.customerName,
                 qty: 0,
                 scannedQty: 0,
-                boxNumber: parseFloat(req.boxNumber), // Convert to number for UI compatibility
+                boxNumber: req.boxNumber, // Keep as string to preserve .0, .1, etc. decimal notation
                 isComplete: true,
                 lastWorkerUserId: req.lastWorkerUserId,
                 lastWorkerColor: req.lastWorkerColor,
