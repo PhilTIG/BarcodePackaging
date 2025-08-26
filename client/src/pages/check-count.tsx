@@ -80,7 +80,7 @@ export default function CheckCountPage() {
   // Get box requirements filtered by box number (with useMemo to prevent re-creation)
   const boxRequirements: BoxRequirement[] = useMemo(() => {
     return (boxRequirementsData as any)?.boxRequirements?.filter(
-      (req: BoxRequirement) => req.boxNumber != null && parseFloat(req.boxNumber.toString()) === parseFloat(boxNumber!)
+      (req: BoxRequirement) => req.boxNumber === parseInt(boxNumber!)
     ) || [];
   }, [boxRequirementsData, boxNumber]);
 
@@ -109,7 +109,7 @@ export default function CheckCountPage() {
   // Create check session mutation
   const createSessionMutation = useMutation({
     mutationFn: async () => {
-      const totalExpected = boxRequirements.reduce((sum, req) => sum + (req.requiredQty || 0), 0);
+      const totalExpected = boxRequirements.reduce((sum, req) => sum + (req.scannedQty || 0), 0);
       const response = await apiRequest("POST", "/api/check-sessions", {
         jobId: jobId!,
         boxNumber: parseInt(boxNumber!),

@@ -6,10 +6,10 @@
 import { useState, useCallback } from 'react';
 
 export interface BoxHighlighting {
-  lastScannedBoxNumber: string | null;
-  workerColors: Map<string, string>; // boxNumber -> worker color (50% transparent)
-  activeWorkerBoxes: Map<string, string>; // workerId -> current active box number
-  workerStaffIds: Map<string, string>; // boxNumber -> worker staffId for display
+  lastScannedBoxNumber: number | null;
+  workerColors: Map<number, string>; // boxNumber -> worker color (50% transparent)
+  activeWorkerBoxes: Map<string, number>; // workerId -> current active box number
+  workerStaffIds: Map<number, string>; // boxNumber -> worker staffId for display
 }
 
 interface UseBoxHighlightingOptions {
@@ -29,7 +29,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
 
   // Update box highlighting when a scan occurs
   const updateBoxHighlighting = useCallback((
-    boxNumber: string,
+    boxNumber: number,
     workerId?: string,
     workerColor?: string,
     workerStaffId?: string
@@ -108,7 +108,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
 
   // Get box highlight style based on priority system
   const getBoxHighlight = useCallback((
-    boxNumber: string,
+    boxNumber: number,
     isComplete: boolean,
     customerName?: string
   ): {

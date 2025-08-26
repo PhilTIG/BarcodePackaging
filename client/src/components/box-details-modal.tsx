@@ -11,24 +11,23 @@ import { useUserPreferences } from '@/hooks/use-user-preferences';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import type { BoxRequirement as SchemaBoxRequirement } from '@shared/schema';
-import { formatBoxNumber } from '@/lib/format-box-number';
 
 interface BoxDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  boxNumber: string | null;
+  boxNumber: number | null;
   jobId: string;
   customerName: string;
   totalQty: number;
   scannedQty: number;
   isComplete: boolean;
   lastWorkerColor?: string;
-  onCheckCount?: (boxNumber: string, jobId: string) => void;
+  onCheckCount?: (boxNumber: number, jobId: string) => void;
 }
 
 interface BoxRequirement {
   id: string;
-  boxNumber: string;
+  boxNumber: number;
   customerName: string;
   barCode: string;
   productName: string;
@@ -139,13 +138,7 @@ export function BoxDetailsModal({
   // Filter box requirements for this specific box number
   const boxRequirementsData = boxRequirementsResponse as { boxRequirements: BoxRequirement[], workers: Record<string, { id: string, name: string, staffId: string }> } | undefined;
   const allBoxRequirements: BoxRequirement[] = boxRequirementsData?.boxRequirements || [];
-  // TYPE FIX: Handle both string and number box numbers (4.0 string vs 4 number)
-  const boxRequirements = allBoxRequirements.filter((req: BoxRequirement) => {
-    // Convert both to numbers for comparison to handle "4.0" === 4
-    const reqBoxNum = typeof req.boxNumber === 'string' ? parseFloat(req.boxNumber) : req.boxNumber;
-    const targetBoxNum = typeof boxNumber === 'string' ? parseFloat(boxNumber) : boxNumber;
-    return reqBoxNum === targetBoxNum;
-  });
+  const boxRequirements = allBoxRequirements.filter((req: BoxRequirement) => req.boxNumber === boxNumber);
   
   // Get workers data for name mapping from the box requirements response
   const workersData = boxRequirementsData?.workers || {};
@@ -313,7 +306,7 @@ export function BoxDetailsModal({
                 style={{ backgroundColor: lastWorkerColor || '#6366f1' }}
                 data-testid="large-box-number"
               >
-                {formatBoxNumber(boxNumber)}
+                {boxNumber}
               </div>
             </CardTitle>
           </CardHeader>

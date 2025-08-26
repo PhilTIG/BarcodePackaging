@@ -9,7 +9,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { BoxDetailsModal } from "./box-details-modal";
 import { useQuery } from "@tanstack/react-query";
 import { useFilteredBoxData } from "@/hooks/use-filtered-box-data";
-import { formatBoxNumber } from "@/lib/format-box-number";
 
 interface Product {
   id: string;
@@ -32,10 +31,9 @@ interface CustomerBoxGridProps {
   onCheckCount?: (boxNumber: number, jobId: string) => void;
   filterByProducts?: string[]; // Array of product names to filter by
   filterByGroups?: string[]; // Array of group names to filter by
-  showArchivedCustomers?: boolean; // Toggle to show/hide decimal boxes
 }
 
-const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount, filterByProducts = [], filterByGroups = [], showArchivedCustomers = false }: CustomerBoxGridProps) {
+const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount, filterByProducts = [], filterByGroups = [] }: CustomerBoxGridProps) {
   
   // Use filtered box data when filtering is requested
   const { boxData: filteredBoxData, availableProducts, isLoading: filterDataLoading } = useFilteredBoxData(
@@ -114,28 +112,10 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
   // Choose between filtered data (from box requirements) or legacy product data
   const boxData = useMemo(() => {
     const isFiltering = filterByProducts.length > 0 || filterByGroups.length > 0;
-    console.log(`[Toggle Debug] showArchivedCustomers=${showArchivedCustomers}, isFiltering=${isFiltering}, products.length=${products.length}`);
     
     // When filtering is active, use the filtered box data
     if (isFiltering && filteredBoxData.length > 0) {
-      const sortedFilteredBoxes = filteredBoxData.sort((a, b) => {
-        const aNum = typeof a.boxNumber === 'string' ? parseFloat(a.boxNumber) : a.boxNumber;
-        const bNum = typeof b.boxNumber === 'string' ? parseFloat(b.boxNumber) : b.boxNumber;
-        return aNum - bNum;
-      });
-      
-      // Apply archived customer filtering to filtered data too
-      if (!showArchivedCustomers) {
-        return sortedFilteredBoxes.filter(box => {
-          // Keep boxes that are whole numbers OR end with .0 (exclude .1, .2, etc.)
-          const boxStr = box.boxNumber.toString();
-          const isRealDecimal = boxStr.includes('.') && !boxStr.endsWith('.0');
-          console.log(`[Filter Debug] Box ${box.boxNumber} - isRealDecimal: ${isRealDecimal}, keeping: ${!isRealDecimal}`);
-          return !isRealDecimal;
-        });
-      }
-      
-      return sortedFilteredBoxes;
+      return filteredBoxData;
     }
     
     // Otherwise, use legacy product-based calculation
@@ -185,30 +165,8 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       }
     });
 
-    const sortedBoxes = Object.values(boxes).sort((a, b) => {
-      const aNum = typeof a.boxNumber === 'string' ? parseFloat(a.boxNumber) : a.boxNumber;
-      const bNum = typeof b.boxNumber === 'string' ? parseFloat(b.boxNumber) : b.boxNumber;
-      return aNum - bNum;
-    });
-    console.log(`[Debug] Found ${sortedBoxes.length} total boxes:`, sortedBoxes.map(b => b.boxNumber));
-    console.log(`[Debug] Decimal boxes:`, sortedBoxes.filter(box => box.boxNumber % 1 !== 0).map(b => b.boxNumber));
-    
-    // Filter out archived customers (decimal boxes) if toggle is off
-    if (!showArchivedCustomers) {
-      const filtered = sortedBoxes.filter(box => {
-        // Keep boxes that are whole numbers OR end with .0 (exclude .1, .2, etc.)
-        const boxStr = box.boxNumber.toString();
-        const isRealDecimal = boxStr.includes('.') && !boxStr.endsWith('.0');
-        console.log(`[Filter Debug] Box ${box.boxNumber} - isRealDecimal: ${isRealDecimal}, keeping: ${!isRealDecimal}`);
-        return !isRealDecimal;
-      });
-      console.log(`[Toggle Filter] Filtered ${sortedBoxes.length} -> ${filtered.length} boxes (removed ${sortedBoxes.length - filtered.length} decimal boxes)`);
-      return filtered;
-    }
-    
-    console.log(`[Toggle Filter] Showing all ${sortedBoxes.length} boxes including decimal boxes`);
-    return sortedBoxes;
-  }, [products, preferences.maxBoxesPerRow, filterByProducts, filterByGroups, filteredBoxData, showArchivedCustomers]);
+    return Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
+  }, [products, preferences.maxBoxesPerRow, filterByProducts, filterByGroups, filteredBoxData]);
 
   // Determine if we should use simplified design (when > 16 boxes per row)
   const isSimplifiedMode = preferences.maxBoxesPerRow > 16;
@@ -271,35 +229,15 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         const displayScannedQty = isFiltering ? (box.filteredScannedQty || 0) : box.scannedQty;
         const completionPercentage = displayTotalQty > 0 ? Math.round((displayScannedQty / displayTotalQty) * 100) : 0;
         
-        // Check if this is an archived customer (decimal box number)
-        // Only boxes with non-zero decimals (.1, .2, etc.) are archived customers, not .0 boxes
-        const boxStr = box.boxNumber.toString();
-        const isRealDecimal = boxStr.includes('.') && !boxStr.endsWith('.0');
-        const isArchivedCustomer = showArchivedCustomers && isRealDecimal;
-        
-        // Debug logging
-        if (isRealDecimal) {
-          console.log(`[Box Debug] Real decimal box ${box.boxNumber} (${typeof box.boxNumber}, ${box.customerName}) - isArchived: ${isArchivedCustomer}, showArchived: ${showArchivedCustomers}`);
-        }
-        
         // POC-style highlighting with worker color support
         const isLastScanned = lastScannedBoxNumber === box.boxNumber;
         const highlighting = getBoxHighlight(box.boxNumber, box.isComplete, box.customerName);
         
         // Handle custom background colors (rgba) vs Tailwind classes
-        // Override styling for archived customers
-        let customStyle = {};
-        if (isArchivedCustomer) {
-          customStyle = {
-            backgroundColor: 'rgb(243, 244, 246)', // gray-100
-            borderColor: 'rgb(156, 163, 175)', // gray-400
-          };
-        } else if (highlighting.backgroundColor.startsWith('rgba')) {
-          customStyle = {
-            backgroundColor: highlighting.backgroundColor,
-            borderColor: highlighting.borderColor,
-          };
-        }
+        const customStyle = highlighting.backgroundColor.startsWith('rgba') ? {
+          backgroundColor: highlighting.backgroundColor,
+          borderColor: highlighting.borderColor,
+        } : {};
         
         // Dynamic box sizing and styling based on mode
         const getBoxHeight = () => {
@@ -363,13 +301,13 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                   <div className="flex-shrink-0 mt-1">
                     <div 
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border border-white shadow text-white ${
-                        isArchivedCustomer ? 'bg-black' : (box.lastWorkerColor ? '' : 'bg-primary')
+                        box.lastWorkerColor ? '' : 'bg-primary'
                       }`}
-                      style={isArchivedCustomer ? undefined : (box.lastWorkerColor ? { 
+                      style={box.lastWorkerColor ? { 
                         backgroundColor: box.lastWorkerColor
-                      } : undefined)}
+                      } : undefined}
                     >
-                      {formatBoxNumber(box.boxNumber)}
+                      {box.boxNumber}
                     </div>
                     
                     {/* Check status indicator with higher z-index */}
@@ -437,13 +375,13 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                 <div className="absolute top-10 right-2">
                   <div 
                     className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
-                      isArchivedCustomer ? 'bg-black' : (highlighting.badgeColor?.startsWith('#') ? '' : highlighting.badgeColor || 'bg-primary')
+                      highlighting.badgeColor?.startsWith('#') ? '' : highlighting.badgeColor || 'bg-primary'
                     }`}
-                    style={isArchivedCustomer ? undefined : (highlighting.badgeColor?.startsWith('#') ? { 
+                    style={highlighting.badgeColor?.startsWith('#') ? { 
                       backgroundColor: highlighting.badgeColor
                     } : box.lastWorkerColor ? { 
                       backgroundColor: box.lastWorkerColor
-                    } : undefined)}
+                    } : undefined}
                   >
                     {box.boxNumber}
                   </div>

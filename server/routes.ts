@@ -507,7 +507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requiredQty: product.qty,
         customerName: product.customerName,
         groupName: product.groupName,
-        boxNumber: product.boxNumber ? product.boxNumber.toString() : null,
+        boxNumber: product.boxNumber,
         scannedQty: 0,
         isComplete: false
       }));
@@ -670,37 +670,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         for (const req of boxRequirements) {
-          // DECIMAL BOX FIX: Only process requirements that have a valid boxNumber (not NULL)
-          // This includes both integer boxes (1, 2, 3) and decimal boxes (1.1, 2.1, etc.)
-          if (req.boxNumber !== null && req.boxNumber !== undefined) {
-            const key = `${req.customerName}-${req.boxNumber}`;
-            if (!productMap.has(key)) {
-              const worker = req.lastWorkerUserId ? workers.get(req.lastWorkerUserId) : null;
-              productMap.set(key, {
-                id: `${req.customerName}-${req.boxNumber}`, // Synthetic ID for UI
-                customerName: req.customerName,
-                qty: 0,
-                scannedQty: 0,
-                boxNumber: req.boxNumber, // Keep as string to preserve .0, .1, etc. decimal notation
-                isComplete: true,
-                lastWorkerUserId: req.lastWorkerUserId,
-                lastWorkerColor: req.lastWorkerColor,
-                lastWorkerStaffId: worker?.staffId // Add staffId for UI display
-              });
-            }
+          const key = `${req.customerName}-${req.boxNumber}`;
+          if (!productMap.has(key)) {
+            const worker = req.lastWorkerUserId ? workers.get(req.lastWorkerUserId) : null;
+            productMap.set(key, {
+              id: `${req.customerName}-${req.boxNumber}`, // Synthetic ID for UI
+              customerName: req.customerName,
+              qty: 0,
+              scannedQty: 0,
+              boxNumber: req.boxNumber,
+              isComplete: true,
+              lastWorkerUserId: req.lastWorkerUserId,
+              lastWorkerColor: req.lastWorkerColor,
+              lastWorkerStaffId: worker?.staffId // Add staffId for UI display
+            });
+          }
 
-            const product = productMap.get(key);
-            product.qty += req.requiredQty;
-            product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
-            product.isComplete = product.isComplete && req.isComplete;
+          const product = productMap.get(key);
+          product.qty += req.requiredQty;
+          product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
+          product.isComplete = product.isComplete && req.isComplete;
 
-            // Update worker info if this requirement has more recent worker data
-            if (req.lastWorkerUserId) {
-              const worker = workers.get(req.lastWorkerUserId);
-              product.lastWorkerUserId = req.lastWorkerUserId;
-              product.lastWorkerColor = req.lastWorkerColor;
-              product.lastWorkerStaffId = worker?.staffId;
-            }
+          // Update worker info if this requirement has more recent worker data
+          if (req.lastWorkerUserId) {
+            const worker = workers.get(req.lastWorkerUserId);
+            product.lastWorkerUserId = req.lastWorkerUserId;
+            product.lastWorkerColor = req.lastWorkerColor;
+            product.lastWorkerStaffId = worker?.staffId;
           }
         }
 
@@ -1272,7 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const sessionData = {
         jobId,
-        boxNumber: boxNumber.toString(),
+        boxNumber: parseInt(boxNumber),
         userId: req.user!.id,
         totalItemsExpected: parseInt(totalItemsExpected),
         status: 'active'
@@ -1347,7 +1343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (corrections && corrections.length > 0) {
         if (applyCorrections) {
           // Apply corrections and update box requirements
-          await storage.applyCheckCorrections(session.jobId, parseFloat(session.boxNumber), corrections, session.userId, (req as AuthenticatedRequest).user!.id);
+          await storage.applyCheckCorrections(session.jobId, session.boxNumber, corrections, session.userId, (req as AuthenticatedRequest).user!.id);
         } else {
           // Create check results for rejected corrections
           await storage.createRejectedCheckResults(session.id, corrections, (req as AuthenticatedRequest).user!.id);
@@ -2200,7 +2196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/jobs/:jobId/boxes/:boxNumber/history', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId, boxNumber } = req.params;
-      const history = await storage.getBoxHistoryByBoxNumber(jobId, boxNumber);
+      const history = await storage.getBoxHistoryByBoxNumber(jobId, parseInt(boxNumber));
       res.json({ history });
     } catch (error) {
       console.error('Failed to fetch box history:', error);
@@ -2219,7 +2215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         barCode,
         productName,
         customerName,
-        originalBoxNumber: originalBoxNumber.toString(),
+        originalBoxNumber: parseInt(originalBoxNumber),
         quantity: parseInt(quantity) || 1,
         putAsideBy: req.user!.id,
         sourceEventId

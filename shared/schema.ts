@@ -35,7 +35,7 @@ export const jobs = pgTable("jobs", {
 export const boxRequirements = pgTable("box_requirements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
-  boxNumber: decimal("box_number", { precision: 10, scale: 1 }), // BOX LIMIT: Can be NULL for unallocated customers. Supports decimal format (2.1, 2.2) for transfer history
+  boxNumber: integer("box_number"), // BOX LIMIT: Can be NULL for unallocated customers
   customerName: text("customer_name").notNull(),
   barCode: text("bar_code").notNull(),
   productName: text("product_name").notNull(),
@@ -74,8 +74,8 @@ export const scanEvents = pgTable("scan_events", {
   barCode: text("bar_code").notNull(),
   productName: text("product_name"),
   customerName: text("customer_name"),
-  boxNumber: decimal("box_number", { precision: 10, scale: 1 }),
-  calculatedTargetBox: decimal("calculated_target_box", { precision: 10, scale: 1 }), // NEW: Calculated target box based on worker allocation
+  boxNumber: integer("box_number"),
+  calculatedTargetBox: integer("calculated_target_box"), // NEW: Calculated target box based on worker allocation
   eventType: text("event_type").notNull(), // 'scan', 'undo', 'error', 'extra_item'
   scanTime: timestamp("scan_time").default(sql`now()`),
   timeSincePrevious: integer("time_since_previous"), // milliseconds
@@ -101,7 +101,7 @@ export const workerBoxAssignments = pgTable("worker_box_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
   workerId: varchar("worker_id").notNull().references(() => users.id),
-  boxNumber: decimal("box_number", { precision: 10, scale: 1 }),
+  boxNumber: integer("box_number"),
   assignmentType: text("assignment_type").notNull(), // 'ascending', 'descending', 'middle_up', 'middle_down'
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -216,7 +216,7 @@ export const jobAssignments = pgTable("job_assignments", {
 export const checkSessions = pgTable("check_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
-  boxNumber: decimal("box_number", { precision: 10, scale: 1 }).notNull(),
+  boxNumber: integer("box_number").notNull(),
   userId: varchar("user_id").notNull().references(() => users.id),
   status: text("status").notNull().default('active'), // 'active', 'completed', 'cancelled'
   startTime: timestamp("start_time").default(sql`now()`),
@@ -256,7 +256,7 @@ export const checkResults = pgTable("check_results", {
 export const boxHistory = pgTable("box_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
-  boxNumber: decimal("box_number", { precision: 10, scale: 1 }).notNull(),
+  boxNumber: integer("box_number").notNull(),
   action: text("action").notNull(), // 'emptied', 'transferred'
   performedBy: varchar("performed_by").notNull().references(() => users.id),
   targetGroup: text("target_group"), // Group name for transfers
@@ -274,14 +274,14 @@ export const putAsideItems = pgTable("put_aside_items", {
   barCode: text("bar_code").notNull(),
   productName: text("product_name").notNull(),
   customerName: text("customer_name").notNull(),
-  originalBoxNumber: decimal("original_box_number", { precision: 10, scale: 1 }).notNull(),
+  originalBoxNumber: integer("original_box_number").notNull(),
   quantity: integer("quantity").notNull().default(1),
   putAsideBy: varchar("put_aside_by").notNull().references(() => users.id),
   putAsideAt: timestamp("put_aside_at").default(sql`now()`),
   
   // Status tracking
   status: text("status").notNull().default('available'), // 'available', 'reallocated', 'archived'
-  reallocatedToBox: decimal("reallocated_to_box", { precision: 10, scale: 1 }),
+  reallocatedToBox: integer("reallocated_to_box"),
   reallocatedAt: timestamp("reallocated_at"),
   reallocatedBy: varchar("reallocated_by").references(() => users.id),
   
