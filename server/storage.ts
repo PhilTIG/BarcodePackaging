@@ -2829,13 +2829,14 @@ export class DatabaseStorage implements IStorage {
   // Core reallocation algorithm for both Empty and Transfer actions
   async reallocateBoxToNextCustomer(jobId: string, boxNumber: number): Promise<{success: boolean, customerName?: string, message?: string}> {
     try {
-      // Find the next unallocated customer (boxNumber: NULL) in FIFO order
+      // Find the next unallocated customer (boxNumber: NULL, not transferred) in FIFO order
       const unallocatedCustomer = await this.db
         .selectDistinct({ customerName: boxRequirements.customerName })
         .from(boxRequirements)
         .where(and(
           eq(boxRequirements.jobId, jobId),
-          isNull(boxRequirements.boxNumber)
+          isNull(boxRequirements.boxNumber),
+          or(isNull(boxRequirements.isTransferred), eq(boxRequirements.isTransferred, false)) // Exclude transferred customers
         ))
         .orderBy(boxRequirements.customerName) // FIFO order based on original CSV sequence
         .limit(1);
@@ -2860,7 +2861,8 @@ export class DatabaseStorage implements IStorage {
         .where(and(
           eq(boxRequirements.jobId, jobId),
           eq(boxRequirements.customerName, customerName),
-          isNull(boxRequirements.boxNumber)
+          isNull(boxRequirements.boxNumber),
+          or(isNull(boxRequirements.isTransferred), eq(boxRequirements.isTransferred, false)) // Ensure not transferred
         ))
         .returning();
 
@@ -2973,12 +2975,13 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
 
-      // Transfer box contents to group (unassign from box)
+      // Transfer box contents to group (permanently exclude from reallocation)
       await this.db
         .update(boxRequirements)
         .set({ 
           boxNumber: null, // Unassign customer from box
           groupName: targetGroup, // Assign to target group
+          isTransferred: true, // Mark as transferred (permanently excluded from reallocation)
           scannedQty: boxItems.reduce((sum, item) => sum + (item.scannedQty || 0), 0), // Preserve scan progress
           isComplete: false, // Reset completion status
           lastWorkerUserId: null,
