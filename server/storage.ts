@@ -1566,6 +1566,8 @@ export class DatabaseStorage implements IStorage {
     const normalizedBarCode = normalizeBarcodeFormat(barCode);
 
     // Get all box requirements for this item that still need more items
+    // BOX LIMIT FIX: Only consider assigned boxes (box_number IS NOT NULL)
+    // Future "Put Aside" functionality will check unassigned boxes separately
     // Try both original and normalized barcode formats for maximum compatibility
     const availableBoxes = await this.db
       .select()
@@ -1573,7 +1575,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(boxRequirements.jobId, jobId),
         sql`(${boxRequirements.barCode} = ${barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`,
-        sql`${boxRequirements.scannedQty} < ${boxRequirements.requiredQty}`
+        sql`${boxRequirements.scannedQty} < ${boxRequirements.requiredQty}`,
+        isNotNull(boxRequirements.boxNumber) // CRITICAL FIX: Filter out unallocated customers
       ))
       .orderBy(boxRequirements.boxNumber);
 
