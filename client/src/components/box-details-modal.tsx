@@ -11,23 +11,24 @@ import { useUserPreferences } from '@/hooks/use-user-preferences';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import type { BoxRequirement as SchemaBoxRequirement } from '@shared/schema';
+import { formatBoxNumber } from '@/lib/format-box-number';
 
 interface BoxDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  boxNumber: number | null;
+  boxNumber: string | null;
   jobId: string;
   customerName: string;
   totalQty: number;
   scannedQty: number;
   isComplete: boolean;
   lastWorkerColor?: string;
-  onCheckCount?: (boxNumber: number, jobId: string) => void;
+  onCheckCount?: (boxNumber: string, jobId: string) => void;
 }
 
 interface BoxRequirement {
   id: string;
-  boxNumber: number;
+  boxNumber: string;
   customerName: string;
   barCode: string;
   productName: string;
@@ -306,7 +307,7 @@ export function BoxDetailsModal({
                 style={{ backgroundColor: lastWorkerColor || '#6366f1' }}
                 data-testid="large-box-number"
               >
-                {boxNumber}
+                {formatBoxNumber(boxNumber)}
               </div>
             </CardTitle>
           </CardHeader>

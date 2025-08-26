@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { BoxDetailsModal } from "./box-details-modal";
 import { useQuery } from "@tanstack/react-query";
 import { useFilteredBoxData } from "@/hooks/use-filtered-box-data";
+import { formatBoxNumber } from "@/lib/format-box-number";
 
 interface Product {
   id: string;
@@ -307,7 +308,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                         backgroundColor: box.lastWorkerColor
                       } : undefined}
                     >
-                      {box.boxNumber}
+                      {formatBoxNumber(box.boxNumber)}
                     </div>
                     
                     {/* Check status indicator with higher z-index */}

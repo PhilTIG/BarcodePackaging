@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Camera, CameraOff, Package, Undo, Settings, RefreshCw, Target, Clock, TrendingUp, LogOut } from "lucide-react";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { formatBoxNumber } from "@/lib/format-box-number";
 
 interface MobileScannerInterfaceProps {
   currentCustomer?: string;
-  currentBoxNumber?: number;
+  currentBoxNumber?: string;
   assignedColor?: string;
   totalBoxes?: number;
   completedBoxes?: number;
@@ -25,7 +26,7 @@ interface MobileScannerInterfaceProps {
     productName: string;
     barCode: string;
     customerName: string;
-    boxNumber: number;
+    boxNumber: string;
     scanTime?: string;
   } | null;
   onScan: (barcode: string) => void;
@@ -35,7 +36,7 @@ interface MobileScannerInterfaceProps {
   isConnected?: boolean;
   scanError?: string | null;
   scanResult?: {
-    boxNumber: number | null;
+    boxNumber: string | null;
     customerName: string;
     productName: string;
     progress: string | null;
@@ -46,7 +47,7 @@ interface MobileScannerInterfaceProps {
     productName: string;
     barCode: string;
     customerName: string;
-    boxNumber: number | null;
+    boxNumber: string | null;
     timestamp: string;
   }> | null;
   runtimeSingleBoxMode?: boolean;
@@ -277,11 +278,11 @@ export function MobileScannerInterface({
 
               // Show most recent scan result
               if (scanResult && scanResultTime >= lastScanTime) {
-                return scanResult.isExtraItem ? 'EXTRA' : scanResult.boxNumber;
+                return scanResult.isExtraItem ? 'EXTRA' : formatBoxNumber(scanResult.boxNumber);
               } else if (lastScanEvent && currentCustomer !== 'Ready to Scan') {
-                return lastScanEvent.boxNumber;
+                return formatBoxNumber(lastScanEvent.boxNumber);
               } else {
-                return currentCustomer === 'Ready to Scan' ? '-' : (currentBoxNumber || '-');
+                return currentCustomer === 'Ready to Scan' ? '-' : formatBoxNumber(currentBoxNumber || '-');
               }
             })()}
           </div>
