@@ -384,7 +384,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
     return () => {
       disconnect();
     };
-  }, [connect]);
+  }, [user?.id, jobId]); // FIX: Use stable dependencies instead of `connect` function
 
   return {
     isConnected,
