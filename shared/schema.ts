@@ -25,6 +25,7 @@ export const jobs = pgTable("jobs", {
   completedItems: integer("completed_items").default(0),
   csvData: jsonb("csv_data").notNull(),
   jobTypeId: varchar("job_type_id").references(() => jobTypes.id), // NEW
+  boxLimit: integer("box_limit"), // BOX LIMIT FOUNDATION: Optional limit on number of boxes
   createdBy: varchar("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").default(sql`now()`),
   completedAt: timestamp("completed_at"),
@@ -34,7 +35,7 @@ export const jobs = pgTable("jobs", {
 export const boxRequirements = pgTable("box_requirements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
-  boxNumber: integer("box_number").notNull(),
+  boxNumber: integer("box_number"), // BOX LIMIT: Can be NULL for unallocated customers
   customerName: text("customer_name").notNull(),
   barCode: text("bar_code").notNull(),
   productName: text("product_name").notNull(),
@@ -42,6 +43,7 @@ export const boxRequirements = pgTable("box_requirements", {
   scannedQty: integer("scanned_qty").default(0),
   isComplete: boolean("is_complete").default(false),
   groupName: text("group_name"), // NEW: Group information for filtering
+  boxStatus: varchar("box_status", { length: 20 }).default('active'), // BOX STATUS: 'active', 'emptied', 'transferred_to_group'
   
   // Worker tracking fields for color highlighting
   lastWorkerUserId: varchar("last_worker_user_id").references(() => users.id),

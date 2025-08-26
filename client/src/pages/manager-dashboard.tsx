@@ -29,6 +29,11 @@ const uploadFormSchema = z.object({
   name: z.string().min(1, "Job name is required"),
   jobTypeId: z.string().min(1, "Job type is required"),
   description: z.string().optional(),
+  boxLimit: z.string().optional().refine((val) => {
+    if (!val || val === "") return true; // Optional field
+    const num = parseInt(val);
+    return !isNaN(num) && num > 0;
+  }, "Box limit must be a positive number"),
   file: z.instanceof(File).optional(),
 });
 
@@ -209,6 +214,7 @@ export default function ManagerDashboard() {
       name: "",
       jobTypeId: "",
       description: "",
+      boxLimit: "",
     },
   });
 
@@ -242,6 +248,9 @@ export default function ManagerDashboard() {
       formData.append("name", data.name);
       formData.append("jobTypeId", data.jobTypeId);
       formData.append("description", data.description || "");
+      if (data.boxLimit && data.boxLimit.trim()) {
+        formData.append("boxLimit", data.boxLimit.trim());
+      }
 
       const response = await apiRequest("POST", "/api/jobs", formData);
 
@@ -261,10 +270,20 @@ export default function ManagerDashboard() {
       form.reset();
       setSelectedFile(null); // Clear selected file on success
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      toast({
-        title: "CSV uploaded successfully",
-        description: `${data.productsCount} products loaded for ${data.customersCount} customers`,
-      });
+      
+      // Show warning if box limit is less than 80% of customers
+      if (data.warning) {
+        toast({
+          title: "CSV uploaded with warning",
+          description: data.warning,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "CSV uploaded successfully",
+          description: `${data.productsCount} products loaded for ${data.customersCount} customers`,
+        });
+      }
     },
     onError: (error: any) => {
       console.error('Upload error:', error);
@@ -634,7 +653,7 @@ export default function ManagerDashboard() {
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     {/* Form Fields Row - Responsive */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                       <FormField
                         control={form.control}
                         name="name"
@@ -669,6 +688,26 @@ export default function ManagerDashboard() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="boxLimit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Box Limit</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="number" 
+                                min="1" 
+                                placeholder="No Limit" 
+                                data-testid="input-box-limit" 
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}

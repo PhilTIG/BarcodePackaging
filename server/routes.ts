@@ -20,7 +20,6 @@ import csv from "csv-parser";
 import { Readable } from "stream";
 import bcrypt from "bcryptjs";
 import { db } from "./db"; // Assuming db is imported for direct access
-import { products } from "@shared/schema/products"; // Assuming products schema path
 import { eq } from "drizzle-orm"; // Assuming drizzle ORM for queries
 
 // Helper function to get worker performance (placeholder)
@@ -431,6 +430,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Extract and parse box limit
+      const boxLimitStr = req.body.boxLimit;
+      const boxLimit = boxLimitStr && boxLimitStr.trim() ? parseInt(boxLimitStr.trim()) : null;
+      
       // Create job
       const jobData = {
         name: req.body.name || `Job ${new Date().toISOString().split('T')[0]}`,
@@ -439,20 +442,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalProducts: csvData.reduce((sum, row) => sum + row.Qty, 0), // Sum all quantities, not just count rows
         totalCustomers: Array.from(new Set(csvData.map(row => row.CustomName))).length,
         csvData,
+        boxLimit: boxLimit, // BOX LIMIT FOUNDATION: Add box limit to job data
         createdBy: req.user!.id
       };
 
       const job = await storage.createJob(jobData);
 
-      // POC-Compliant Box Assignment: Customers assigned to boxes 1-100 by first appearance order
-      const customerToBoxMap = new Map<string, number>();
+      // BOX LIMIT FOUNDATION: Enhanced Box Assignment with optional limit
+      const uniqueCustomers = Array.from(new Set(csvData.map(row => row.CustomName)));
+      const totalCustomers = uniqueCustomers.length;
+      
+      // Check for box limit warning (< 80% of customers)
+      let warningMessage = null;
+      if (boxLimit && boxLimit < Math.ceil(totalCustomers * 0.8)) {
+        warningMessage = `Warning: Box limit (${boxLimit}) is less than 80% of unique customers (${totalCustomers}). ${totalCustomers - boxLimit} customers will be unallocated and require manual assignment.`;
+      }
+      
+      const customerToBoxMap = new Map<string, number | null>();
       let nextBoxNumber = 1;
 
-      // Build customer-to-box mapping based on first appearance in CSV
-      csvData.forEach(row => {
-        if (!customerToBoxMap.has(row.CustomName)) {
-          customerToBoxMap.set(row.CustomName, nextBoxNumber);
+      // Build customer-to-box mapping: assign boxes up to limit, then NULL
+      uniqueCustomers.forEach((customerName, index) => {
+        if (!boxLimit || nextBoxNumber <= boxLimit) {
+          customerToBoxMap.set(customerName, nextBoxNumber);
           nextBoxNumber++;
+        } else {
+          // BOX LIMIT: Set to NULL for customers beyond the limit
+          customerToBoxMap.set(customerName, null);
         }
       });
 
@@ -472,7 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return barCode;
       };
 
-      // Create products with POC-compliant box assignments
+      // Create products with BOX LIMIT box assignments (may be NULL)
       const products = csvData.map((row) => ({
         jobId: job.id,
         barCode: normalizeBarcodeFormat(row.BarCode), // Normalize barcode format
@@ -480,7 +496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         qty: row.Qty,
         customerName: row.CustomName,
         groupName: row.Group || null,
-        boxNumber: customerToBoxMap.get(row.CustomName)! // Assign based on customer first appearance
+        boxNumber: customerToBoxMap.get(row.CustomName) || null // May be NULL for unallocated customers
       }));
 
       // Create box requirements directly (products table eliminated)
@@ -503,6 +519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         products: products,
         productsCount: jobData.totalProducts, // Use total quantity sum, not CSV row count
         customersCount: jobData.totalCustomers,
+        warning: warningMessage, // BOX LIMIT WARNING: Send warning if limit < 80% of customers
         message: 'CSV uploaded and job created successfully' 
       });
     } catch (error: any) {
