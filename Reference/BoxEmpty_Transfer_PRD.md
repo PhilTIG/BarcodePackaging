@@ -52,7 +52,8 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 - **Database Update**: Change `boxNumber` from `NULL` to the emptied box number for all products of that customer
 - **Transition**: Seamless - no "empty" status, direct assignment to new customer
 - **Notification**: Simple notification to user about reallocation ("Box 5 now assigned to Customer ABC")
-- **Worker Impact**: Workers continue following their allocation patterns with newly assigned boxes
+- **Worker Impact**: Workers skip NULL boxes and recalculate their sequence dynamically
+- **Box Number Retention**: Emptied/transferred boxes retain their box number for history tracking
 
 #### 1.3 Box History System
 - **Scope**: Show all previous contents for the specific box number across the job
@@ -103,12 +104,14 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 - **Location**: Optional field in job creation/CSV upload form ("Max Boxes: [50]" or "No Limit")
 - **Default**: "No Limit" - system creates boxes for all customers as before
 - **Function**: Hard limit that stops creation of new boxes for customers beyond the limit
-- **Processing**: Continues processing CSV but sets `boxNumber` to `NULL` for unallocated customers
-- **Validation**: Shows warning if limit is much smaller than total unique customers
+- **Processing Flow**: Build full customerToBoxMap, then modify boxRequirements creation to set `boxNumber: null` for excess customers
+- **Warning Threshold**: Show warning if limit is less than 80% of total unique customers (e.g., 40 boxes for 50 customers)
+- **Warning Timing**: After CSV is uploaded and we know total unique customers
 - **Storage**: `box_limit INTEGER DEFAULT NULL` in jobs table
 - **Unallocated Storage**: Customers beyond limit stored as `boxNumber: NULL` in `box_requirements`
 
 #### 4.2 Manager Dashboard Integration
+- **Location**: When manager clicks on a job with unallocated customers, show in job management area
 - **Unallocated Customers Section**: New section showing customers with `boxNumber: NULL`
 - **Customer Details**: Display each unallocated customer with their required products
 - **Product Preview**: Similar to Box Details screen, showing BarCode, Product Name, Qty
@@ -134,7 +137,12 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 - **Job Status**: Available for any active or completed job
 - **Role-based**: Managers and Supervisors have automatic access
 
-#### 6.2 Put Aside Notifications
+#### 6.2 Worker Allocation Pattern Adaptation
+- **Dynamic Recalculation**: Workers skip NULL boxes and recalculate their sequence dynamically
+- **Real-time Updates**: When boxes get assigned from NULL to real customers, worker patterns adapt
+- **Box Availability**: Workers see newly available boxes immediately in their allocation sequence
+
+#### 6.3 Put Aside Notifications
 - **Display**: Count of items with available boxes on worker screen
 - **Interaction**: Click for details modal showing available items
 - **Action**: Standard scanning process - direct worker to appropriate box
