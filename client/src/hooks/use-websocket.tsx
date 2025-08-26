@@ -155,19 +155,20 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         }
         
         // Update worker performance data directly
-        if (message.data.performance && message.data.scanEvent?.userId) {
-          queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", message.data.scanEvent.userId], {
+        if (message.data.performance && (message.data as any).scanEvent && (message.data as any).scanEvent.userId) {
+          queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", (message.data as any).scanEvent.userId], {
             performance: message.data.performance
           });
         }
         
         // Trigger box highlighting update for real-time visual feedback
-        if (onWorkerBoxUpdate && message.data.scanEvent?.boxNumber && message.data.scanEvent?.userId) {
+        if (onWorkerBoxUpdate && (message.data as any).scanEvent && (message.data as any).scanEvent.boxNumber && (message.data as any).scanEvent.userId) {
+          const scanEvent = (message.data as any).scanEvent;
           onWorkerBoxUpdate(
-            Number(message.data.scanEvent.boxNumber),
-            String(message.data.scanEvent.userId),
-            message.data.scanEvent.workerColor || '',
-            message.data.scanEvent.workerStaffId || ''
+            Number(scanEvent.boxNumber),
+            String(scanEvent.userId),
+            scanEvent.workerColor || '',
+            scanEvent.workerStaffId || ''
           );
         }
         
@@ -339,6 +340,17 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
       case "box_transferred":
         // Handle box transfer events - refresh specific box data only
         console.log("[WebSocket] Box transfer event received:", message.data);
+        console.log("[WebSocket] Box transferred - invalidating cache for instant UI refresh");
+        
+        // Invalidate box-specific queries to refresh UI immediately
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+        break;
+      
+      case "box_emptied":
+        // Handle box empty events - refresh specific box data only
+        console.log("[WebSocket] Box empty event received:", message.data);
+        console.log("[WebSocket] Box emptied - invalidating cache for instant UI refresh");
         
         // Invalidate box-specific queries to refresh UI immediately
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
