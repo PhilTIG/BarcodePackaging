@@ -132,19 +132,22 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       filteredScannedQty?: number;
     }} = {};
 
-    products.forEach(product => {
-      if (!boxes[product.boxNumber]) {
-        boxes[product.boxNumber] = {
-          boxNumber: product.boxNumber,
-          customerName: product.customerName,
-          totalQty: 0,
-          scannedQty: 0,
-          isComplete: false,
-          lastWorkerColor: product.lastWorkerColor,
-          filteredTotalQty: 0,
-          filteredScannedQty: 0,
-        };
-      }
+    // BOX LIMIT FIX: Filter out NULL boxNumber products as backup protection
+    products
+      .filter(product => product.boxNumber !== null && product.boxNumber !== undefined)
+      .forEach(product => {
+        if (!boxes[product.boxNumber]) {
+          boxes[product.boxNumber] = {
+            boxNumber: product.boxNumber,
+            customerName: product.customerName,
+            totalQty: 0,
+            scannedQty: 0,
+            isComplete: false,
+            lastWorkerColor: product.lastWorkerColor,
+            filteredTotalQty: 0,
+            filteredScannedQty: 0,
+          };
+        }
 
       boxes[product.boxNumber].totalQty += product.qty;
       boxes[product.boxNumber].scannedQty += product.scannedQty;

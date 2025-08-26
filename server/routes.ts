@@ -1541,6 +1541,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // BOX LIMIT: Get unallocated customers for Customer Queue
+  app.get('/api/jobs/:id/unallocated-customers', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const unallocatedCustomers = await storage.getUnallocatedCustomers(req.params.id);
+      res.json({ customers: unallocatedCustomers });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch unallocated customers' });
+    }
+  });
+
   // Extra Items endpoints (NEW)
   app.get('/api/jobs/:id/extra-items', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
     try {

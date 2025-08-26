@@ -59,7 +59,7 @@ import {
   type InsertPutAsideItem
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, ne, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, or, ne, desc, sql, inArray, isNotNull } from "drizzle-orm";
 
 /**
  * Utility function to normalize barcodes by converting scientific notation to full numeric strings
@@ -115,6 +115,9 @@ export interface IStorage {
   getBoxRequirementsByBoxNumber(jobId: string, boxNumber: number): Promise<BoxRequirement[]>;
   findNextTargetBox(barCode: string, jobId: string, workerId: string): Promise<number | null>;
   updateBoxRequirementScannedQty(boxNumber: number, barCode: string, jobId: string, workerId: string, workerColor: string): Promise<BoxRequirement | undefined>;
+  
+  // BOX LIMIT: Unallocated customers methods
+  getUnallocatedCustomers(jobId: string): Promise<{ customerName: string; totalItems: number; productCount: number; }[]>;
   // Migration method removed - not needed after full migration completed
 
   // Scan session methods
@@ -523,6 +526,7 @@ export class DatabaseStorage implements IStorage {
       const job = await this.getJobById(id);
       
       // OPTIMIZED: Use direct database aggregation instead of loading all records
+      // BOX LIMIT FIX: Filter out NULL boxNumber entries entirely
       const [progressStats] = await this.db
         .select({
           totalItems: sql<number>`COALESCE(SUM(${boxRequirements.requiredQty}), 0)`,
@@ -531,12 +535,13 @@ export class DatabaseStorage implements IStorage {
           completedBoxes: sql<number>`COUNT(DISTINCT CASE WHEN ${boxRequirements.isComplete} = true THEN ${boxRequirements.boxNumber} END)`
         })
         .from(boxRequirements)
-        .where(eq(boxRequirements.jobId, id));
+        .where(and(eq(boxRequirements.jobId, id), isNotNull(boxRequirements.boxNumber)));
 
       const totalItems = progressStats.totalItems || 0;
       const scannedItems = progressStats.scannedItems || 0;
       
       // Get box data efficiently with aggregation query
+      // BOX LIMIT FIX: Filter out NULL boxNumber entries entirely
       const boxData = await this.db
         .select({
           customerName: boxRequirements.customerName,
@@ -547,7 +552,7 @@ export class DatabaseStorage implements IStorage {
           lastWorkerColor: sql<string>`MAX(${boxRequirements.lastWorkerColor})`
         })
         .from(boxRequirements)
-        .where(eq(boxRequirements.jobId, id))
+        .where(and(eq(boxRequirements.jobId, id), isNotNull(boxRequirements.boxNumber)))
         .groupBy(boxRequirements.customerName, boxRequirements.boxNumber);
 
       const jobProducts = boxData;
@@ -2351,6 +2356,34 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error('Error generating QA summary:', error);
+      throw error;
+    }
+  }
+
+  // ========================
+  // BOX LIMIT: UNALLOCATED CUSTOMERS METHODS  
+  // ========================
+
+  async getUnallocatedCustomers(jobId: string): Promise<{ customerName: string; totalItems: number; productCount: number; }[]> {
+    try {
+      const unallocatedData = await this.db
+        .select({
+          customerName: boxRequirements.customerName,
+          totalItems: sql<number>`SUM(${boxRequirements.requiredQty})`,
+          productCount: sql<number>`COUNT(*)`
+        })
+        .from(boxRequirements)
+        .where(and(eq(boxRequirements.jobId, jobId), sql`${boxRequirements.boxNumber} IS NULL`))
+        .groupBy(boxRequirements.customerName)
+        .orderBy(boxRequirements.customerName);
+
+      return unallocatedData.map(item => ({
+        customerName: item.customerName,
+        totalItems: item.totalItems || 0,
+        productCount: item.productCount || 0
+      }));
+    } catch (error) {
+      console.error(`[ERROR] getUnallocatedCustomers failed for job ${jobId}:`, error);
       throw error;
     }
   }

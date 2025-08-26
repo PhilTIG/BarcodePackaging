@@ -10,6 +10,7 @@ import { Settings, LogOut, Users, Package, ChevronLeft } from "lucide-react";
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { PerformanceDashboard } from "@/components/performance-dashboard";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
+import { CustomerQueueModal } from "@/components/customer-queue-modal";
 import { ItemFilter } from "@/components/item-filter";
 import { GroupFilter } from "@/components/group-filter";
 import { useFilteredBoxData } from "@/hooks/use-filtered-box-data";
@@ -20,6 +21,7 @@ export default function SupervisorView() {
   const [, setLocation] = useLocation();
   const { user, isLoading, logout } = useAuth();
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
+  const [isCustomerQueueModalOpen, setIsCustomerQueueModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
@@ -347,7 +349,7 @@ export default function SupervisorView() {
           </CardHeader>
           <CardContent>
             <Progress value={completionPercentage} className="h-4 mb-4" />
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Items: {job.completedItems}/{job.totalProducts}</span>
                 <div className="text-xs text-gray-500">({completionPercentage}% complete)</div>
@@ -366,6 +368,20 @@ export default function SupervisorView() {
                 >
                   <span className="text-gray-600">Extra Items: {progress?.extraItemsCount || 0}</span>
                   <div className="text-xs text-gray-500">Click to view details</div>
+                </Button>
+              </div>
+              
+              {/* BOX LIMIT: Customer Queue Button */}
+              <div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-auto p-2 flex flex-col items-start"
+                  onClick={() => setIsCustomerQueueModalOpen(true)}
+                  data-testid="button-customer-queue"
+                >
+                  <span className="text-gray-600">Customer Queue</span>
+                  <div className="text-xs text-gray-500">Unallocated customers</div>
                 </Button>
               </div>
             </div>
@@ -440,6 +456,13 @@ export default function SupervisorView() {
         jobId={jobId!}
       />
 
+      {/* BOX LIMIT: Customer Queue Modal */}
+      <CustomerQueueModal 
+        isOpen={isCustomerQueueModalOpen}
+        onClose={() => setIsCustomerQueueModalOpen(false)}
+        jobId={jobId!}
+        jobName={job?.name}
+      />
 
     </div>
   );
