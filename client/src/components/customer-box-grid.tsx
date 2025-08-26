@@ -123,9 +123,10 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       // Apply archived customer filtering to filtered data too
       if (!showArchivedCustomers) {
         return sortedFilteredBoxes.filter(box => {
-          // Keep only boxes that are whole numbers (no decimal part or ends with .0)
-          const isWholeNumber = box.boxNumber % 1 === 0;
-          return isWholeNumber;
+          // Keep only boxes without decimal points (exclude .0, .1, etc.)
+          const hasDecimal = box.boxNumber.toString().includes('.');
+          console.log(`[Filter Debug] Box ${box.boxNumber} - hasDecimal: ${hasDecimal}, keeping: ${!hasDecimal}`);
+          return !hasDecimal;
         });
       }
       
@@ -186,9 +187,10 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     // Filter out archived customers (decimal boxes) if toggle is off
     if (!showArchivedCustomers) {
       const filtered = sortedBoxes.filter(box => {
-        // Keep only boxes that are whole numbers (no decimal part or ends with .0)
-        const isWholeNumber = box.boxNumber % 1 === 0;
-        return isWholeNumber;
+        // Keep only boxes without decimal points (exclude .0, .1, etc.)
+        const hasDecimal = box.boxNumber.toString().includes('.');
+        console.log(`[Filter Debug] Box ${box.boxNumber} - hasDecimal: ${hasDecimal}, keeping: ${!hasDecimal}`);
+        return !hasDecimal;
       });
       console.log(`[Toggle Filter] Filtered ${sortedBoxes.length} -> ${filtered.length} boxes (removed ${sortedBoxes.length - filtered.length} decimal boxes)`);
       return filtered;
@@ -260,7 +262,13 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         const completionPercentage = displayTotalQty > 0 ? Math.round((displayScannedQty / displayTotalQty) * 100) : 0;
         
         // Check if this is an archived customer (decimal box number)
-        const isArchivedCustomer = showArchivedCustomers && (box.boxNumber % 1 !== 0);
+        // Include .0 boxes (like 1.0, 2.0) as archived customers since they come from transfers
+        const isArchivedCustomer = showArchivedCustomers && (box.boxNumber.toString().includes('.'));
+        
+        // Debug logging
+        if (box.boxNumber.toString().includes('.')) {
+          console.log(`[Box Debug] Box ${box.boxNumber} (${box.customerName}) - isArchived: ${isArchivedCustomer}, showArchived: ${showArchivedCustomers}`);
+        }
         
         // POC-style highlighting with worker color support
         const isLastScanned = lastScannedBoxNumber === box.boxNumber;
