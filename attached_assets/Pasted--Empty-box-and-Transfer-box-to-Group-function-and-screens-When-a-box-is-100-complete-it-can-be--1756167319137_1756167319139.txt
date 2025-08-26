@@ -1,0 +1,28 @@
+**Empty box and Transfer box to Group function and screens
+
+When a box is 100% complete it can be "Emptied". When clicking into a box a manager or supervisor or worker (with a setting allowing them to empty a box). They will see this.
+* An "Empty" button if no groups exist for the CSV file. This will perform a simple function of emptying the box and setting it to an "Empty" status. The box details view will show a history section below that allows the user to see any previous box contents for the Job. When they click on this they will see the contents of that box with the title stating the time it got emptied at the top and a back button to return the user to the current box. In a future scenario we will be able to reuse this box to pack into (do not do this but take it into account so we can do it in the future).
+* If Groups exist in the job CSV then we will be using the word "Transfer" instead of "Empty". The content of the box will be transferred to the group name it is allocated to. The same history function is to exist for these transferred boxes. The History is to state which group the box got transferred to. Once the box is transferred it is also to be marked as empty.
+
+**Box limit concept
+A Box Limit - value input is to be presented to the Manager when adding a new CSV to the system. If this new field is left empty then it will generate unlimited boxes. If it has a value allocated, then it will limit the box allocation to that value. If the data has more boxes to be allocated then once a box has been emptied in the system the next available CustomName (Box) from the CSV data is to be allocated to it.
+
+**Box Limit Extra logic.
+* If a scanned item has been placed in all available boxes but can be allocated to unallocated customerNames then we should state "Put Aside - <CustomName> and not count the scan as an Extra item or for a box. (The user will be able to scan the item again once more boxes have rotated through the system.
+* If a scanned item cannot be allocated to the available boxes or unallocated customers then it is an Extra item and should be handled the same as Extra items logic.
+
+**Settings
+* Workers can have a setting that allows them to perform Empty and Transfer functions. If this is switched on then workers can see the Empty and Transfer button on the Box Details screen and perform the button's function.
+****** Manager - Box Limit checkbox and value input. A new setting is to be added to the Manager's setting section where they can limit the 
+
+**Group screen Monitor
+A new Group screen monitor is to be built. This will contain all the groups that have been included in the CSV file. 
+Each group will contain the transferred boxes that are allocated to the group in a grid format. The grid will contain the following:
+* CustomName
+* Box number used to pack
+* Item Qty
+* Quality check icon
+* Worker who packed it (worker StaffId)
+* Time and date
+
+Group Screen Filter - This screen should have  Group Filter at the top that allows the user to filter for all the Groups that they select.
