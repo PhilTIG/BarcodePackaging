@@ -64,6 +64,70 @@ The application incorporates sophisticated performance tracking, including a sco
 - **Scope**: Active jobs only, 7-day activity window, real-time WebSocket updates, tablet-optimized design
 - **Implementation Plan**: 4-phase rollout (Backend → Main Dashboard → Dedicated Dashboard → Advanced Features)
 
+**Box Empty/Transfer System (August 2025 - Implementation Pending)**:
+- **Core Business Logic**: CSV structure determines system behavior automatically with no user choices
+- **CSV Group Detection**: System checks for literal "Group" column in uploaded CSV to determine mode
+- **Transfer Mode**: When CSV contains "Group" column, completed boxes are transferred to predetermined groups
+- **Empty Mode**: When CSV has no "Group" column, completed boxes are emptied for reuse
+- **1:1 CustomName-Group Mapping**: Each unique CustomName maps to exactly one group name (no conflicts)
+- **Box Completion Logic**: When box reaches 100% completion, all scanned items belong to same CustomName
+- **Automatic Target Detection**: System automatically determines target group based on CustomName in completed box
+- **User Interface**: Simple confirmation dialog showing "Transfer this box to [GroupName]" or "Empty this box"
+- **Box Limit Feature**: New job creation parameter for maximum active boxes with automatic queuing
+- **Automatic Reallocation**: When box is emptied/transferred, next queued CustomName automatically allocated
+- **Box Number Persistence**: Boxes keep same number but reset contents for new CustomName allocation
+- **History Tracking**: Complete job history of all emptied/transferred boxes displayed in box details
+- **Real-time Updates**: WebSocket events for all box operations across connected interfaces
+- **Organizational Purpose**: Purely for tracking/reporting, no impact on scanning behavior
+- **Algorithm Integration**: New allocations follow existing worker allocation patterns (ascending, descending, middle up/down)
+
+**Box Empty/Transfer Implementation Task List:**
+
+**Phase 1: Database and Core Logic**
+1. Update database schema to track box operations and history
+2. Add box limit field to job creation/management
+3. Implement CSV group column detection during upload
+4. Create storage methods for box empty/transfer operations
+5. Add automatic CustomName-to-Group mapping logic
+
+**Phase 2: Box Limit and Queuing System**
+6. Implement box limit enforcement during job creation
+7. Create CustomName queuing system for when box limit reached
+8. Add automatic box reallocation logic when boxes become available
+9. Integrate with existing worker allocation algorithms (ascending, descending, middle up/down)
+
+**Phase 3: Box Completion and Action Logic**
+10. Detect when box reaches 100% completion
+11. Determine CustomName in completed box from scanned items
+12. Implement automatic action determination (Transfer vs Empty based on CSV Group column)
+13. Add automatic target group detection for Transfer mode
+
+**Phase 4: User Interface**
+14. Create simple confirmation dialog for box operations
+15. Display "Transfer this box to [GroupName]" or "Empty this box" messaging
+16. Add box operation buttons to completed boxes (managers/supervisors only)
+17. Implement one-click confirmation with no user input fields
+
+**Phase 5: History and Tracking**
+18. Create history tracking system for all box operations
+19. Add history display section at bottom of box details screen
+20. Show "Emptied" or "Transferred out" sections based on job mode
+21. Display format: CustomName and destination information for entire job
+
+**Phase 6: Real-time Updates and Integration**
+22. Implement WebSocket events for box empty/transfer operations
+23. Broadcast updates to all connected interfaces
+24. Ensure box number persistence with content reset
+25. Test integration with existing scanning and allocation systems
+
+**Critical Requirements:**
+- No user choices or inputs - fully automated based on CSV structure
+- Each CustomName maps to exactly one group (1:1 relationship)
+- Box keeps same number but resets contents for new allocation
+- Purely organizational tracking - no impact on scanning behavior
+- Real-time updates across all interfaces
+- Integration with existing worker allocation patterns
+
 ### Mobile and Hardware Support
 
 The design is optimized for warehouse environments, featuring responsive layouts for tablets and mobile devices. It supports both camera-based and hardware HID barcode scanners. The UI is touch-friendly with large targets.
