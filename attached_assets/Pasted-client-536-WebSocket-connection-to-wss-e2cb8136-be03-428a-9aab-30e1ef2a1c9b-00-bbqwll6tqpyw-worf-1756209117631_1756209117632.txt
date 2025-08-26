@@ -1,0 +1,399 @@
+client:536  WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/?token=VJ9iPFS5Tk-j' failed: Error during WebSocket handshake: Unexpected response code: 400
+setupWebSocket @ client:536
+(anonymous) @ client:531
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+client:536  Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=VJ9iPFS5Tk-j' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555
+react-dom.development.js:29895 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+websocket-error-filter.ts:58 [WebSocket Error Filter] Development tool WebSocket error suppression enabled
+use-websocket.tsx:354 [WebSocket] Manual disconnection requested
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job d713c9cb-70ff-4b41-ba27-b95efe8403dd
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 70837a12-7091-46c8-b8e2-f9831ab3e57d
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job f2c05683-0c17-420a-b02e-a012be9d6f06
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: '1kdyt', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: '1kdyt', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d'}
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: 'l85ap', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: 'l85ap', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: '26e1bbc7-2f35-40b3-a15a-30fad19dac33'}
+use-websocket.tsx:354 [WebSocket] Manual disconnection requested
+use-websocket.tsx:354 [WebSocket] Manual disconnection requested
+use-websocket.tsx:354 [WebSocket] Manual disconnection requested
+use-websocket.tsx:363  WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+disconnect @ use-websocket.tsx:363
+(anonymous) @ use-websocket.tsx:376
+safelyCallDestroy @ react-dom.development.js:22971
+commitHookEffectListUnmount @ react-dom.development.js:23139
+commitPassiveUnmountInsideDeletedTreeOnFiber @ react-dom.development.js:25137
+commitPassiveUnmountEffectsInsideOfDeletedTree_begin @ react-dom.development.js:25087
+commitPassiveUnmountEffects_begin @ react-dom.development.js:24995
+commitPassiveUnmountEffects @ react-dom.development.js:24980
+flushPassiveEffectsImpl @ react-dom.development.js:27077
+flushPassiveEffects @ react-dom.development.js:27023
+commitRootImpl @ react-dom.development.js:26974
+commitRoot @ react-dom.development.js:26721
+performSyncWorkOnRoot @ react-dom.development.js:26156
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+use-websocket.tsx:354 [WebSocket] Manual disconnection requested
+use-websocket.tsx:363  WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+disconnect @ use-websocket.tsx:363
+(anonymous) @ use-websocket.tsx:376
+safelyCallDestroy @ react-dom.development.js:22971
+commitHookEffectListUnmount @ react-dom.development.js:23139
+commitPassiveUnmountInsideDeletedTreeOnFiber @ react-dom.development.js:25137
+commitPassiveUnmountEffectsInsideOfDeletedTree_begin @ react-dom.development.js:25087
+commitPassiveUnmountEffects_begin @ react-dom.development.js:24995
+commitPassiveUnmountEffects @ react-dom.development.js:24980
+flushPassiveEffectsImpl @ react-dom.development.js:27077
+flushPassiveEffects @ react-dom.development.js:27023
+commitRootImpl @ react-dom.development.js:26974
+commitRoot @ react-dom.development.js:26721
+performSyncWorkOnRoot @ react-dom.development.js:26156
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+use-websocket.tsx:354 [WebSocket] Manual disconnection requested
+use-websocket.tsx:363  WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+disconnect @ use-websocket.tsx:363
+(anonymous) @ use-websocket.tsx:376
+safelyCallDestroy @ react-dom.development.js:22971
+commitHookEffectListUnmount @ react-dom.development.js:23139
+commitPassiveUnmountInsideDeletedTreeOnFiber @ react-dom.development.js:25137
+commitPassiveUnmountEffectsInsideOfDeletedTree_begin @ react-dom.development.js:25087
+commitPassiveUnmountEffects_begin @ react-dom.development.js:24995
+commitPassiveUnmountEffects @ react-dom.development.js:24980
+flushPassiveEffectsImpl @ react-dom.development.js:27077
+flushPassiveEffects @ react-dom.development.js:27023
+commitRootImpl @ react-dom.development.js:26974
+commitRoot @ react-dom.development.js:26721
+performSyncWorkOnRoot @ react-dom.development.js:26156
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 26e1bbc7-2f35-40b3-a15a-30fad19dac33
+websocket-error-filter.ts:47  [WebSocket] Connection error: Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}
+filteredConsoleError @ websocket-error-filter.ts:47
+wsRef.current.onerror @ use-websocket.tsx:114
+websocket-error-filter.ts:47  [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filter.ts:47
+wsRef.current.onerror @ use-websocket.tsx:115
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+use-websocket.tsx:105 [WebSocket] Scheduling reconnection in 3000ms
+websocket-error-filter.ts:47  [WebSocket] Connection error: Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}
+filteredConsoleError @ websocket-error-filter.ts:47
+wsRef.current.onerror @ use-websocket.tsx:114
+websocket-error-filter.ts:47  [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filter.ts:47
+wsRef.current.onerror @ use-websocket.tsx:115
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+use-websocket.tsx:105 [WebSocket] Scheduling reconnection in 3000ms
+websocket-error-filter.ts:47  [WebSocket] Connection error: Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}
+filteredConsoleError @ websocket-error-filter.ts:47
+wsRef.current.onerror @ use-websocket.tsx:114
+websocket-error-filter.ts:47  [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filter.ts:47
+wsRef.current.onerror @ use-websocket.tsx:115
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+use-websocket.tsx:105 [WebSocket] Scheduling reconnection in 3000ms
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 26e1bbc7-2f35-40b3-a15a-30fad19dac33
+customer-box-grid.tsx:104 [CheckStatus] Box 2: discrepancies=0, corrections=false
+customer-box-grid.tsx:104 [CheckStatus] Box 2: discrepancies=0, corrections=false
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: 'hd5cdc', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: 'hd5cdc', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: '26e1bbc7-2f35-40b3-a15a-30fad19dac33'}
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job d713c9cb-70ff-4b41-ba27-b95efe8403dd
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 70837a12-7091-46c8-b8e2-f9831ab3e57d
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job f2c05683-0c17-420a-b02e-a012be9d6f06
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: '1znpdt', message: 'WebSocket connection established successfully'}
+customer-box-grid.tsx:104 [CheckStatus] Box 2: discrepancies=0, corrections=false
+customer-box-grid.tsx:104 [CheckStatus] Box 2: discrepancies=0, corrections=false
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: '1znpdt', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: '26e1bbc7-2f35-40b3-a15a-30fad19dac33'}
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: 'sc683y', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: 'sc683y', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: 'd713c9cb-70ff-4b41-ba27-b95efe8403dd'}
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: 'xijg0c', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: 'xijg0c', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: '70837a12-7091-46c8-b8e2-f9831ab3e57d'}
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: 'fgt038', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: 'fgt038', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: 'f2c05683-0c17-420a-b02e-a012be9d6f06'}
+customer-box-grid.tsx:104 [CheckStatus] Box 2: discrepancies=0, corrections=false
+customer-box-grid.tsx:104 [CheckStatus] Box 2: discrepancies=0, corrections=false
+box-details-modal.tsx:157 [BoxModal] Box 1 workers: [{…}]
+websocket-error-filter.ts:47  Warning: React has detected a change in the order of Hooks called by BoxDetailsModal. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://reactjs.org/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+1. useContext                 useContext
+2. useContext                 useContext
+3. useState                   useState
+4. useEffect                  useEffect
+5. useContext                 useContext
+6. useContext                 useContext
+7. useContext                 useContext
+8. useContext                 useContext
+9. useEffect                  useEffect
+10. useState                  useState
+11. useCallback               useCallback
+12. useSyncExternalStore      useSyncExternalStore
+13. useEffect                 useEffect
+14. useContext                useContext
+15. useContext                useContext
+16. useContext                useContext
+17. useEffect                 useEffect
+18. useState                  useState
+19. useCallback               useCallback
+20. useSyncExternalStore      useSyncExternalStore
+21. useEffect                 useEffect
+22. undefined                 useContext
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    at BoxDetailsModal (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/box-details-modal.tsx:30:3)
+    at div
+    at CustomerBoxGrid (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/customer-box-grid.tsx:27:77)
+    at div
+    at _c9 (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at div
+    at SupervisorView (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/pages/supervisor-view.tsx:37:21)
+    at Route (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:323:16)
+    at Switch (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:379:17)
+    at Router
+    at Provider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=e2bbd14a:38:15)
+    at TooltipProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e2bbd14a:64:5)
+    at AuthProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-auth.tsx:22:32)
+    at ThemeProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/theme-provider.tsx:20:33)
+    at UserPreferencesProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-user-preferences.tsx:37:43)
+    at ErrorProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/lib/error-context.tsx:20:33)
+    at QueryClientProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e2bbd14a:2805:3)
+    at App
+filteredConsoleError @ websocket-error-filter.ts:47
+printWarning @ react-dom.development.js:86
+error @ react-dom.development.js:60
+warnOnHookMismatchInDev @ react-dom.development.js:15401
+updateHookTypesDev @ react-dom.development.js:15360
+useContext @ react-dom.development.js:17037
+useContext @ react.development.js:1618
+useQueryClient @ QueryClientProvider.tsx:11
+useMutation @ useMutation.ts:24
+BoxDetailsModal @ box-details-modal.tsx:202
+renderWithHooks @ react-dom.development.js:15486
+updateFunctionComponent @ react-dom.development.js:19617
+beginWork @ react-dom.development.js:21640
+beginWork$1 @ react-dom.development.js:27465
+performUnitOfWork @ react-dom.development.js:26596
+workLoopSync @ react-dom.development.js:26505
+renderRootSync @ react-dom.development.js:26473
+performSyncWorkOnRoot @ react-dom.development.js:26124
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+box-details-modal.tsx:157 [BoxModal] Box 1 workers: [{…}]
+react-dom.development.js:15688  Uncaught Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (react-dom.development.js:15688:13)
+    at updateReducer (react-dom.development.js:15749:14)
+    at updateState (react-dom.development.js:16185:10)
+    at Object.useState (react-dom.development.js:17096:16)
+    at Object.useState (react.development.js:1622:21)
+    at useMutation (useMutation.ts:26:28)
+    at BoxDetailsModal (box-details-modal.tsx:202:28)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at updateFunctionComponent (react-dom.development.js:19617:20)
+    at beginWork (react-dom.development.js:21640:16)
+updateWorkInProgressHook @ react-dom.development.js:15688
+updateReducer @ react-dom.development.js:15749
+updateState @ react-dom.development.js:16185
+useState @ react-dom.development.js:17096
+useState @ react.development.js:1622
+useMutation @ useMutation.ts:26
+BoxDetailsModal @ box-details-modal.tsx:202
+renderWithHooks @ react-dom.development.js:15486
+updateFunctionComponent @ react-dom.development.js:19617
+beginWork @ react-dom.development.js:21640
+callCallback2 @ react-dom.development.js:4164
+invokeGuardedCallbackDev @ react-dom.development.js:4213
+invokeGuardedCallback @ react-dom.development.js:4277
+beginWork$1 @ react-dom.development.js:27490
+performUnitOfWork @ react-dom.development.js:26596
+workLoopSync @ react-dom.development.js:26505
+renderRootSync @ react-dom.development.js:26473
+performSyncWorkOnRoot @ react-dom.development.js:26124
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+customer-box-grid.tsx:104 [CheckStatus] Box 2: discrepancies=0, corrections=false
+customer-box-grid.tsx:104 [CheckStatus] Box 2: discrepancies=0, corrections=false
+box-details-modal.tsx:157 [BoxModal] Box 1 workers: [{…}]
+box-details-modal.tsx:157 [BoxModal] Box 1 workers: [{…}]
+react-dom.development.js:15688  Uncaught Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (react-dom.development.js:15688:13)
+    at updateReducer (react-dom.development.js:15749:14)
+    at updateState (react-dom.development.js:16185:10)
+    at Object.useState (react-dom.development.js:17096:16)
+    at Object.useState (react.development.js:1622:21)
+    at useMutation (useMutation.ts:26:28)
+    at BoxDetailsModal (box-details-modal.tsx:202:28)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at updateFunctionComponent (react-dom.development.js:19617:20)
+    at beginWork (react-dom.development.js:21640:16)
+updateWorkInProgressHook @ react-dom.development.js:15688
+updateReducer @ react-dom.development.js:15749
+updateState @ react-dom.development.js:16185
+useState @ react-dom.development.js:17096
+useState @ react.development.js:1622
+useMutation @ useMutation.ts:26
+BoxDetailsModal @ box-details-modal.tsx:202
+renderWithHooks @ react-dom.development.js:15486
+updateFunctionComponent @ react-dom.development.js:19617
+beginWork @ react-dom.development.js:21640
+callCallback2 @ react-dom.development.js:4164
+invokeGuardedCallbackDev @ react-dom.development.js:4213
+invokeGuardedCallback @ react-dom.development.js:4277
+beginWork$1 @ react-dom.development.js:27490
+performUnitOfWork @ react-dom.development.js:26596
+workLoopSync @ react-dom.development.js:26505
+renderRootSync @ react-dom.development.js:26473
+recoverFromConcurrentError @ react-dom.development.js:25889
+performSyncWorkOnRoot @ react-dom.development.js:26135
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+websocket-error-filter.ts:47  The above error occurred in the <BoxDetailsModal> component:
+
+    at BoxDetailsModal (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/box-details-modal.tsx:30:3)
+    at div
+    at CustomerBoxGrid (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/customer-box-grid.tsx:27:77)
+    at div
+    at _c9 (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at div
+    at SupervisorView (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/pages/supervisor-view.tsx:37:21)
+    at Route (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:323:16)
+    at Switch (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:379:17)
+    at Router
+    at Provider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=e2bbd14a:38:15)
+    at TooltipProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e2bbd14a:64:5)
+    at AuthProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-auth.tsx:22:32)
+    at ThemeProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/theme-provider.tsx:20:33)
+    at UserPreferencesProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-user-preferences.tsx:37:43)
+    at ErrorProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/lib/error-context.tsx:20:33)
+    at QueryClientProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e2bbd14a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+filteredConsoleError @ websocket-error-filter.ts:47
+logCapturedError @ react-dom.development.js:18704
+update.callback @ react-dom.development.js:18737
+callCallback @ react-dom.development.js:15036
+commitUpdateQueue @ react-dom.development.js:15057
+commitLayoutEffectOnFiber @ react-dom.development.js:23430
+commitLayoutMountEffects_complete @ react-dom.development.js:24727
+commitLayoutEffects_begin @ react-dom.development.js:24713
+commitLayoutEffects @ react-dom.development.js:24651
+commitRootImpl @ react-dom.development.js:26862
+commitRoot @ react-dom.development.js:26721
+performSyncWorkOnRoot @ react-dom.development.js:26156
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+react-dom.development.js:15688  Uncaught Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (react-dom.development.js:15688:13)
+    at updateReducer (react-dom.development.js:15749:14)
+    at updateState (react-dom.development.js:16185:10)
+    at Object.useState (react-dom.development.js:17096:16)
+    at Object.useState (react.development.js:1622:21)
+    at useMutation (useMutation.ts:26:28)
+    at BoxDetailsModal (box-details-modal.tsx:202:28)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at updateFunctionComponent (react-dom.development.js:19617:20)
+    at beginWork (react-dom.development.js:21640:16)
+updateWorkInProgressHook @ react-dom.development.js:15688
+updateReducer @ react-dom.development.js:15749
+updateState @ react-dom.development.js:16185
+useState @ react-dom.development.js:17096
+useState @ react.development.js:1622
+useMutation @ useMutation.ts:26
+BoxDetailsModal @ box-details-modal.tsx:202
+renderWithHooks @ react-dom.development.js:15486
+updateFunctionComponent @ react-dom.development.js:19617
+beginWork @ react-dom.development.js:21640
+beginWork$1 @ react-dom.development.js:27465
+performUnitOfWork @ react-dom.development.js:26596
+workLoopSync @ react-dom.development.js:26505
+renderRootSync @ react-dom.development.js:26473
+recoverFromConcurrentError @ react-dom.development.js:25889
+performSyncWorkOnRoot @ react-dom.development.js:26135
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+use-websocket.tsx:354 [WebSocket] Manual disconnection requested
+use-websocket.tsx:354 [WebSocket] Manual disconnection requested
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true

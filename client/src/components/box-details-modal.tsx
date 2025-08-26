@@ -64,19 +64,23 @@ export function BoxDetailsModal({
   const { preferences } = useUserPreferences();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
   // Fetch box requirements for this specific box using the default query function
   const { data: boxRequirementsResponse, isLoading } = useQuery({
     queryKey: [`/api/jobs/${jobId}/box-requirements`],
-    enabled: isOpen && boxNumber !== null
+    enabled: isOpen && boxNumber !== null && !!jobId
   });
 
   // Fetch job groups to determine if Empty or Transfer button should show
   const { data: jobGroupsResponse } = useQuery({
     queryKey: [`/api/jobs/${jobId}/groups`],
-    enabled: isOpen && boxNumber !== null
+    enabled: isOpen && boxNumber !== null && !!jobId
   });
 
-  if (!isOpen || boxNumber === null) return null;
+  // Early return AFTER all hooks to prevent hooks rule violations
+  if (!isOpen || boxNumber === null) {
+    return null;
+  }
 
   // Filter box requirements for this specific box number
   const boxRequirementsData = boxRequirementsResponse as { boxRequirements: BoxRequirement[], workers: Record<string, { id: string, name: string, staffId: string }> } | undefined;
