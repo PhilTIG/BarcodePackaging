@@ -1056,31 +1056,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const scanEvent = await storage.createScanEvent(eventData);
 
-      // Check if this scan resolves any put aside items
-      if (scanEvent.eventType === 'scan' && scanEvent.barCode && scanEvent.boxNumber) {
-        const putAsideItems = await storage.getPutAsideItems(jobId);
-        const matchingItem = putAsideItems.find(item => 
-          item.barCode === scanEvent.barCode && 
-          !item.resolvedAt
-        );
-
-        if (matchingItem) {
-          await storage.resolvePutAsideItem(matchingItem.id, scanEvent.boxNumber);
-          
-          // Broadcast put aside resolution
-          broadcastToJob(jobId, {
-            type: 'put_aside_resolved',
-            data: {
-              putAsideItemId: matchingItem.id,
-              boxNumber: scanEvent.boxNumber,
-              barCode: scanEvent.barCode,
-              resolvedBy: req.user!.id,
-              resolvedByName: req.user!.name
-            }
-          });
-        }
-      }
-
       // Update session statistics
       await storage.updateScanSessionStats(sessionId);
 
@@ -1543,14 +1518,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/jobs/:id/progress', requireAuth, async (req, res) => {
     try {
       const progressData = await storage.getJobProgress(req.params.id);
-      
-      // Add put aside counts
-      const putAsideItems = await storage.getPutAsideItems(req.params.id);
-      const putAsideWithBoxes = putAsideItems.filter(item => item.isBoxAvailable);
-      
-      progressData.progress.putAsideItemsTotal = putAsideItems.length;
-      progressData.progress.putAsideItemsWithBoxes = putAsideWithBoxes.length;
-      
       res.json(progressData);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch job progress' });
@@ -1564,61 +1531,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ extraItems });
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch extra items' });
-    }
-  });
-
-  // Put Aside Items endpoints
-  app.get('/api/jobs/:id/put-aside', requireAuth, async (req, res) => {
-    try {
-      const putAsideItems = await storage.getPutAsideItems(req.params.id);
-      res.json({ putAsideItems });
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch put aside items' });
-    }
-  });
-
-  app.post('/api/jobs/:id/put-aside', requireAuth, requireRole(['worker', 'supervisor', 'manager']), async (req: AuthenticatedRequest, res) => {
-    try {
-      const { barCode, productName, customerName } = req.body;
-
-      const itemData = {
-        jobId: req.params.id,
-        barCode,
-        productName,
-        customerName,
-        putAsideBy: req.user!.id
-      };
-
-      const putAsideItem = await storage.createPutAsideItem(itemData);
-
-      // Broadcast to job for real-time updates
-      broadcastToJob(req.params.id, {
-        type: 'put_aside_created',
-        data: { 
-          putAsideItem,
-          userId: req.user!.id,
-          userName: req.user!.name 
-        }
-      });
-
-      res.status(201).json({ putAsideItem });
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to create put aside item' });
-    }
-  });
-
-  app.post('/api/put-aside/:id/resolve', requireAuth, requireRole(['worker', 'supervisor', 'manager']), async (req, res) => {
-    try {
-      const { boxNumber } = req.body;
-      const success = await storage.resolvePutAsideItem(req.params.id, boxNumber);
-
-      if (!success) {
-        return res.status(404).json({ message: 'Put aside item not found' });
-      }
-
-      res.json({ message: 'Put aside item resolved successfully' });
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to resolve put aside item' });
     }
   });
 

@@ -42,7 +42,7 @@ export const boxRequirements = pgTable("box_requirements", {
   scannedQty: integer("scanned_qty").default(0),
   isComplete: boolean("is_complete").default(false),
   groupName: text("group_name"), // NEW: Group information for filtering
-
+  
   // Worker tracking fields for color highlighting
   lastWorkerUserId: varchar("last_worker_user_id").references(() => users.id),
   lastWorkerColor: text("last_worker_color"),
@@ -76,10 +76,10 @@ export const scanEvents = pgTable("scan_events", {
   eventType: text("event_type").notNull(), // 'scan', 'undo', 'error', 'extra_item'
   scanTime: timestamp("scan_time").default(sql`now()`),
   timeSincePrevious: integer("time_since_previous"), // milliseconds
-
+  
   // Worker assignment tracking (PHASE 4: Cleaned up unused fields)
   workerColor: text("worker_color"), // Track worker color for this scan
-
+  
   // Extra Items tracking (NEW)
   isExtraItem: boolean("is_extra_item").default(false), // Mark if this is an extra item not in original job
   jobId: varchar("job_id").references(() => jobs.id), // Direct reference for extra items tracking
@@ -108,25 +108,25 @@ export const workerBoxAssignments = pgTable("worker_box_assignments", {
 export const jobArchives = pgTable("job_archives", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   originalJobId: varchar("original_job_id").notNull(),
-
+  
   // Job snapshot data
   jobName: varchar("job_name").notNull(),
   totalItems: integer("total_items").notNull(),
   totalBoxes: integer("total_boxes").notNull(),
   managerName: varchar("manager_name").notNull(), // User who created the job
   managerId: varchar("manager_id").notNull().references(() => users.id),
-
+  
   // CheckCount statistics
   totalExtrasFound: integer("total_extras_found").default(0),
   totalItemsChecked: integer("total_items_checked").default(0),
   totalCorrectChecks: integer("total_correct_checks").default(0),
   overallCheckAccuracy: decimal("overall_check_accuracy", { precision: 5, scale: 2 }).default("0.00"),
-
+  
   // Archive metadata
   archivedBy: varchar("archived_by").notNull().references(() => users.id),
   archivedAt: timestamp("archived_at").default(sql`now()`),
   isPurged: boolean("is_purged").default(false), // True if live data has been deleted
-
+  
   // Full snapshot for restore capability (when not purged)
   jobDataSnapshot: jsonb("job_data_snapshot"), // Complete job data for restore
 });
@@ -137,25 +137,25 @@ export const archiveWorkerStats = pgTable("archive_worker_stats", {
   archiveId: varchar("archive_id").notNull().references(() => jobArchives.id, { onDelete: 'cascade' }),
   workerId: varchar("worker_id").notNull().references(() => users.id),
   workerName: varchar("worker_name").notNull(),
-
+  
   // Scanning statistics
   totalScans: integer("total_scans").default(0),
   totalSessionTime: integer("total_session_time").default(0), // in minutes
-
+  
   // CheckCount statistics per worker
   itemsChecked: integer("items_checked").default(0),
   correctChecks: integer("correct_checks").default(0),
   checkAccuracy: decimal("check_accuracy", { precision: 5, scale: 2 }).default("0.00"),
   extrasFound: integer("extras_found").default(0), // Extras found by this worker during CheckCount
   errorsCaused: integer("errors_caused").default(0), // Items this worker scanned incorrectly (found during CheckCount)
-
+  
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
 export const userPreferences = pgTable("user_preferences", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
-
+  
   // Scanner Settings
   maxBoxesPerRow: integer("max_boxes_per_row").default(12),
   autoClearInput: boolean("auto_clear_input").default(true),
@@ -165,24 +165,24 @@ export const userPreferences = pgTable("user_preferences", {
   targetScansPerHour: integer("target_scans_per_hour").default(71),
   autoSaveSessions: boolean("auto_save_sessions").default(true),
   showRealtimeStats: boolean("show_realtime_stats").default(true),
-
+  
   // Interface Preferences
   theme: text("theme").default("blue"), // "blue", "green", "orange", "teal", "red", "dark"
   compactMode: boolean("compact_mode").default(false),
   showHelpTips: boolean("show_help_tips").default(true),
-
-  // Performance Preferences
+  
+  // Performance Preferences  
   enableAutoUndo: boolean("enable_auto_undo").default(false),
   undoTimeLimit: integer("undo_time_limit").default(30), // seconds
   batchScanMode: boolean("batch_scan_mode").default(false),
-
+  
   // Mobile Preferences (NEW)
   mobileModePreference: boolean("mobile_mode_preference").default(false),
   singleBoxMode: boolean("single_box_mode").default(false),
-
+  
   // CheckCount Preferences (NEW)
   checkBoxEnabled: boolean("check_box_enabled").default(false), // Worker permission to perform checks
-
+  
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });
@@ -533,21 +533,21 @@ export interface UserPreferences {
   targetScansPerHour: number;
   autoSaveSessions: boolean;
   showRealtimeStats: boolean;
-
+  
   // Interface Preferences
   theme: "blue" | "green" | "orange" | "teal" | "red" | "dark";
   compactMode: boolean;
   showHelpTips: boolean;
-
+  
   // Performance Preferences
   enableAutoUndo: boolean;
   undoTimeLimit: number;
   batchScanMode: boolean;
-
+  
   // Mobile Preferences (NEW)
   mobileModePreference: boolean;
   singleBoxMode: boolean;
-
+  
   // CheckCount Preferences (NEW)
   checkBoxEnabled: boolean;
 }
@@ -628,8 +628,7 @@ export type CheckEvent = typeof checkEvents.$inferSelect;
 export type InsertCheckEvent = z.infer<typeof insertCheckEventSchema>;
 export type CheckResult = typeof checkResults.$inferSelect;
 export type InsertCheckResult = z.infer<typeof insertCheckResultSchema>;
-export type InsertPutAsideItem = z.infer<typeof insertPutAsideItemSchema>;
-export type PutAsideItem = typeof putAsideItems.$inferSelect;
+// InsertJobArchive moved to archive section
 export type BoxRequirement = typeof boxRequirements.$inferSelect;
 export type InsertBoxRequirement = z.infer<typeof insertBoxRequirementSchema>;
 
