@@ -94,7 +94,7 @@ async function getNextDecimalBoxNumber(baseBoxNumber: number, jobId: string, db:
     .from(boxRequirements)
     .where(and(
       eq(boxRequirements.jobId, jobId),
-      sql`${boxRequirements.boxNumber} LIKE ${boxNumberPattern}`
+      sql`CAST(${boxRequirements.boxNumber} AS TEXT) LIKE ${boxNumberPattern}`
     ))
     .orderBy(desc(boxRequirements.boxNumber));
     
