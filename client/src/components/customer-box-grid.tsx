@@ -127,10 +127,11 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       // Apply archived customer filtering to filtered data too
       if (!showArchivedCustomers) {
         return sortedFilteredBoxes.filter(box => {
-          // Keep only boxes without decimal points (exclude .0, .1, etc.)
-          const hasDecimal = box.boxNumber.toString().includes('.');
-          console.log(`[Filter Debug] Box ${box.boxNumber} - hasDecimal: ${hasDecimal}, keeping: ${!hasDecimal}`);
-          return !hasDecimal;
+          // Keep boxes that are whole numbers OR end with .0 (exclude .1, .2, etc.)
+          const boxStr = box.boxNumber.toString();
+          const isRealDecimal = boxStr.includes('.') && !boxStr.endsWith('.0');
+          console.log(`[Filter Debug] Box ${box.boxNumber} - isRealDecimal: ${isRealDecimal}, keeping: ${!isRealDecimal}`);
+          return !isRealDecimal;
         });
       }
       
@@ -195,10 +196,11 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     // Filter out archived customers (decimal boxes) if toggle is off
     if (!showArchivedCustomers) {
       const filtered = sortedBoxes.filter(box => {
-        // Keep only boxes without decimal points (exclude .0, .1, etc.)
-        const hasDecimal = box.boxNumber.toString().includes('.');
-        console.log(`[Filter Debug] Box ${box.boxNumber} - hasDecimal: ${hasDecimal}, keeping: ${!hasDecimal}`);
-        return !hasDecimal;
+        // Keep boxes that are whole numbers OR end with .0 (exclude .1, .2, etc.)
+        const boxStr = box.boxNumber.toString();
+        const isRealDecimal = boxStr.includes('.') && !boxStr.endsWith('.0');
+        console.log(`[Filter Debug] Box ${box.boxNumber} - isRealDecimal: ${isRealDecimal}, keeping: ${!isRealDecimal}`);
+        return !isRealDecimal;
       });
       console.log(`[Toggle Filter] Filtered ${sortedBoxes.length} -> ${filtered.length} boxes (removed ${sortedBoxes.length - filtered.length} decimal boxes)`);
       return filtered;
@@ -270,12 +272,14 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         const completionPercentage = displayTotalQty > 0 ? Math.round((displayScannedQty / displayTotalQty) * 100) : 0;
         
         // Check if this is an archived customer (decimal box number)
-        // Include .0 boxes (like 1.0, 2.0) as archived customers since they come from transfers
-        const isArchivedCustomer = showArchivedCustomers && (box.boxNumber.toString().includes('.'));
+        // Only boxes with non-zero decimals (.1, .2, etc.) are archived customers, not .0 boxes
+        const boxStr = box.boxNumber.toString();
+        const isRealDecimal = boxStr.includes('.') && !boxStr.endsWith('.0');
+        const isArchivedCustomer = showArchivedCustomers && isRealDecimal;
         
         // Debug logging
-        if (box.boxNumber.toString().includes('.')) {
-          console.log(`[Box Debug] Box ${box.boxNumber} (${box.customerName}) - isArchived: ${isArchivedCustomer}, showArchived: ${showArchivedCustomers}`);
+        if (isRealDecimal) {
+          console.log(`[Box Debug] Real decimal box ${box.boxNumber} (${typeof box.boxNumber}, ${box.customerName}) - isArchived: ${isArchivedCustomer}, showArchived: ${showArchivedCustomers}`);
         }
         
         // POC-style highlighting with worker color support
