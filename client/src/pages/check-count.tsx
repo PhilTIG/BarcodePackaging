@@ -80,7 +80,7 @@ export default function CheckCountPage() {
   // Get box requirements filtered by box number (with useMemo to prevent re-creation)
   const boxRequirements: BoxRequirement[] = useMemo(() => {
     return (boxRequirementsData as any)?.boxRequirements?.filter(
-      (req: BoxRequirement) => parseFloat(req.boxNumber.toString()) === parseFloat(boxNumber!)
+      (req: BoxRequirement) => req.boxNumber != null && parseFloat(req.boxNumber.toString()) === parseFloat(boxNumber!)
     ) || [];
   }, [boxRequirementsData, boxNumber]);
 

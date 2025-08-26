@@ -1,0 +1,205 @@
+react-dom.development.js:29895 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+websocket-error-filter.ts:58 [WebSocket Error Filter] Development tool WebSocket error suppression enabled
+use-websocket.tsx:363 [WebSocket] Manual disconnection requested
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job d713c9cb-70ff-4b41-ba27-b95efe8403dd
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 70837a12-7091-46c8-b8e2-f9831ab3e57d
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job f2c05683-0c17-420a-b02e-a012be9d6f06
+use-websocket.tsx:363 [WebSocket] Manual disconnection requested
+WebSocket connection to '<URL>' failed: WebSocket is closed before the connection is established.
+WebSocket connection to '<URL>' failed: WebSocket is closed before the connection is established.
+WebSocket connection to '<URL>' failed: WebSocket is closed before the connection is established.
+WebSocket connection to '<URL>' failed: WebSocket is closed before the connection is established.
+WebSocket connection to '<URL>' failed: WebSocket is closed before the connection is established.
+use-websocket.tsx:363 [WebSocket] Manual disconnection requested
+use-websocket.tsx:363 [WebSocket] Manual disconnection requested
+use-websocket.tsx:363 [WebSocket] Manual disconnection requested
+use-websocket.tsx:363 [WebSocket] Manual disconnection requested
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 26e1bbc7-2f35-40b3-a15a-30fad19dac33
+websocket-error-filter.ts:47  [WebSocket] Connection error: Event
+filteredConsoleError @ websocket-error-filter.ts:47
+websocket-error-filter.ts:47  [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filter.ts:47
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+use-websocket.tsx:105 [WebSocket] Scheduling reconnection in 3000ms
+websocket-error-filter.ts:47  [WebSocket] Connection error: Event
+filteredConsoleError @ websocket-error-filter.ts:47
+websocket-error-filter.ts:47  [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filter.ts:47
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+use-websocket.tsx:105 [WebSocket] Scheduling reconnection in 3000ms
+websocket-error-filter.ts:47  [WebSocket] Connection error: Event
+filteredConsoleError @ websocket-error-filter.ts:47
+websocket-error-filter.ts:47  [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filter.ts:47
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+use-websocket.tsx:105 [WebSocket] Scheduling reconnection in 3000ms
+websocket-error-filter.ts:47  [WebSocket] Connection error: Event
+filteredConsoleError @ websocket-error-filter.ts:47
+websocket-error-filter.ts:47  [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filter.ts:47
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+use-websocket.tsx:105 [WebSocket] Scheduling reconnection in 3000ms
+websocket-error-filter.ts:47  [WebSocket] Connection error: Event
+filteredConsoleError @ websocket-error-filter.ts:47
+websocket-error-filter.ts:47  [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filter.ts:47
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+use-websocket.tsx:105 [WebSocket] Scheduling reconnection in 3000ms
+client:536  WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/?token=gjZdYNfTWI-v' failed: Error during WebSocket handshake: Unexpected response code: 400
+setupWebSocket @ client:536
+client:536  Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=gjZdYNfTWI-v' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: Object
+box-details-modal.tsx:215 [BoxModal] Box 2.0 workers: Array(0)
+box-details-modal.tsx:215 [BoxModal] Box 2.0 workers: Array(0)
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job d713c9cb-70ff-4b41-ba27-b95efe8403dd
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 70837a12-7091-46c8-b8e2-f9831ab3e57d
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job f2c05683-0c17-420a-b02e-a012be9d6f06
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+box-details-modal.tsx:215 [BoxModal] Box 2.0 workers: Array(0)
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+check-count.tsx:83  Uncaught TypeError: Cannot read properties of null (reading 'toString')
+    at check-count.tsx:83:57
+    at Array.filter (<anonymous>)
+    at check-count.tsx:82:59
+    at mountMemo (react-dom.development.js:16406:19)
+    at Object.useMemo (react-dom.development.js:16851:16)
+    at useMemo (react.development.js:1650:21)
+    at CheckCountPage (check-count.tsx:81:45)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (react-dom.development.js:20103:13)
+    at beginWork (react-dom.development.js:21626:16)
+check-count.tsx:83  Uncaught TypeError: Cannot read properties of null (reading 'toString')
+    at check-count.tsx:83:57
+    at Array.filter (<anonymous>)
+    at check-count.tsx:82:59
+    at mountMemo (react-dom.development.js:16406:19)
+    at Object.useMemo (react-dom.development.js:16851:16)
+    at useMemo (react.development.js:1650:21)
+    at CheckCountPage (check-count.tsx:81:45)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (react-dom.development.js:20103:13)
+    at beginWork (react-dom.development.js:21626:16)
+websocket-error-filter.ts:47  The above error occurred in the <CheckCountPage> component:
+
+    at CheckCountPage (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/pages/check-count.tsx:33:32)
+    at Route (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:323:16)
+    at Switch (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:379:17)
+    at Router
+    at Provider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=e2bbd14a:38:15)
+    at TooltipProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e2bbd14a:64:5)
+    at AuthProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-auth.tsx:22:32)
+    at ThemeProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/theme-provider.tsx:20:33)
+    at UserPreferencesProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-user-preferences.tsx:37:43)
+    at ErrorProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/lib/error-context.tsx:20:33)
+    at QueryClientProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e2bbd14a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+filteredConsoleError @ websocket-error-filter.ts:47
+react-dom.development.js:12056  Uncaught TypeError: Cannot read properties of null (reading 'toString')
+    at check-count.tsx:83:57
+    at Array.filter (<anonymous>)
+    at check-count.tsx:82:59
+    at mountMemo (react-dom.development.js:16406:19)
+    at Object.useMemo (react-dom.development.js:16851:16)
+    at useMemo (react.development.js:1650:21)
+    at CheckCountPage (check-count.tsx:81:45)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (react-dom.development.js:20103:13)
+    at beginWork (react-dom.development.js:21626:16)
+use-websocket.tsx:363 [WebSocket] Manual disconnection requested
+use-websocket.tsx:363 [WebSocket] Manual disconnection requested
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: Object
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: '6q3ne', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: '26e1bbc7-2f35-40b3-a15a-30fad19dac33'}
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: 'zltmh7', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: 'zltmh7', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: 'd713c9cb-70ff-4b41-ba27-b95efe8403dd'}
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: 'exin8s', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: 'exin8s', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: 'f2c05683-0c17-420a-b02e-a012be9d6f06'}
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: {type: 'authenticate', data: {…}}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'connected', data: {…}}
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: {clientId: 'n8th49', message: 'WebSocket connection established successfully'}
+use-websocket.tsx:91 [WebSocket] Message received: {type: 'authenticated', data: {…}}
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: {clientId: 'n8th49', userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d', jobId: '70837a12-7091-46c8-b8e2-f9831ab3e57d'}
