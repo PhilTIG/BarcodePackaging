@@ -64,6 +64,15 @@ The application incorporates sophisticated performance tracking, including a sco
 - **Scope**: Active jobs only, 7-day activity window, real-time WebSocket updates, tablet-optimized design
 - **Implementation Plan**: 4-phase rollout (Backend → Main Dashboard → Dedicated Dashboard → Advanced Features)
 
+**Box Empty/Transfer System (August 2025)**:
+- **Status**: Critical race condition resolved with `isTransferred` field implementation
+- **Root Cause Identified**: UI data synchronization issue where modal customer name (prop-based) displays with new customer's products (API-based)
+- **Current Implementation**: Integer boxNumber + separate transferSequence field approach
+- **Architecture Decision**: Transferred boxes purely for backend tracking, not visible in UI
+- **Transfer Logic**: Box 2 → Customer A becomes boxNumber=2, transferSequence=1 (archived), new Customer B gets boxNumber=2, transferSequence=0 (active)
+- **Database Schema**: `isTransferred` boolean + `transferSequence` integer field for complete transfer history
+- **UI Display**: Only shows transferSequence=0 records, providing clean box assignments without data mixing
+
 ### Mobile and Hardware Support
 
 The design is optimized for warehouse environments, featuring responsive layouts for tablets and mobile devices. It supports both camera-based and hardware HID barcode scanners. The UI is touch-friendly with large targets.
