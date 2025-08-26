@@ -79,9 +79,11 @@ This PRD defines the comprehensive Box Empty/Transfer system that enables worker
 
 ### 3. Put Aside System
 
-#### 3.1 Put Aside Scan Events
-- **Event Type**: New "Aside" scan event type in existing system
-- **Trigger**: Special scan action when no suitable box available
+#### 3.1 Put Aside Logic Flow (CLARIFIED)
+- **Trigger**: Individual scanned items that couldn't find a suitable box
+- **Decision Logic**: 
+  - IF unallocated customers (boxNumber=NULL) require this item → Create "Put Aside" entry
+  - IF unallocated customers do NOT require this item → Send to "Extra Items" list
 - **Storage**: Integrate with existing scan events table structure
 - **Naming**: "Put Aside - <CustomName>" format for identification
 
@@ -186,6 +188,10 @@ CREATE TABLE put_aside_items (
 -- Add box limit to jobs
 ALTER TABLE jobs ADD COLUMN box_limit INTEGER DEFAULT NULL;
 
+-- Add box status tracking (CRITICAL: separate from isComplete)
+ALTER TABLE box_requirements ADD COLUMN box_status VARCHAR(20) DEFAULT 'active';
+-- Values: 'active', 'emptied', 'transferred_to_group'
+
 -- Add empty/transfer permission
 ALTER TABLE user_preferences ADD COLUMN can_empty_boxes BOOLEAN DEFAULT FALSE;
 
@@ -244,17 +250,37 @@ type BoxTransferEvents =
 
 ## Implementation Task List
 
-### Phase 1: Database Foundation (Week 1)
-- [ ] Create `box_history` table with proper indexing
-- [ ] Create `put_aside_items` table with status tracking
-- [ ] Add `box_limit` field to jobs table
-- [ ] Add `can_empty_boxes` permission to user preferences
-- [ ] Update `scan_events` table for put aside integration
-- [ ] Create database migration scripts
-- [ ] Add foreign key constraints and indexes
-- [ ] Test database schema with sample data
+### FOUNDATION PHASE: Box Limit Implementation (Week 1-2)
 
-### Phase 2: Backend API Development (Week 1-2)
+#### Database Schema Updates
+- [ ] Add `box_limit INTEGER DEFAULT NULL` to jobs table
+- [ ] Add `box_status VARCHAR(20) DEFAULT 'active'` to box_requirements table
+- [ ] Test schema changes with existing data
+
+#### CSV Processing Modifications  
+- [ ] Update job creation form with optional "Box Limit" field
+- [ ] Add warning when limit < 80% of unique customers
+- [ ] Modify box assignment logic: build full customerToBoxMap, then set boxNumber=NULL for excess
+- [ ] Test CSV processing with various limits
+
+#### Storage Layer
+- [ ] Add storage methods for retrieving unallocated customers (boxNumber=NULL)
+- [ ] Add methods for box limit validation and warnings
+- [ ] Update existing storage methods to handle NULL box numbers
+
+#### Manager Dashboard Integration
+- [ ] Create unallocated customers section in job management area
+- [ ] Display customer details with required products
+- [ ] Add real-time updates for unallocated customer status
+
+#### Worker Allocation Updates
+- [ ] Update worker patterns to skip NULL boxes dynamically
+- [ ] Test allocation patterns with mixed NULL and assigned boxes
+- [ ] Ensure workers can still follow their sequences effectively
+
+This foundation enables the complete Empty/Transfer system in subsequent phases.
+
+### FUTURE PHASE 2: Empty/Transfer API Development (Post-Foundation)
 - [ ] Implement box empty endpoint with automatic reallocation
 - [ ] Implement box transfer endpoint with group integration
 - [ ] Create box history retrieval endpoint
@@ -269,7 +295,7 @@ type BoxTransferEvents =
 - [ ] Add permission checking middleware
 - [ ] Create comprehensive error handling
 
-### Phase 3: Frontend UI Components (Week 2)
+### FUTURE PHASE 3: Empty/Transfer UI Components (Post-Foundation)
 - [ ] Add Empty/Transfer buttons to Box Details Modal
 - [ ] Create box history display component
 - [ ] Implement put aside items modal component
@@ -281,7 +307,7 @@ type BoxTransferEvents =
 - [ ] Create loading states and success notifications
 - [ ] Implement responsive design for mobile users
 
-### Phase 4: Manager Dashboard Integration (Week 2-3)
+### FUTURE PHASE 4: Complete Dashboard Integration (Post-Foundation)
 - [ ] Add box limit setting during CSV upload
 - [ ] Create put aside monitoring panel
 - [ ] Implement transfer tracking dashboard
@@ -293,7 +319,7 @@ type BoxTransferEvents =
 - [ ] Create system health monitoring
 - [ ] Add configuration management interface
 
-### Phase 5: Worker Interface Enhancement (Week 3)
+### FUTURE PHASE 5: Complete Worker Interface (Post-Foundation)
 - [ ] Add put aside item notifications to worker screen
 - [ ] Implement clickable put aside details
 - [ ] Create availability status indicators (red/green)
@@ -305,7 +331,7 @@ type BoxTransferEvents =
 - [ ] Implement offline handling for put aside operations
 - [ ] Add accessibility features for action buttons
 
-### Phase 6: Real-time System Integration (Week 3-4)
+### FUTURE PHASE 6: Real-time System Integration (Post-Foundation)
 - [ ] Implement WebSocket events for box operations
 - [ ] Add real-time put aside count updates
 - [ ] Create live transfer notifications
@@ -317,7 +343,7 @@ type BoxTransferEvents =
 - [ ] Create real-time error handling
 - [ ] Add connection recovery mechanisms
 
-### Phase 7: History and Audit System (Week 4)
+### FUTURE PHASE 7: History and Audit System (Post-Foundation)
 - [ ] Implement comprehensive box history tracking
 - [ ] Create audit trail for all empty/transfer operations
 - [ ] Add worker attribution for all actions
@@ -332,7 +358,7 @@ type BoxTransferEvents =
 - [ ] Implement group/transfer data archival with job archival
 - [ ] Add group/transfer data purging when jobs are purged
 
-### Phase 8: Testing and Quality Assurance (Week 4-5)
+### FUTURE PHASE 8: Complete System Testing (Post-Foundation)
 - [ ] Unit tests for box allocation algorithms
 - [ ] Integration tests for empty/transfer workflows
 - [ ] API endpoint testing with various scenarios
@@ -346,7 +372,7 @@ type BoxTransferEvents =
 - [ ] Error handling and edge case testing
 - [ ] User acceptance testing with warehouse workers
 
-### Phase 9: Documentation and Training (Week 5)
+### FUTURE PHASE 9: Documentation and Training (Post-Foundation)
 - [ ] Create user documentation for empty/transfer features
 - [ ] Write technical documentation for API endpoints
 - [ ] Create training materials for workers
@@ -358,7 +384,7 @@ type BoxTransferEvents =
 - [ ] Create backup and recovery procedures
 - [ ] Write performance optimization guidelines
 
-### Phase 10: Deployment and Monitoring (Week 5-6)
+### FUTURE PHASE 10: Full System Deployment (Post-Foundation)
 - [ ] Set up production database migrations
 - [ ] Configure monitoring and alerting systems
 - [ ] Implement feature flags for gradual rollout
