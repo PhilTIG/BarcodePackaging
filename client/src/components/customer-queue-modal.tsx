@@ -9,7 +9,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Users, Package } from 'lucide-react';
+import { Loader2, Users, Package, Tag } from 'lucide-react';
+import { CustomerProductDetailsModal } from './customer-product-details-modal';
 
 interface CustomerQueueModalProps {
   isOpen: boolean;
@@ -22,9 +23,13 @@ interface UnallocatedCustomer {
   customerName: string;
   totalItems: number;
   productCount: number;
+  groupName: string | null;
 }
 
 export function CustomerQueueModal({ isOpen, onClose, jobId, jobName }: CustomerQueueModalProps) {
+  const [selectedCustomer, setSelectedCustomer] = useState<UnallocatedCustomer | null>(null);
+  const [isProductDetailsOpen, setIsProductDetailsOpen] = useState(false);
+  
   const { data: customersData, isLoading, error } = useQuery({
     queryKey: ['/api/jobs', jobId, 'unallocated-customers'],
     enabled: isOpen && !!jobId,
@@ -32,6 +37,11 @@ export function CustomerQueueModal({ isOpen, onClose, jobId, jobName }: Customer
   });
 
   const customers = (customersData as any)?.customers || [];
+
+  const handleItemsClick = (customer: UnallocatedCustomer) => {
+    setSelectedCustomer(customer);
+    setIsProductDetailsOpen(true);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -114,13 +124,29 @@ export function CustomerQueueModal({ isOpen, onClose, jobId, jobName }: Customer
                             <span>•</span>
                             <span>{customer.productCount} unique products</span>
                           </div>
+                          {customer.groupName && (
+                            <>
+                              <div className="flex items-center gap-1">
+                                <span>•</span>
+                                <Tag className="h-4 w-4" />
+                                <span>Group: {customer.groupName}</span>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary" data-testid={`badge-items-${customer.customerName}`}>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-auto px-3 py-2"
+                          onClick={() => handleItemsClick(customer)}
+                          data-testid={`button-items-${customer.customerName}`}
+                        >
+                          <Package className="h-4 w-4 mr-1" />
                           {customer.totalItems} items
-                        </Badge>
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -137,6 +163,22 @@ export function CustomerQueueModal({ isOpen, onClose, jobId, jobName }: Customer
           </div>
         </div>
       </DialogContent>
+      
+      {/* Customer Product Details Modal */}
+      {selectedCustomer && (
+        <CustomerProductDetailsModal 
+          isOpen={isProductDetailsOpen}
+          onClose={() => {
+            setIsProductDetailsOpen(false);
+            setSelectedCustomer(null);
+          }}
+          customerName={selectedCustomer.customerName}
+          jobId={jobId}
+          totalItems={selectedCustomer.totalItems}
+          productCount={selectedCustomer.productCount}
+          groupName={selectedCustomer.groupName}
+        />
+      )}
     </Dialog>
   );
 }

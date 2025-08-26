@@ -2364,26 +2364,46 @@ export class DatabaseStorage implements IStorage {
   // BOX LIMIT: UNALLOCATED CUSTOMERS METHODS  
   // ========================
 
-  async getUnallocatedCustomers(jobId: string): Promise<{ customerName: string; totalItems: number; productCount: number; }[]> {
+  async getUnallocatedCustomers(jobId: string): Promise<{ customerName: string; totalItems: number; productCount: number; groupName: string | null; }[]> {
     try {
       const unallocatedData = await this.db
         .select({
           customerName: boxRequirements.customerName,
+          groupName: boxRequirements.groupName,
           totalItems: sql<number>`SUM(${boxRequirements.requiredQty})`,
           productCount: sql<number>`COUNT(*)`
         })
         .from(boxRequirements)
         .where(and(eq(boxRequirements.jobId, jobId), sql`${boxRequirements.boxNumber} IS NULL`))
-        .groupBy(boxRequirements.customerName)
+        .groupBy(boxRequirements.customerName, boxRequirements.groupName)
         .orderBy(boxRequirements.customerName);
 
       return unallocatedData.map(item => ({
         customerName: item.customerName,
         totalItems: item.totalItems || 0,
-        productCount: item.productCount || 0
+        productCount: item.productCount || 0,
+        groupName: item.groupName
       }));
     } catch (error) {
       console.error(`[ERROR] getUnallocatedCustomers failed for job ${jobId}:`, error);
+      throw error;
+    }
+  }
+
+  // BOX LIMIT: Get customer product details for unallocated customers
+  async getCustomerProductDetails(jobId: string, customerName: string): Promise<BoxRequirement[]> {
+    try {
+      return await this.db
+        .select()
+        .from(boxRequirements)
+        .where(and(
+          eq(boxRequirements.jobId, jobId),
+          eq(boxRequirements.customerName, customerName),
+          sql`${boxRequirements.boxNumber} IS NULL`
+        ))
+        .orderBy(boxRequirements.productName);
+    } catch (error) {
+      console.error(`[ERROR] getCustomerProductDetails failed for customer ${customerName} in job ${jobId}:`, error);
       throw error;
     }
   }

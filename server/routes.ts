@@ -1551,6 +1551,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // BOX LIMIT: Get product details for a specific unallocated customer
+  app.get('/api/jobs/:id/customers/:customerName/products', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const products = await storage.getCustomerProductDetails(req.params.id, req.params.customerName);
+      res.json({ products });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch customer product details' });
+    }
+  });
+
   // Extra Items endpoints (NEW)
   app.get('/api/jobs/:id/extra-items', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
     try {
