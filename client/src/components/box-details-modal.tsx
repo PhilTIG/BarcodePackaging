@@ -77,6 +77,58 @@ export function BoxDetailsModal({
     enabled: isOpen && boxNumber !== null && !!jobId
   });
 
+  // Empty Box mutation - MUST be called before early return
+  const emptyBoxMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/jobs/${jobId}/boxes/${boxNumber}/empty`, 'POST', {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Box Emptied Successfully",
+        description: data.message || `Box ${boxNumber} has been emptied and reassigned.`,
+        variant: "default"
+      });
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Empty Box",
+        description: error.message || "An error occurred while emptying the box.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Transfer Box mutation - MUST be called before early return
+  const transferBoxMutation = useMutation({
+    mutationFn: async () => {
+      // Auto-detect target group from current customer's groupName
+      // The API will automatically determine the target group from CSV data
+      return apiRequest(`/api/jobs/${jobId}/boxes/${boxNumber}/transfer`, 'POST', {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Box Transferred Successfully",
+        description: data.message || `Box ${boxNumber} has been transferred and reassigned.`,
+        variant: "default"
+      });
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Transfer Box",
+        description: error.message || "An error occurred while transferring the box.",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Early return AFTER all hooks to prevent hooks rule violations
   if (!isOpen || boxNumber === null) {
     return null;
@@ -202,57 +254,7 @@ export function BoxDetailsModal({
     return user?.role === 'worker' && preferences?.canEmptyAndTransfer === true;
   };
 
-  // Empty Box mutation
-  const emptyBoxMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest(`/api/jobs/${jobId}/boxes/${boxNumber}/empty`, 'POST', {});
-    },
-    onSuccess: (data: any) => {
-      toast({
-        title: "Box Emptied Successfully",
-        description: data.message || `Box ${boxNumber} has been emptied and reassigned.`,
-        variant: "default"
-      });
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-      onClose();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to Empty Box",
-        description: error.message || "An error occurred while emptying the box.",
-        variant: "destructive"
-      });
-    }
-  });
-
-  // Transfer Box mutation
-  const transferBoxMutation = useMutation({
-    mutationFn: async () => {
-      // Auto-detect target group from current customer's groupName
-      // The API will automatically determine the target group from CSV data
-      return apiRequest(`/api/jobs/${jobId}/boxes/${boxNumber}/transfer`, 'POST', {});
-    },
-    onSuccess: (data: any) => {
-      toast({
-        title: "Box Transferred Successfully",
-        description: data.message || `Box ${boxNumber} has been transferred and reassigned.`,
-        variant: "default"
-      });
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-      onClose();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to Transfer Box",
-        description: error.message || "An error occurred while transferring the box.",
-        variant: "destructive"
-      });
-    }
-  });
+  // Mutations moved above early return to fix React hooks rule violation
 
   const handleEmptyTransferAction = () => {
     const jobGroups = (jobGroupsResponse as { groups?: string[] })?.groups || [];
