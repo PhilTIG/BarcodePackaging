@@ -114,6 +114,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
   // Choose between filtered data (from box requirements) or legacy product data
   const boxData = useMemo(() => {
     const isFiltering = filterByProducts.length > 0 || filterByGroups.length > 0;
+    console.log(`[Toggle Debug] showArchivedCustomers=${showArchivedCustomers}, isFiltering=${isFiltering}, products.length=${products.length}`);
     
     // When filtering is active, use the filtered box data
     if (isFiltering && filteredBoxData.length > 0) {
@@ -179,16 +180,21 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     });
 
     const sortedBoxes = Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
+    console.log(`[Debug] Found ${sortedBoxes.length} total boxes:`, sortedBoxes.map(b => b.boxNumber));
+    console.log(`[Debug] Decimal boxes:`, sortedBoxes.filter(box => box.boxNumber % 1 !== 0).map(b => b.boxNumber));
     
     // Filter out archived customers (decimal boxes) if toggle is off
     if (!showArchivedCustomers) {
-      return sortedBoxes.filter(box => {
+      const filtered = sortedBoxes.filter(box => {
         // Keep only boxes that are whole numbers (no decimal part or ends with .0)
         const isWholeNumber = box.boxNumber % 1 === 0;
         return isWholeNumber;
       });
+      console.log(`[Toggle Filter] Filtered ${sortedBoxes.length} -> ${filtered.length} boxes (removed ${sortedBoxes.length - filtered.length} decimal boxes)`);
+      return filtered;
     }
     
+    console.log(`[Toggle Filter] Showing all ${sortedBoxes.length} boxes including decimal boxes`);
     return sortedBoxes;
   }, [products, preferences.maxBoxesPerRow, filterByProducts, filterByGroups, filteredBoxData, showArchivedCustomers]);
 

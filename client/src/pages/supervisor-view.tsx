@@ -394,7 +394,10 @@ export default function SupervisorView() {
               <Switch 
                 id="show-archived" 
                 checked={showArchivedCustomers} 
-                onCheckedChange={setShowArchivedCustomers}
+                onCheckedChange={(checked) => {
+                  console.log(`[Toggle Click] Archived customers toggle clicked: ${checked}`);
+                  setShowArchivedCustomers(checked);
+                }}
                 data-testid="toggle-archived-customers"
               />
               <Label htmlFor="show-archived" className="text-sm text-gray-600">
