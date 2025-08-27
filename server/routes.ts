@@ -1900,14 +1900,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Perform empty operation with automatic reallocation
       const emptyResult = await storage.emptyBox(jobId, boxNum, req.user!.id);
       
-      // Broadcast real-time update
+      // PHASE 1 OPTIMIZATION: Get complete updated data for WebSocket broadcast
+      // This follows the proven scan_update pattern for instant UI updates
+      const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
+
+      // Transform box requirements to product format for UI compatibility
+      const updatedProducts = [];
+      const productMap = new Map();
+
+      for (const req of updatedBoxRequirements) {
+        const key = `${req.customerName}-${req.boxNumber}`;
+        if (!productMap.has(key)) {
+          const worker = req.lastWorkerUserId ? await storage.getUserById(req.lastWorkerUserId) : null;
+          productMap.set(key, {
+            id: `${req.customerName}-${req.boxNumber}`,
+            customerName: req.customerName,
+            qty: 0,
+            scannedQty: 0,
+            boxNumber: req.boxNumber,
+            isComplete: true,
+            lastWorkerUserId: req.lastWorkerUserId,
+            lastWorkerColor: req.lastWorkerColor,
+            lastWorkerStaffId: worker?.staffId
+          });
+        }
+      }
+
+      for (const req of updatedBoxRequirements) {
+        const key = `${req.customerName}-${req.boxNumber}`;
+        const product = productMap.get(key);
+        product.qty += req.requiredQty;
+        product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
+        product.isComplete = product.isComplete && req.isComplete;
+
+        if (req.lastWorkerUserId) {
+          product.lastWorkerUserId = req.lastWorkerUserId;
+          product.lastWorkerColor = req.lastWorkerColor;
+        }
+      }
+
+      const transformedProducts = Array.from(productMap.values());
+      
+      // Broadcast real-time update with complete data (like scan_update)
       broadcastToJob(jobId, {
         type: 'box_emptied',
         data: { 
           boxNumber: boxNum, 
           performedBy: req.user!.name,
           timestamp: new Date().toISOString(),
-          jobId
+          jobId,
+          products: transformedProducts // NEW: Include products data for instant UI updates
         }
       });
 
@@ -1976,7 +2018,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Perform transfer operation with automatic reallocation
       const transferResult = await storage.transferBoxToGroup(jobId, boxNum, customerGroup, req.user!.id);
       
-      // Broadcast real-time update
+      // PHASE 1 OPTIMIZATION: Get complete updated data for WebSocket broadcast
+      // This follows the proven scan_update pattern for instant UI updates
+      const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
+
+      // Transform box requirements to product format for UI compatibility
+      const updatedProducts = [];
+      const productMap = new Map();
+
+      for (const req of updatedBoxRequirements) {
+        const key = `${req.customerName}-${req.boxNumber}`;
+        if (!productMap.has(key)) {
+          const worker = req.lastWorkerUserId ? await storage.getUserById(req.lastWorkerUserId) : null;
+          productMap.set(key, {
+            id: `${req.customerName}-${req.boxNumber}`,
+            customerName: req.customerName,
+            qty: 0,
+            scannedQty: 0,
+            boxNumber: req.boxNumber,
+            isComplete: true,
+            lastWorkerUserId: req.lastWorkerUserId,
+            lastWorkerColor: req.lastWorkerColor,
+            lastWorkerStaffId: worker?.staffId
+          });
+        }
+      }
+
+      for (const req of updatedBoxRequirements) {
+        const key = `${req.customerName}-${req.boxNumber}`;
+        const product = productMap.get(key);
+        product.qty += req.requiredQty;
+        product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
+        product.isComplete = product.isComplete && req.isComplete;
+
+        if (req.lastWorkerUserId) {
+          product.lastWorkerUserId = req.lastWorkerUserId;
+          product.lastWorkerColor = req.lastWorkerColor;
+        }
+      }
+
+      const transformedProducts = Array.from(productMap.values());
+      
+      // Broadcast real-time update with complete data (like scan_update)
       broadcastToJob(jobId, {
         type: 'box_transferred',
         data: { 
@@ -1984,7 +2067,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           targetGroup: customerGroup,
           performedBy: req.user!.name,
           timestamp: new Date().toISOString(),
-          jobId
+          jobId,
+          products: transformedProducts // NEW: Include products data for instant UI updates
         }
       });
 

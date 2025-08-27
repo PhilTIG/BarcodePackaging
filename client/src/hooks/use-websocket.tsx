@@ -338,25 +338,41 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         break;
       
       case "box_transferred":
-        // Handle box transfer events - refresh specific box data only
+        // Handle box transfer events - OPTION 1: Direct data injection (like scan_update)
         console.log("[WebSocket] Box transfer event received:", message.data);
-        console.log("[WebSocket] Box transferred - invalidating cache for instant UI refresh");
+        console.log("[WebSocket] Box transferred - injecting updated data for instant UI refresh");
         
-        // Invalidate box-specific queries to refresh UI immediately
+        // Direct data injection (follows proven scan_update pattern)
+        if (message.data.products) {
+          queryClient.setQueryData(["api/jobs", jobId], (oldData: any) => ({
+            ...oldData,
+            products: message.data.products  // NEW DATA PROVIDED - instant UI update
+          }));
+        }
+        
+        // Still invalidate other queries for additional components
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}`] }); // CRITICAL FIX: Update Customer Box Grid
+        queryClient.invalidateQueries({ queryKey: ["api/jobs"] }); // Manager Dashboard
         break;
       
       case "box_emptied":
-        // Handle box empty events - refresh specific box data only
+        // Handle box empty events - OPTION 1: Direct data injection (like scan_update)
         console.log("[WebSocket] Box empty event received:", message.data);
-        console.log("[WebSocket] Box emptied - invalidating cache for instant UI refresh");
+        console.log("[WebSocket] Box emptied - injecting updated data for instant UI refresh");
         
-        // Invalidate box-specific queries to refresh UI immediately
+        // Direct data injection (follows proven scan_update pattern)
+        if (message.data.products) {
+          queryClient.setQueryData(["api/jobs", jobId], (oldData: any) => ({
+            ...oldData,
+            products: message.data.products  // NEW DATA PROVIDED - instant UI update
+          }));
+        }
+        
+        // Still invalidate other queries for additional components
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}`] }); // CRITICAL FIX: Update Customer Box Grid
+        queryClient.invalidateQueries({ queryKey: ["api/jobs"] }); // Manager Dashboard
         break;
       
       default:
