@@ -1548,6 +1548,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get customer progress data for Customer Progress modal
+  app.get('/api/jobs/:id/customer-progress', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const progressData = await storage.getCustomerProgressData(req.params.id);
+      res.json(progressData);
+    } catch (error) {
+      console.error('Failed to fetch customer progress data:', error);
+      res.status(500).json({ message: 'Failed to fetch customer progress data' });
+    }
+  });
+
   // Extra Items endpoints (NEW)
   app.get('/api/jobs/:id/extra-items', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
     try {

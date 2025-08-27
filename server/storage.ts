@@ -222,6 +222,9 @@ export interface IStorage {
   getGroupCustomers(jobId: string, groupName: string): Promise<BoxRequirement[]>;
   getJobGroups(jobId: string): Promise<string[]>;
   updateBoxRequirementsGroup(jobId: string, boxNumber: number, groupName: string): Promise<void>;
+
+  // Customer progress methods
+  getCustomerProgressData(jobId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3252,6 +3255,83 @@ export class DatabaseStorage implements IStorage {
         eq(boxRequirements.jobId, jobId),
         eq(boxRequirements.boxNumber, boxNumber)
       ));
+  }
+
+  async getCustomerProgressData(jobId: string): Promise<any> {
+    try {
+      // Get all customers with their progress, state, and group information
+      const customerData = await this.db
+        .select({
+          customerName: boxRequirements.customerName,
+          groupName: boxRequirements.groupName,
+          totalItems: sql<number>`SUM(${boxRequirements.requiredQty})`,
+          scannedItems: sql<number>`SUM(LEAST(${boxRequirements.scannedQty}, ${boxRequirements.requiredQty}))`,
+          boxNumber: boxRequirements.boxNumber,
+          transferSequence: boxRequirements.transferSequence,
+          isTransferred: boxRequirements.isTransferred,
+          allItemsComplete: sql<boolean>`BOOL_AND(${boxRequirements.scannedQty} >= ${boxRequirements.requiredQty})`
+        })
+        .from(boxRequirements)
+        .where(eq(boxRequirements.jobId, jobId))
+        .groupBy(
+          boxRequirements.customerName,
+          boxRequirements.groupName,
+          boxRequirements.boxNumber,
+          boxRequirements.transferSequence,
+          boxRequirements.isTransferred
+        )
+        .orderBy(boxRequirements.customerName);
+
+      // Transform data to include calculated status and completion percentage
+      const customers = customerData.map((customer: any) => {
+        const completionPercentage = customer.totalItems > 0 ? 
+          Math.round((customer.scannedItems / customer.totalItems) * 100) : 0;
+
+        // Determine status with priority: Transferred/Archived > Completed > Box > Unassigned
+        let status: string;
+        if (customer.transferSequence > 0 && customer.isTransferred) {
+          status = 'Transferred';
+        } else if (customer.transferSequence > 0 && !customer.isTransferred) {
+          status = 'Archived';
+        } else if (customer.allItemsComplete) {
+          status = 'Completed';
+        } else if (customer.boxNumber !== null) {
+          status = 'Box';
+        } else {
+          status = 'Unassigned';
+        }
+
+        return {
+          customerName: customer.customerName,
+          groupName: customer.groupName,
+          totalItems: customer.totalItems,
+          scannedItems: customer.scannedItems,
+          completionPercentage,
+          status,
+          boxNumber: customer.boxNumber
+        };
+      });
+
+      // Get summary statistics
+      const totalCustomers = customers.length;
+      const completedCustomers = customers.filter(c => 
+        ['Completed', 'Transferred', 'Archived'].includes(c.status)
+      ).length;
+      const completionPercentage = totalCustomers > 0 ? 
+        Math.round((completedCustomers / totalCustomers) * 100) : 0;
+
+      return {
+        customers,
+        summary: {
+          totalCustomers,
+          completedCustomers,
+          completionPercentage
+        }
+      };
+    } catch (error) {
+      console.error('Error getting customer progress data:', error);
+      throw error;
+    }
   }
 
   // PUT ASIDE STORAGE METHODS (using scan_events table)

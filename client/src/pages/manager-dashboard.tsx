@@ -22,6 +22,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2, Archive, Box } from "lucide-react";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
 import { QASummaryPanel } from "@/components/qa-summary-panel";
+import { CustomerProgressModal } from "@/components/customer-progress-modal";
 import { z } from "zod";
 import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPattern } from "../../../lib/worker-allocation";
 
@@ -43,12 +44,12 @@ type UploadForm = z.infer<typeof uploadFormSchema>;
 function ExtraItemsAndBoxesButtons({
   jobId,
   onExtraItemsClick,
-  onBoxesCompleteClick,
+  onCustomerProgressClick,
   onPutAsideClick
 }: {
   jobId: string;
   onExtraItemsClick: () => void;
-  onBoxesCompleteClick: () => void;
+  onCustomerProgressClick: () => void;
   onPutAsideClick: () => void;
 }) {
   // Connect to WebSocket for real-time updates (same as Job Monitoring)
@@ -102,15 +103,15 @@ function ExtraItemsAndBoxesButtons({
         </Button>
       )}
 
-      {/* Boxes Complete Button */}
+      {/* Customer Progress Button */}
       <Button
         variant="outline"
         size="sm"
-        onClick={onBoxesCompleteClick}
-        data-testid={`button-boxes-complete-${jobId}`}
+        onClick={onCustomerProgressClick}
+        data-testid={`button-customer-progress-${jobId}`}
       >
-        <Box className="mr-1 h-4 w-4" />
-        {completedCustomers}/{totalCustomers} Customers
+        <Users className="mr-1 h-4 w-4" />
+        Customer Progress ({completedCustomers}/{totalCustomers})
       </Button>
     </>
   );
@@ -296,8 +297,8 @@ export default function ManagerDashboard() {
   const [extraItemsJobId, setExtraItemsJobId] = useState<string | null>(null);
   const [isPutAsideModalOpen, setIsPutAsideModalOpen] = useState(false);
   const [putAsideJobId, setPutAsideJobId] = useState<string | null>(null);
-  const [isCompletedBoxesModalOpen, setIsCompletedBoxesModalOpen] = useState(false);
-  const [completedBoxesJobId, setCompletedBoxesJobId] = useState<string | null>(null);
+  const [isCustomerProgressModalOpen, setIsCustomerProgressModalOpen] = useState(false);
+  const [customerProgressJobId, setCustomerProgressJobId] = useState<string | null>(null);
 
   // Assignment form state
   const [assignForm, setAssignForm] = useState({
@@ -1115,9 +1116,9 @@ export default function ManagerDashboard() {
                             setPutAsideJobId(job.id);
                             setIsPutAsideModalOpen(true);
                           }}
-                          onBoxesCompleteClick={() => {
-                            setCompletedBoxesJobId(job.id);
-                            setIsCompletedBoxesModalOpen(true);
+                          onCustomerProgressClick={() => {
+                            setCustomerProgressJobId(job.id);
+                            setIsCustomerProgressModalOpen(true);
                           }}
                         />
                       </div>
@@ -1334,15 +1335,16 @@ export default function ManagerDashboard() {
         />
       )}
 
-      {/* Completed Boxes Modal */}
-      {completedBoxesJobId && (
-        <CompletedBoxesModal
-          isOpen={isCompletedBoxesModalOpen}
+      {/* Customer Progress Modal */}
+      {customerProgressJobId && (
+        <CustomerProgressModal
+          isOpen={isCustomerProgressModalOpen}
           onClose={() => {
-            setIsCompletedBoxesModalOpen(false);
-            setCompletedBoxesJobId(null);
+            setIsCustomerProgressModalOpen(false);
+            setCustomerProgressJobId(null);
           }}
-          jobId={completedBoxesJobId}
+          jobId={customerProgressJobId}
+          jobName={(jobsData as any)?.jobs?.find((job: any) => job.id === customerProgressJobId)?.name}
         />
       )}
 
