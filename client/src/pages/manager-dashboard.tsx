@@ -19,8 +19,9 @@ import { useErrorContext } from "@/lib/error-context";
 import { ErrorDialog } from "@/components/ui/error-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2, Archive, Box } from "lucide-react";
+import { Package, Settings, LogOut, CloudUpload, Eye, Users, Download, Plus, ChevronDown, UserPlus, Palette, Trash2, Archive, Box, CircleDot } from "lucide-react";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
+import { PutAsideModal } from "@/components/put-aside-modal";
 import { QASummaryPanel } from "@/components/qa-summary-panel";
 import { z } from "zod";
 import { assignWorkerPattern, getDefaultWorkerColors, type WorkerAllocationPattern } from "../../../lib/worker-allocation";
@@ -39,14 +40,16 @@ const uploadFormSchema = z.object({
 
 type UploadForm = z.infer<typeof uploadFormSchema>;
 
-// Component for Extra Items and Boxes Complete buttons
+// Component for Extra Items, Put Aside, and Boxes Complete buttons
 function ExtraItemsAndBoxesButtons({
   jobId,
   onExtraItemsClick,
+  onPutAsideClick,
   onBoxesCompleteClick
 }: {
   jobId: string;
   onExtraItemsClick: () => void;
+  onPutAsideClick: () => void;
   onBoxesCompleteClick: () => void;
 }) {
   // Connect to WebSocket for real-time updates (same as Job Monitoring)
@@ -59,8 +62,16 @@ function ExtraItemsAndBoxesButtons({
     refetchInterval: 5000, // 5-second polling as requested
   });
 
+  // Fetch Put Aside items count
+  const { data: putAsideData } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/put-aside`],
+    enabled: !!jobId,
+    refetchInterval: 5000, // 5-second polling for real-time updates
+  });
+
   // Extract consistent data from progress endpoint (matches SupervisorView)
   const extraItemsCount = (progressData as any)?.progress?.extraItemsCount || 0;
+  const putAsideCount = (putAsideData as any)?.items?.length || 0;
   const completedCustomers = (progressData as any)?.progress?.completedCustomers || 0;
   const totalCustomers = (progressData as any)?.progress?.totalCustomers || 0;
 
@@ -75,6 +86,18 @@ function ExtraItemsAndBoxesButtons({
       >
         <Package className="mr-1 h-4 w-4" />
         {extraItemsCount} Extra Items
+      </Button>
+
+      {/* Put Aside Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onPutAsideClick}
+        data-testid={`button-put-aside-${jobId}`}
+        className="border-blue-200 hover:bg-blue-50"
+      >
+        <CircleDot className="mr-1 h-4 w-4 text-blue-600" />
+        {putAsideCount} Put Aside
       </Button>
 
       {/* Boxes Complete Button */}
@@ -199,6 +222,8 @@ export default function ManagerDashboard() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
   const [extraItemsJobId, setExtraItemsJobId] = useState<string | null>(null);
+  const [isPutAsideModalOpen, setIsPutAsideModalOpen] = useState(false);
+  const [putAsideJobId, setPutAsideJobId] = useState<string | null>(null);
   const [isCompletedBoxesModalOpen, setIsCompletedBoxesModalOpen] = useState(false);
   const [completedBoxesJobId, setCompletedBoxesJobId] = useState<string | null>(null);
 
@@ -1014,6 +1039,10 @@ export default function ManagerDashboard() {
                             setExtraItemsJobId(job.id);
                             setIsExtraItemsModalOpen(true);
                           }}
+                          onPutAsideClick={() => {
+                            setPutAsideJobId(job.id);
+                            setIsPutAsideModalOpen(true);
+                          }}
                           onBoxesCompleteClick={() => {
                             setCompletedBoxesJobId(job.id);
                             setIsCompletedBoxesModalOpen(true);
@@ -1230,6 +1259,17 @@ export default function ManagerDashboard() {
             setExtraItemsJobId(null);
           }}
           jobId={extraItemsJobId}
+        />
+      )}
+
+      {putAsideJobId && (
+        <PutAsideModal
+          isOpen={isPutAsideModalOpen}
+          onClose={() => {
+            setIsPutAsideModalOpen(false);
+            setPutAsideJobId(null);
+          }}
+          jobId={putAsideJobId}
         />
       )}
 

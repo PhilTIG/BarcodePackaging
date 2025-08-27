@@ -6,10 +6,11 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { Settings, LogOut, Users, Package, ChevronLeft } from "lucide-react";
+import { Settings, LogOut, Users, Package, ChevronLeft, CircleDot } from "lucide-react";
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { PerformanceDashboard } from "@/components/performance-dashboard";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
+import { PutAsideModal } from "@/components/put-aside-modal";
 import { CustomerQueueModal } from "@/components/customer-queue-modal";
 import { ItemFilter } from "@/components/item-filter";
 import { GroupFilter } from "@/components/group-filter";
@@ -21,6 +22,7 @@ export default function SupervisorView() {
   const [, setLocation] = useLocation();
   const { user, isLoading, logout } = useAuth();
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
+  const [isPutAsideModalOpen, setIsPutAsideModalOpen] = useState(false);
   const [isCustomerQueueModalOpen, setIsCustomerQueueModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -47,6 +49,13 @@ export default function SupervisorView() {
 
   // Connect to WebSocket for real-time updates 
   const { isConnected } = useWebSocket(jobId);
+
+  // Fetch Put Aside items for this job
+  const { data: putAsideData } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/put-aside`],
+    enabled: !!jobId,
+    refetchInterval: 5000, // 5-second polling for real-time updates
+  });
 
   // Get available products and groups for filtering (always fetch when job is available)
   const { availableProducts, availableGroups } = useFilteredBoxData(jobId || "", [], []);
@@ -371,17 +380,20 @@ export default function SupervisorView() {
                 </Button>
               </div>
               
-              {/* BOX LIMIT: Customer Queue Button */}
+              {/* Put Aside Button */}
               <div>
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-auto p-2 flex flex-col items-start"
-                  onClick={() => setIsCustomerQueueModalOpen(true)}
-                  data-testid="button-customer-queue"
+                  className="h-auto p-2 flex flex-col items-start border-blue-200 hover:bg-blue-50"
+                  onClick={() => setIsPutAsideModalOpen(true)}
+                  data-testid="button-put-aside"
                 >
-                  <span className="text-gray-600">Customer Queue: {progress?.unallocatedCustomers || 0}</span>
-                  <div className="text-xs text-gray-500">Unallocated customers</div>
+                  <span className="text-gray-600 flex items-center gap-1">
+                    <CircleDot className="h-3 w-3 text-blue-600" />
+                    Put Aside: {(putAsideData as any)?.items?.length || 0}
+                  </span>
+                  <div className="text-xs text-gray-500">Items for unallocated customers</div>
                 </Button>
               </div>
             </div>
@@ -453,6 +465,13 @@ export default function SupervisorView() {
       <ExtraItemsModal 
         isOpen={isExtraItemsModalOpen}
         onClose={() => setIsExtraItemsModalOpen(false)}
+        jobId={jobId!}
+      />
+
+      {/* Put Aside Modal */}
+      <PutAsideModal 
+        isOpen={isPutAsideModalOpen}
+        onClose={() => setIsPutAsideModalOpen(false)}
         jobId={jobId!}
       />
 

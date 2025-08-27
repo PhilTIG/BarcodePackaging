@@ -2923,10 +2923,40 @@ export class DatabaseStorage implements IStorage {
       }
 
       console.log(`[Reallocation] Successfully assigned customer "${customerName}" to box ${boxNumber} (${result.length} products)`);
+      
+      // AUTO-ALLOCATION: Check for Put Aside items for this customer and auto-allocate them
+      const putAsideItems = await this.db
+        .select()
+        .from(putAsideItems)
+        .where(and(
+          eq(putAsideItems.jobId, jobId),
+          eq(putAsideItems.customerName, customerName),
+          eq(putAsideItems.status, 'pending')
+        ));
+
+      let autoAllocatedCount = 0;
+      if (putAsideItems.length > 0) {
+        // Auto-allocate Put Aside items to the newly available box
+        for (const item of putAsideItems) {
+          await this.db
+            .update(putAsideItems)
+            .set({
+              status: 'allocated',
+              allocatedAt: new Date().toISOString(),
+              allocatedBoxNumber: boxNumber
+            })
+            .where(eq(putAsideItems.id, item.id));
+          autoAllocatedCount++;
+        }
+        
+        console.log(`[Auto-Allocation] Successfully auto-allocated ${autoAllocatedCount} Put Aside items for customer "${customerName}" to box ${boxNumber}`);
+      }
+
       return { 
         success: true, 
         customerName, 
-        message: `Box ${boxNumber} now assigned to Customer ${customerName}` 
+        message: `Box ${boxNumber} now assigned to Customer ${customerName}${autoAllocatedCount > 0 ? ` | Auto-allocated ${autoAllocatedCount} Put Aside items` : ''}`,
+        autoAllocatedItems: autoAllocatedCount
       };
 
     } catch (error) {
