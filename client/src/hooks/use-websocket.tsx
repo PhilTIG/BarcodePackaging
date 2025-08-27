@@ -344,7 +344,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         
         // Direct data injection (follows proven scan_update pattern)
         if (message.data.products) {
-          queryClient.setQueryData(["api/jobs", jobId], (oldData: any) => ({
+          queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
             ...oldData,
             products: message.data.products  // NEW DATA PROVIDED - instant UI update
           }));
@@ -353,7 +353,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         // Still invalidate other queries for additional components
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-        queryClient.invalidateQueries({ queryKey: ["api/jobs"] }); // Manager Dashboard
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // Manager Dashboard
         break;
       
       case "box_emptied":
@@ -363,7 +363,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         
         // Direct data injection (follows proven scan_update pattern)
         if (message.data.products) {
-          queryClient.setQueryData(["api/jobs", jobId], (oldData: any) => ({
+          queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
             ...oldData,
             products: message.data.products  // NEW DATA PROVIDED - instant UI update
           }));
@@ -372,7 +372,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         // Still invalidate other queries for additional components
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-        queryClient.invalidateQueries({ queryKey: ["api/jobs"] }); // Manager Dashboard
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // Manager Dashboard
         break;
       
       default:
