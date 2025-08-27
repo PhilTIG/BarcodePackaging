@@ -574,6 +574,44 @@ export class DatabaseStorage implements IStorage {
           Math.round(((progressStats.completedBoxes || 0) / (progressStats.totalBoxes || 0)) * 100) : 0
       };
 
+      // NEW: Customer-based calculations for UI display
+      // Calculate total customers (all customers in job data)
+      const [totalCustomersData] = await this.db
+        .select({
+          totalCustomers: sql<number>`COUNT(DISTINCT ${boxRequirements.customerName})`
+        })
+        .from(boxRequirements)
+        .where(eq(boxRequirements.jobId, id));
+
+      // Calculate unallocated customers (customers without box assignments)
+      const [unallocatedCustomersData] = await this.db
+        .select({
+          unallocatedCustomers: sql<number>`COUNT(DISTINCT ${boxRequirements.customerName})`
+        })
+        .from(boxRequirements)
+        .where(and(eq(boxRequirements.jobId, id), sql`${boxRequirements.boxNumber} IS NULL`));
+
+      // Calculate completed customers (customers where ALL their items are complete)
+      // Group by customer and check if all items are complete
+      const customerCompletionData = await this.db
+        .select({
+          customerName: boxRequirements.customerName,
+          allComplete: sql<boolean>`BOOL_AND(${boxRequirements.isComplete})`
+        })
+        .from(boxRequirements)
+        .where(eq(boxRequirements.jobId, id))
+        .groupBy(boxRequirements.customerName);
+
+      const completedCustomers = customerCompletionData.filter((c: any) => c.allComplete).length;
+
+      const customerCompletion = {
+        totalCustomers: totalCustomersData.totalCustomers || 0,
+        completedCustomers: completedCustomers || 0,
+        unallocatedCustomers: unallocatedCustomersData.unallocatedCustomers || 0,
+        customerCompletionPercentage: (totalCustomersData.totalCustomers || 0) > 0 ? 
+          Math.round((completedCustomers / (totalCustomersData.totalCustomers || 0)) * 100) : 0
+      };
+
       // Get worker performance data for all assigned workers
       const workersData = await Promise.all(
         assignments.map(async (assignment) => {
@@ -605,6 +643,11 @@ export class DatabaseStorage implements IStorage {
           totalBoxes: boxCompletion.totalBoxes,
           completedBoxes: boxCompletion.completedBoxes,
           boxCompletionPercentage: boxCompletion.boxCompletionPercentage,
+          // NEW: Customer-based progress data for UI display
+          totalCustomers: customerCompletion.totalCustomers,
+          completedCustomers: customerCompletion.completedCustomers,
+          unallocatedCustomers: customerCompletion.unallocatedCustomers,
+          customerCompletionPercentage: customerCompletion.customerCompletionPercentage,
           activeSessions: sessions.filter(s => s.status === 'active').length,
           waitingSessions: sessions.filter(s => s.status === 'paused').length,
           totalAssignedWorkers: assignments.length,

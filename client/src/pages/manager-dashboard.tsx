@@ -61,8 +61,8 @@ function ExtraItemsAndBoxesButtons({
 
   // Extract consistent data from progress endpoint (matches SupervisorView)
   const extraItemsCount = (progressData as any)?.progress?.extraItemsCount || 0;
-  const completedBoxes = (progressData as any)?.progress?.completedBoxes || 0;
-  const totalBoxes = (progressData as any)?.progress?.totalBoxes || 0;
+  const completedCustomers = (progressData as any)?.progress?.completedCustomers || 0;
+  const totalCustomers = (progressData as any)?.progress?.totalCustomers || 0;
 
   return (
     <>
@@ -85,7 +85,7 @@ function ExtraItemsAndBoxesButtons({
         data-testid={`button-boxes-complete-${jobId}`}
       >
         <Box className="mr-1 h-4 w-4" />
-        {completedBoxes}/{totalBoxes} Boxes
+        {completedCustomers}/{totalCustomers} Customers
       </Button>
     </>
   );
@@ -853,7 +853,7 @@ export default function ManagerDashboard() {
                         <div>
                           <h3 className="font-medium text-gray-900">{job.name}</h3>
                           <p className="text-sm text-gray-600">
-                            {job.totalProducts} products, {job.totalCustomers} boxes
+                            {job.totalProducts} products, {job.totalCustomers} customers
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">

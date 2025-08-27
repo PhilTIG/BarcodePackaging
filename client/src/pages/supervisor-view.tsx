@@ -355,8 +355,8 @@ export default function SupervisorView() {
                 <div className="text-xs text-gray-500">({completionPercentage}% complete)</div>
               </div>
               <div>
-                <span className="text-gray-600">Boxes: {progress?.completedBoxes || 0}/{progress?.totalBoxes || job.totalCustomers}</span>
-                <div className="text-xs text-gray-500">({progress?.boxCompletionPercentage || 0}% complete)</div>
+                <span className="text-gray-600">Customers: {progress?.completedCustomers || 0}/{progress?.totalCustomers || job.totalCustomers}</span>
+                <div className="text-xs text-gray-500">({progress?.customerCompletionPercentage || 0}% complete)</div>
               </div>
               <div>
                 <Button 
@@ -380,7 +380,7 @@ export default function SupervisorView() {
                   onClick={() => setIsCustomerQueueModalOpen(true)}
                   data-testid="button-customer-queue"
                 >
-                  <span className="text-gray-600">Customer Queue</span>
+                  <span className="text-gray-600">Customer Queue: {progress?.unallocatedCustomers || 0}</span>
                   <div className="text-xs text-gray-500">Unallocated customers</div>
                 </Button>
               </div>
