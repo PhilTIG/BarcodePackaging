@@ -952,6 +952,38 @@ export class DatabaseStorage implements IStorage {
         targetBox = await this.findNextTargetBox(insertEvent.barCode, session.jobId, workerId);
 
         if (targetBox) {
+          // PUT ASIDE PRIORITIZATION: Check if job has box limit and consume Put Aside items first
+          const job = await this.getJobById(session.jobId);
+          if (job?.boxLimit) {
+            // BARCODE FIX: Normalize barcode for Put Aside checks
+            const normalizedBarCode = normalizeBarcodeFormat(insertEvent.barCode);
+            
+            // Look for unallocated Put Aside items with matching barcode
+            const putAsideItems = await this.db
+              .select()
+              .from(scanEvents)
+              .where(and(
+                eq(scanEvents.jobId, session.jobId),
+                eq(scanEvents.eventType, 'put_aside'),
+                sql`(${scanEvents.barCode} = ${insertEvent.barCode} OR ${scanEvents.barCode} = ${normalizedBarCode})`,
+                isNull(scanEvents.allocatedAt) // Only unallocated Put Aside items
+              ))
+              .limit(1);
+
+            if (putAsideItems.length > 0) {
+              // CONSUME PUT ASIDE ITEM: Mark the first matching Put Aside item as allocated
+              const putAsideItem = putAsideItems[0];
+              await this.db
+                .update(scanEvents)
+                .set({
+                  allocatedToBox: targetBox,
+                  allocatedAt: new Date()
+                })
+                .where(eq(scanEvents.id, putAsideItem.id));
+
+              console.log(`[Put Aside Priority] Consumed Put Aside item for barcode ${insertEvent.barCode} - allocated to box ${targetBox}`);
+            }
+          }
           // Get box requirement info for the target box
           const boxReq = await this.db
             .select()
