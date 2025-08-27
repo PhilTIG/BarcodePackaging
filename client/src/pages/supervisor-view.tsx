@@ -11,6 +11,7 @@ import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { PerformanceDashboard } from "@/components/performance-dashboard";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
 import { CustomerQueueModal } from "@/components/customer-queue-modal";
+import { CustomerProgressModal } from "@/components/customer-progress-modal";
 import { ItemFilter } from "@/components/item-filter";
 import { GroupFilter } from "@/components/group-filter";
 import { useFilteredBoxData } from "@/hooks/use-filtered-box-data";
@@ -94,6 +95,7 @@ export default function SupervisorView() {
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
   const [isCustomerQueueModalOpen, setIsCustomerQueueModalOpen] = useState(false);
   const [isPutAsideModalOpen, setIsPutAsideModalOpen] = useState(false);
+  const [isCustomerProgressModalOpen, setIsCustomerProgressModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
@@ -434,8 +436,16 @@ export default function SupervisorView() {
                 <div className="text-xs text-gray-500">({completionPercentage}% complete)</div>
               </div>
               <div>
-                <span className="text-gray-600">Customers: {progress?.completedCustomers || 0}/{progress?.totalCustomers || job.totalCustomers}</span>
-                <div className="text-xs text-gray-500">({progress?.customerCompletionPercentage || 0}% complete)</div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-auto p-2 flex flex-col items-start"
+                  onClick={() => setIsCustomerProgressModalOpen(true)}
+                  data-testid="button-customer-progress"
+                >
+                  <span className="text-gray-600">Customer Progress ({progress?.completedCustomers || 0}/{progress?.totalCustomers || job.totalCustomers})</span>
+                  <div className="text-xs text-gray-500">({progress?.customerCompletionPercentage || 0}% complete)</div>
+                </Button>
               </div>
               <div>
                 <Button 
@@ -564,6 +574,14 @@ export default function SupervisorView() {
         isOpen={isPutAsideModalOpen}
         onClose={() => setIsPutAsideModalOpen(false)}
         jobId={jobId!}
+      />
+
+      {/* Customer Progress Modal */}
+      <CustomerProgressModal
+        isOpen={isCustomerProgressModalOpen}
+        onClose={() => setIsCustomerProgressModalOpen(false)}
+        jobId={jobId!}
+        jobName={job?.name}
       />
 
     </div>
