@@ -15,6 +15,77 @@ import { ItemFilter } from "@/components/item-filter";
 import { GroupFilter } from "@/components/group-filter";
 import { useFilteredBoxData } from "@/hooks/use-filtered-box-data";
 import { useEffect, useState, useCallback } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+
+// Put Aside Modal Component (without Allocate to Box button)
+function PutAsideModal({
+  isOpen,
+  onClose,
+  jobId
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  jobId: string;
+}) {
+  const { data: putAsideData, isLoading } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/put-aside`],
+    enabled: !!jobId && isOpen,
+    refetchInterval: 5000, // 5-second polling for real-time updates
+  });
+
+  const putAsideItems = (putAsideData as any)?.items || [];
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-orange-600">
+            <Package className="h-5 w-5" />
+            Put Aside Items ({putAsideItems.length})
+          </DialogTitle>
+          <DialogDescription>
+            Items waiting for automatic allocation when workers scan matching barcodes
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="overflow-y-auto max-h-[60vh] space-y-3">
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-gray-500">Loading put aside items...</div>
+            </div>
+          ) : putAsideItems.length === 0 ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-gray-500">No put aside items found</div>
+            </div>
+          ) : (
+            putAsideItems.map((item: any, index: number) => (
+              <Card key={index} className="border-l-4 border-l-orange-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="font-mono text-sm bg-orange-100 px-2 py-1 rounded">
+                      {item.barCode}
+                    </div>
+                    <div className="font-medium">{item.productName}</div>
+                    <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                      Qty: {item.qty}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-orange-600 mt-2">
+                    Will be allocated automatically when workers scan matching barcode
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function SupervisorView() {
   const { jobId } = useParams();
@@ -22,6 +93,7 @@ export default function SupervisorView() {
   const { user, isLoading, logout } = useAuth();
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
   const [isCustomerQueueModalOpen, setIsCustomerQueueModalOpen] = useState(false);
+  const [isPutAsideModalOpen, setIsPutAsideModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
@@ -43,6 +115,13 @@ export default function SupervisorView() {
     queryKey: ["/api/jobs", jobId, "progress"],
     enabled: !!jobId && !!user,
     refetchInterval: 10000, // Reduced from 5s to 10s for better performance
+  });
+
+  // Fetch Put Aside count
+  const { data: putAsideData } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/put-aside/count`],
+    enabled: !!jobId && !!user,
+    refetchInterval: 10000, // Real-time updates
   });
 
   // Connect to WebSocket for real-time updates 
@@ -349,7 +428,7 @@ export default function SupervisorView() {
           </CardHeader>
           <CardContent>
             <Progress value={completionPercentage} className="h-4 mb-4" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Items: {job.completedItems}/{job.totalProducts}</span>
                 <div className="text-xs text-gray-500">({completionPercentage}% complete)</div>
@@ -370,6 +449,22 @@ export default function SupervisorView() {
                   <div className="text-xs text-gray-500">Click to view details</div>
                 </Button>
               </div>
+
+              {/* Put Aside Button - Only show when job has box limit */}
+              {job?.boxLimit && (
+                <div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-auto p-2 flex flex-col items-start border-orange-500 text-orange-600 hover:bg-orange-50"
+                    onClick={() => setIsPutAsideModalOpen(true)}
+                    data-testid="button-put-aside"
+                  >
+                    <span className="text-orange-600">Put Aside: {(putAsideData as any)?.count || 0}</span>
+                    <div className="text-xs text-orange-500">Items to allocate</div>
+                  </Button>
+                </div>
+              )}
               
               {/* BOX LIMIT: Customer Queue Button */}
               <div>
@@ -462,6 +557,13 @@ export default function SupervisorView() {
         onClose={() => setIsCustomerQueueModalOpen(false)}
         jobId={jobId!}
         jobName={job?.name}
+      />
+
+      {/* Put Aside Modal */}
+      <PutAsideModal
+        isOpen={isPutAsideModalOpen}
+        onClose={() => setIsPutAsideModalOpen(false)}
+        jobId={jobId!}
       />
 
     </div>

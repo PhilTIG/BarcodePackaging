@@ -234,7 +234,7 @@ function PutAsideModal({
             Put Aside Items ({putAsideItems.length})
           </DialogTitle>
           <DialogDescription>
-            Items that need to be allocated to available boxes
+            Items waiting for automatic allocation when workers scan matching barcodes
           </DialogDescription>
         </DialogHeader>
 
@@ -251,26 +251,17 @@ function PutAsideModal({
             putAsideItems.map((item: any, index: number) => (
               <Card key={index} className="border-l-4 border-l-orange-500">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="font-mono text-sm bg-orange-100 px-2 py-1 rounded">
-                        {item.barCode}
-                      </div>
-                      <div className="font-medium">{item.productName}</div>
-                      <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                        Qty: {item.qty}
-                      </Badge>
+                  <div className="flex items-center gap-3">
+                    <div className="font-mono text-sm bg-orange-100 px-2 py-1 rounded">
+                      {item.barCode}
                     </div>
-                    <Button 
-                      size="sm" 
-                      className="bg-orange-500 hover:bg-orange-600 text-white"
-                      onClick={() => {
-                        // TODO: Implement allocation logic
-                        console.log('Allocate item:', item);
-                      }}
-                    >
-                      Allocate to Box
-                    </Button>
+                    <div className="font-medium">{item.productName}</div>
+                    <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                      Qty: {item.qty}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-orange-600 mt-2">
+                    Will be allocated automatically when workers scan matching barcode
                   </div>
                 </CardContent>
               </Card>
