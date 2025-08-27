@@ -1932,9 +1932,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check permissions
       const userPreferences = await storage.getUserPreferences(req.user!.id);
+      console.log(`[Transfer Permission Debug] User: ${req.user!.id}, Role: ${req.user!.role}, canEmptyAndTransfer: ${userPreferences?.canEmptyAndTransfer}`);
+      
       if (!canEmptyAndTransfer(req.user!, userPreferences)) {
-        return res.status(403).json({ message: 'Insufficient permissions to transfer boxes' });
+        console.log(`[Transfer Permission Debug] Permission denied for user ${req.user!.id} with role ${req.user!.role}`);
+        return res.status(403).json({ 
+          message: 'Insufficient permissions to transfer boxes',
+          debug: {
+            userId: req.user!.id,
+            role: req.user!.role,
+            canEmptyAndTransfer: userPreferences?.canEmptyAndTransfer
+          }
+        });
       }
+      console.log(`[Transfer Permission Debug] Permission granted for user ${req.user!.id}`);
 
       // Auto-detect customer's group from database - no manual selection required
 
