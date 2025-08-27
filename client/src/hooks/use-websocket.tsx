@@ -354,6 +354,10 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
         queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // Manager Dashboard
+        
+        // Force worker view re-render by invalidating worker-specific queries
+        queryClient.invalidateQueries({ queryKey: ["/api/users/me/assignments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/scan-sessions/my-active"] });
         break;
       
       case "box_emptied":
@@ -373,6 +377,10 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
         queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // Manager Dashboard
+        
+        // Force worker view re-render by invalidating worker-specific queries
+        queryClient.invalidateQueries({ queryKey: ["/api/users/me/assignments"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/scan-sessions/my-active"] });
         break;
       
       default:
