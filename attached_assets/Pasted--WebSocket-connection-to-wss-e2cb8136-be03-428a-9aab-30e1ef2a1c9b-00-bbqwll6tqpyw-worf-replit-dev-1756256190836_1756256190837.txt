@@ -1,0 +1,186 @@
+ WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/?token=MFvZfd_aQJVT' failed: 
+setupWebSocket @ client:536
+client:536 Uncaught (in promise) 
+ Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+ [WebSocket Error Filter] Development tool WebSocket error suppression enabled
+/api/users/me/preferences:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
+ [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+ [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+ [WebSocket] Detected environment: Replit Production
+ [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d
+ [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+ [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+ [WebSocket] Detected environment: Replit Production
+ [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 18a323a0-7281-4255-b30a-8c4889d85985
+ [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+ [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+ [WebSocket] Detected environment: Replit Production
+ [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 26e1bbc7-2f35-40b3-a15a-30fad19dac33
+ [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+ [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+ [WebSocket] Detected environment: Replit Production
+ [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job d713c9cb-70ff-4b41-ba27-b95efe8403dd
+ [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+ [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+ [WebSocket] Detected environment: Replit Production
+ [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 70837a12-7091-46c8-b8e2-f9831ab3e57d
+ [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+ [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/manager
+ [WebSocket] Detected environment: Replit Production
+ [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job f2c05683-0c17-420a-b02e-a012be9d6f06
+ [WebSocket] Connection established successfully
+ [WebSocket] Sending authentication: Object
+ [WebSocket] Message received: Object
+ [WebSocket] Server connection confirmed: Object
+ [WebSocket] Message received: Object
+ [WebSocket] Authentication confirmed: Object
+ [WebSocket] Connection established successfully
+ [WebSocket] Sending authentication: Object
+ [WebSocket] Message received: Object
+ [WebSocket] Server connection confirmed: Object
+ [WebSocket] Message received: Object
+ [WebSocket] Authentication confirmed: Object
+ [WebSocket] Manual disconnection requested
+ [WebSocket] Manual disconnection requested
+ [WebSocket] Manual disconnection requested
+ WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+disconnect @ use-websocket.tsx:285
+ [WebSocket] Manual disconnection requested
+ WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+disconnect @ use-websocket.tsx:285
+ [WebSocket] Manual disconnection requested
+ WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+disconnect @ use-websocket.tsx:285
+ [WebSocket] Manual disconnection requested
+ WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+disconnect @ use-websocket.tsx:285
+ [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+ [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/18a323a0-7281-4255-b30a-8c4889d85985
+ [WebSocket] Detected environment: Replit Production
+ [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 18a323a0-7281-4255-b30a-8c4889d85985
+ [WebSocket] Connection error: Event
+filteredConsoleError @ websocket-error-filt…0CKdtVfgw5QYWbAU:28
+ [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filt…0CKdtVfgw5QYWbAU:28
+ [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+ [WebSocket] Scheduling reconnection in 3000ms
+ [WebSocket] Connection error: Event
+filteredConsoleError @ websocket-error-filt…0CKdtVfgw5QYWbAU:28
+ [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filt…0CKdtVfgw5QYWbAU:28
+ [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+ [WebSocket] Scheduling reconnection in 3000ms
+ [WebSocket] Connection error: Event
+filteredConsoleError @ websocket-error-filt…0CKdtVfgw5QYWbAU:28
+ [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filt…0CKdtVfgw5QYWbAU:28
+ [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+ [WebSocket] Scheduling reconnection in 3000ms
+ [WebSocket] Connection error: Event
+filteredConsoleError @ websocket-error-filt…0CKdtVfgw5QYWbAU:28
+ [WebSocket] Error details - ReadyState: undefined URL: undefined
+filteredConsoleError @ websocket-error-filt…0CKdtVfgw5QYWbAU:28
+ [WebSocket] Connection closed. Code: 1006, Reason: , Clean: false
+ [WebSocket] Scheduling reconnection in 3000ms
+ [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true
+ [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true
+ [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+ [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/18a323a0-7281-4255-b30a-8c4889d85985
+ [WebSocket] Detected environment: Replit Production
+ [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 18a323a0-7281-4255-b30a-8c4889d85985
+ [WebSocket] Connection established successfully
+ [WebSocket] Sending authentication: Object
+ [WebSocket] Message received: Object
+ [WebSocket] Server connection confirmed: Object
+ [WebSocket] Message received: Object
+ [WebSocket] Authentication confirmed: Object
+ [WebSocket] Attempting reconnection...
+ [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/18a323a0-7281-4255-b30a-8c4889d85985
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 26e1bbc7-2f35-40b3-a15a-30fad19dac33
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/18a323a0-7281-4255-b30a-8c4889d85985
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job d713c9cb-70ff-4b41-ba27-b95efe8403dd
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/18a323a0-7281-4255-b30a-8c4889d85985
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job 70837a12-7091-46c8-b8e2-f9831ab3e57d
+use-websocket.tsx:107 [WebSocket] Attempting reconnection...
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/supervisor/18a323a0-7281-4255-b30a-8c4889d85985
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d on job f2c05683-0c17-420a-b02e-a012be9d6f06
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: Object
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: Object
+box-details-modal.tsx:235 [BoxModal] Box 2 workers: Array(0)
+box-details-modal.tsx:235 [BoxModal] Box 2 workers: Array(0)
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: Object
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: Object
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:147 [WebSocket] Optimized scan update received: Object
+customer-box-grid.tsx:66 [CustomerBoxGrid] WebSocket scan update: Box 1, Worker 66c2f804-647e-41d4-bf15-bbbf1ffaed9a Object
+use-box-highlighting.ts:88 [useBoxHighlighting] Updated highlighting for box 1 (Manager mode): Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:147 [WebSocket] Optimized scan update received: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:147 [WebSocket] Optimized scan update received: Object
+customer-box-grid.tsx:66 [CustomerBoxGrid] WebSocket scan update: Box 2, Worker 66c2f804-647e-41d4-bf15-bbbf1ffaed9a Object
+use-box-highlighting.ts:88 [useBoxHighlighting] Updated highlighting for box 2 (Manager mode): Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:147 [WebSocket] Optimized scan update received: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:147 [WebSocket] Optimized scan update received: Object
+customer-box-grid.tsx:66 [CustomerBoxGrid] WebSocket scan update: Box 2, Worker 66c2f804-647e-41d4-bf15-bbbf1ffaed9a Object
+use-box-highlighting.ts:88 [useBoxHighlighting] Updated highlighting for box 2 (Manager mode): Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:147 [WebSocket] Optimized scan update received: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:147 [WebSocket] Optimized scan update received: Object
+customer-box-grid.tsx:66 [CustomerBoxGrid] WebSocket scan update: Box 2, Worker 66c2f804-647e-41d4-bf15-bbbf1ffaed9a Object
+use-box-highlighting.ts:88 [useBoxHighlighting] Updated highlighting for box 2 (Manager mode): Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:147 [WebSocket] Optimized scan update received: Object
+box-details-modal.tsx:235 [BoxModal] Box 2 workers: Array(1)
+chunk-PIXLUW3O.js?v=e2bbd14a:339 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ chunk-PIXLUW3O.js?v=e2bbd14a:339
+box-details-modal.tsx:235 [BoxModal] Box 2 workers: Array(1)
+box-details-modal.tsx:235 [BoxModal] Box 2 workers: Array(1)
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:342 [WebSocket] Box transfer event received: Object
+use-websocket.tsx:343 [WebSocket] Box transferred - invalidating cache for instant UI refresh
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:342 [WebSocket] Box transfer event received: Object
+use-websocket.tsx:343 [WebSocket] Box transferred - invalidating cache for instant UI refresh
+box-details-modal.tsx:131 [BoxModal] Box 2 transferred - starting WebSocket delay timer
+box-details-modal.tsx:235 [BoxModal] Box 2 workers: Array(1)0: {workerId: '1ffaed9a', color: '#f73b3b', contribution: 3}length: 1[[Prototype]]: Array(0)
+box-details-modal.tsx:140 [BoxModal] WebSocket delay complete - closing modal for box 2
