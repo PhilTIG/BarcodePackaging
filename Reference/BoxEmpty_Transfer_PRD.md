@@ -266,19 +266,26 @@ type BoxTransferEvents =
 - [ ] Test CSV processing with various limits
 
 #### Storage Layer
-- [ ] Add storage methods for retrieving unallocated customers (boxNumber=NULL)
+- [x] Add storage methods for retrieving unallocated customers (boxNumber=NULL) ✅ COMPLETED
 - [ ] Add methods for box limit validation and warnings
 - [ ] Update existing storage methods to handle NULL box numbers
 
 #### Manager Dashboard Integration
-- [ ] Create unallocated customers section in job management area
-- [ ] Display customer details with required products
-- [ ] Add real-time updates for unallocated customer status
+- [x] Create unallocated customers section in job management area ✅ COMPLETED - Customer Queue shows count
+- [x] Display customer details with required products ✅ COMPLETED - Customer-based terminology implemented
+- [x] Add real-time updates for unallocated customer status ✅ COMPLETED - Real-time WebSocket updates working
 
 #### Worker Allocation Updates
 - [ ] Update worker patterns to skip NULL boxes dynamically
 - [ ] Test allocation patterns with mixed NULL and assigned boxes
 - [ ] Ensure workers can still follow their sequences effectively
+
+#### UI TERMINOLOGY UPDATES (COMPLETED) ✅
+- [x] Change "Boxes: 0/6" to "Customers: X/Y" in Overall Progress section ✅ COMPLETED
+- [x] Update Manager Dashboard to use "Customers" instead of "Boxes" ✅ COMPLETED  
+- [x] Show "Customer Queue: X" with unallocated customer count ✅ COMPLETED
+- [x] Customer-based completion calculations (completedCustomers/totalCustomers) ✅ COMPLETED
+- [x] Customer completion percentage calculations ✅ COMPLETED
 
 This foundation enables the complete Empty/Transfer system in subsequent phases.
 
