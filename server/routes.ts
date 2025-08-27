@@ -1953,22 +1953,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // AUTO-ALLOCATION: Broadcast Put Aside updates if items were auto-allocated
-      if (emptyResult.reallocation?.autoAllocatedItems > 0) {
-        const updatedPutAsideData = await storage.getPutAsideItems(jobId);
-        broadcastToJob(jobId, {
-          type: 'put_aside_auto_allocated',
-          data: {
-            jobId,
-            autoAllocatedCount: emptyResult.reallocation.autoAllocatedItems,
-            customerName: emptyResult.reallocation.customerName,
-            boxNumber: boxNum,
-            timestamp: new Date().toISOString(),
-            putAsideData: updatedPutAsideData
-          }
-        });
-      }
-
       res.json({ 
         success: true, 
         message: emptyResult.message,
@@ -2087,22 +2071,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           products: transformedProducts // NEW: Include products data for instant UI updates
         }
       });
-
-      // AUTO-ALLOCATION: Broadcast Put Aside updates if items were auto-allocated
-      if (transferResult.reallocation?.autoAllocatedItems > 0) {
-        const updatedPutAsideData = await storage.getPutAsideItems(jobId);
-        broadcastToJob(jobId, {
-          type: 'put_aside_auto_allocated',
-          data: {
-            jobId,
-            autoAllocatedCount: transferResult.reallocation.autoAllocatedItems,
-            customerName: transferResult.reallocation.customerName,
-            boxNumber: boxNum,
-            timestamp: new Date().toISOString(),
-            putAsideData: updatedPutAsideData
-          }
-        });
-      }
 
       res.json({ 
         success: true, 

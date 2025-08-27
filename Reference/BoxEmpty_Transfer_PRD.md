@@ -81,37 +81,26 @@ This PRD defines the comprehensive Box Empty/Transfer system that provides insta
 
 ### 3. Put Aside System
 
-#### 3.0 Put Aside System Prerequisites (CRITICAL)
-- **Box Limit Requirement**: Put Aside logic ONLY runs when job has a box limit configured
-- **No Box Limit = No Put Aside**: If job has no box limit, all Put Aside logic is bypassed
-- **Foundation Check**: System must first check if job has box limit before any Put Aside processing
-
-#### 3.1 Put Aside Logic Flow (FULLY CLARIFIED)
-- **Trigger**: Scanned item cannot be allocated to any existing box BUT can be allocated to an unallocated customer in the queue
-- **Auto-Detection**: Worker scans normally, system automatically detects the Put Aside scenario
-- **Decision Making**: System makes all Put Aside vs Extra Items decisions automatically
+#### 3.1 Put Aside Logic Flow (CLARIFIED)
+- **Trigger**: Individual scanned items that couldn't find a suitable box
 - **Decision Logic**: 
-  - Step 1: Check if scanned item matches any existing box requirements → If YES, allocate normally
-  - Step 2: If NO match in existing boxes, check every unallocated customer's product list for this barcode
-  - Step 3: IF unallocated customers require this item → Create "Put Aside" entry
-  - Step 4: IF no unallocated customers require this item → Send to "Extra Items" list
+  - IF unallocated customers (boxNumber=NULL) require this item → Create "Put Aside" entry
+  - IF unallocated customers do NOT require this item → Send to "Extra Items" list
 - **Storage**: Integrate with existing scan events table structure
 - **Naming**: "Put Aside - <CustomName>" format for identification
 
-#### 3.2 Put Aside Queue Management (UPDATED)
-- **UI Location**: "Put Aside" button/box displayed next to "Extra Items" button on Monitor screen
-- **Count Display**: Shows number of items that have been put aside
-- **Similar UI Pattern**: Follows same design as Extra Items button
-- **Persistence**: Items stay in Put Aside list indefinitely if never allocated
-- **No Expiration**: No time limits or automatic removal from Put Aside list
-- **Item Details**: Show product name and barcode for each Put Aside item
+#### 3.2 Put Aside Queue Management
+- **Display**: List next to Extra Items icon with similar UI pattern
+- **Status Indicator**: Red cross (no box) / Green tick (box available)
+- **Worker Notification**: "Check Put Aside" message on worker screen
+- **Item Details**: Show product name and availability status
 
-#### 3.3 Put Aside Item Auto-Allocation (UPDATED)
-- **Automatic Priority**: When boxes become available, Put Aside items automatically get priority allocation
-- **Matching Logic**: If same barcode matches and a box can accept the Put Aside item → auto-allocate and remove from list
-- **Box Availability Detection**: System monitors when boxes get emptied/transferred and become available
-- **Seamless Integration**: Works with existing worker allocation patterns and box assignment logic
-- **No Manual Intervention**: All allocation happens automatically without worker or manager action required
+#### 3.3 Put Aside Item Allocation
+- **Process**: When put aside item scanned, allocate following worker's allocation pattern rules
+- **Priority**: Put aside items are prioritized and taken from list first during allocation
+- **Worker Instruction**: Manager directs worker to scan put aside items
+- **Removal**: Auto-remove from put aside list once allocated
+- **System Integration**: Use existing worker-based box allocation logic
 
 ### 4. Manager Configuration
 

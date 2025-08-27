@@ -383,43 +383,6 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         queryClient.invalidateQueries({ queryKey: ["/api/scan-sessions/my-active"] });
         break;
       
-      case "put_aside_auto_allocated":
-        // Put Aside items auto-allocated to available box
-        console.log("[WebSocket] Put Aside auto-allocation received:", message.data);
-        
-        // Invalidate Put Aside data to refresh counts and modal content
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside`] });
-        
-        // Invalidate job progress to update unallocated customer counts
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-        
-        // Invalidate manager dashboard to update progress bars
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-        
-        // Log auto-allocation activity for user feedback
-        if (message.data && (message.data as any).autoAllocatedCount > 0) {
-          console.log(`[Put Aside] Auto-allocated ${(message.data as any).autoAllocatedCount} items for customer "${(message.data as any).customerName}" to box ${(message.data as any).boxNumber}`);
-        }
-        break;
-      
-      case "box_emptied":
-        // Box emptied - refresh all data
-        console.log("[WebSocket] Box emptied notification received:", message.data);
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
-        break;
-      
-      case "box_transferred":
-        // Box transferred - refresh all data
-        console.log("[WebSocket] Box transferred notification received:", message.data);
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
-        break;
-
       default:
         console.log("[WebSocket] Unknown message type received:", message.type, message.data);
     }
