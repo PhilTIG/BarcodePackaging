@@ -2299,57 +2299,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create put aside item
-  app.post('/api/jobs/:jobId/put-aside', requireAuth, requireRole(['worker']), async (req: AuthenticatedRequest, res) => {
-    try {
-      const { jobId } = req.params;
-      const { barCode, productName, customerName, originalBoxNumber, quantity, sourceEventId } = req.body;
+  // ============== PUT ASIDE API ENDPOINTS (NEW scan_events approach) ==============
 
-      const putAsideItem = await storage.createPutAsideItem({
-        jobId,
-        barCode,
-        productName,
-        customerName,
-        originalBoxNumber: parseInt(originalBoxNumber),
-        quantity: parseInt(quantity) || 1,
-        putAsideBy: req.user!.id,
-        sourceEventId
-      });
-
-      // Broadcast put aside event
-      broadcastToJob(jobId, {
-        type: 'item_put_aside',
-        data: {
-          item: putAsideItem,
-          performedBy: req.user!.name,
-          timestamp: new Date().toISOString()
-        }
-      });
-
-      res.status(201).json({ 
-        success: true,
-        item: putAsideItem,
-        message: 'Item successfully put aside'
-      });
-    } catch (error) {
-      console.error('Failed to create put aside item:', error);
-      res.status(500).json({ message: 'Failed to create put aside item' });
-    }
-  });
-
-  // Get put aside items for a job
+  // Get put aside items for a job 
   app.get('/api/jobs/:jobId/put-aside', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId } = req.params;
-      const { status } = req.query;
-      
-      let items;
-      if (status) {
-        items = await storage.getPutAsideItemsByStatus(jobId, status as string);
-      } else {
-        items = await storage.getPutAsideItems(jobId);
-      }
-      
+      const items = await storage.getPutAsideItemsForJob(jobId);
       res.json({ items });
     } catch (error) {
       console.error('Failed to fetch put aside items:', error);
@@ -2357,54 +2313,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all put aside items across all jobs (for managers/supervisors)
-  app.get('/api/put-aside/all', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+  // Get put aside count for a job
+  app.get('/api/jobs/:jobId/put-aside/count', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
     try {
-      const { status } = req.query;
-      
-      // This would need a new storage method to get all put aside items
-      const items = await storage.getAllPutAsideItems(status as string);
-      
-      res.json({ items });
+      const { jobId } = req.params;
+      const count = await storage.getPutAsideCount(jobId);
+      res.json({ count });
     } catch (error) {
-      console.error('Failed to fetch all put aside items:', error);
-      res.status(500).json({ message: 'Failed to fetch all put aside items' });
+      console.error('Failed to fetch put aside count:', error);
+      res.status(500).json({ message: 'Failed to fetch put aside count' });
     }
   });
 
-  // Reallocate put aside item to a box
-  app.post('/api/put-aside/:itemId/reallocate', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+  // Check if a barcode requires put aside (for unallocated customers)
+  app.post('/api/jobs/:jobId/check-put-aside', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
     try {
-      const { itemId } = req.params;
-      const { targetBoxNumber } = req.body;
+      const { jobId } = req.params;
+      const { barCode } = req.body;
 
-      if (!targetBoxNumber) {
-        return res.status(400).json({ message: 'Target box number is required' });
+      if (!barCode) {
+        return res.status(400).json({ message: 'Barcode is required' });
       }
 
-      const item = await storage.reallocatePutAsideItem(itemId, parseInt(targetBoxNumber), req.user!.id);
+      const requiresPutAside = await storage.checkUnallocatedCustomerRequirements(jobId, barCode);
+      res.json({ requiresPutAside });
+    } catch (error) {
+      console.error('Failed to check put aside requirement:', error);
+      res.status(500).json({ message: 'Failed to check put aside requirement' });
+    }
+  });
 
-      if (!item) {
+  // Mark put aside item as allocated to a box
+  app.post('/api/put-aside/:eventId/allocate', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { eventId } = req.params;
+      const { boxNumber } = req.body;
+
+      if (!boxNumber) {
+        return res.status(400).json({ message: 'Box number is required' });
+      }
+
+      const allocatedEvent = await storage.markPutAsideAllocated(eventId, parseInt(boxNumber));
+
+      if (!allocatedEvent) {
         return res.status(404).json({ message: 'Put aside item not found' });
       }
 
-      // Broadcast reallocation event
-      if (item.jobId) {
-        broadcastToJob(item.jobId, {
-          type: 'item_reallocated',
-          data: {
-            item,
-            targetBoxNumber: parseInt(targetBoxNumber),
-            performedBy: req.user!.name,
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
+      // Broadcast allocation event
+      broadcastToJob(allocatedEvent.jobId!, {
+        type: 'put_aside_allocated',
+        data: {
+          allocatedEvent,
+          boxNumber: parseInt(boxNumber),
+          performedBy: req.user!.name,
+          timestamp: new Date().toISOString()
+        }
+      });
 
       res.json({
         success: true,
-        item,
-        message: `Item reallocated to box ${targetBoxNumber}`
+        allocatedEvent,
+        message: `Put aside item allocated to box ${boxNumber}`
       });
     } catch (error) {
       console.error('Failed to reallocate put aside item:', error);

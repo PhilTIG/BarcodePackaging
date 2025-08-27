@@ -967,10 +967,13 @@ export class DatabaseStorage implements IStorage {
             customerName = boxReq[0].customerName;
           }
         } else if (insertEvent.eventType === 'scan') {
-          // BARCODE FIX: Normalize barcode for put aside checks
-          const normalizedBarCode = normalizeBarcodeFormat(insertEvent.barCode);
-          
-          // STEP 1: Check if unallocated customers (boxNumber: NULL) need this item
+          // CRITICAL: Put Aside logic ONLY runs when job has a box limit
+          const job = await this.getJobById(session.jobId);
+          if (job?.boxLimit) {
+            // BARCODE FIX: Normalize barcode for put aside checks
+            const normalizedBarCode = normalizeBarcodeFormat(insertEvent.barCode);
+            
+            // STEP 1: Check if unallocated customers (boxNumber: NULL) need this item
           const unallocatedRequirement = await this.db
             .select()
             .from(boxRequirements)
@@ -983,26 +986,14 @@ export class DatabaseStorage implements IStorage {
             .limit(1);
 
           if (unallocatedRequirement.length > 0) {
-            // CREATE PUT ASIDE ENTRY: Unallocated customer needs this item
-            const putAsideData = {
-              jobId: session.jobId,
-              barCode: insertEvent.barCode,
-              productName: unallocatedRequirement[0].productName,
-              customerName: unallocatedRequirement[0].customerName,
-              originalBoxNumber: 0, // No box assigned yet
-              quantity: 1,
-              status: 'pending',
-              putAsideBy: session.userId,
-              sourceEventId: null // Will be set after scan event creation
-            };
-
-            console.log(`[Put Aside] Creating put aside entry for unallocated customer "${unallocatedRequirement[0].customerName}" - item: ${unallocatedRequirement[0].productName}`);
-            await this.createPutAsideItem(putAsideData);
+            // CREATE PUT ASIDE SCAN EVENT: Unallocated customer needs this item
+            console.log(`[Put Aside] Creating put aside scan event for unallocated customer "${unallocatedRequirement[0].customerName}" - item: ${unallocatedRequirement[0].productName}`);
             
-            // Mark scan event as put aside type with descriptive message format
+            // Mark scan event as put aside type
             insertEvent.eventType = 'put_aside';
-            productName = `Put ${unallocatedRequirement[0].productName} Aside`;
-            customerName = unallocatedRequirement[0].customerName;
+            productName = unallocatedRequirement[0].productName;
+            customerName = null; // Put Aside items have no customer initially
+            targetBox = null; // Put Aside items have no box initially
           } else {
             // STEP 2: Check if this is a known product anywhere in the job (excess quantity)
             const existingProduct = await this.db
@@ -1023,6 +1014,35 @@ export class DatabaseStorage implements IStorage {
             } else {
               // Completely unknown barcode - mark as extra item with "Unknown" name
               console.log(`Unknown barcode ${insertEvent.barCode} scanned - marking as extra item`);
+              insertEvent.eventType = 'extra_item';
+              productName = 'Unknown';
+              customerName = 'Unassigned';
+            }
+          }
+          } else {
+            // No box limit: Skip Put Aside logic, go directly to extra items
+            // BARCODE FIX: Normalize barcode for checks
+            const normalizedBarCode = normalizeBarcodeFormat(insertEvent.barCode);
+            
+            // Check if this is a known product anywhere in the job (excess quantity)
+            const existingProduct = await this.db
+              .select()
+              .from(boxRequirements)
+              .where(and(
+                eq(boxRequirements.jobId, session.jobId),
+                sql`(${boxRequirements.barCode} = ${insertEvent.barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`
+              ))
+              .limit(1);
+
+            if (existingProduct.length > 0) {
+              // This is a known product but all quantities fulfilled - mark as EXTRA ITEM
+              console.log(`No box limit: Barcode ${insertEvent.barCode} - marking as extra item`);
+              insertEvent.eventType = 'extra_item';
+              productName = existingProduct[0].productName;
+              customerName = existingProduct[0].customerName;
+            } else {
+              // Completely unknown barcode - mark as extra item with "Unknown" name
+              console.log(`No box limit: Unknown barcode ${insertEvent.barCode} - marking as extra item`);
               insertEvent.eventType = 'extra_item';
               productName = 'Unknown';
               customerName = 'Unassigned';
@@ -3198,6 +3218,112 @@ export class DatabaseStorage implements IStorage {
         eq(boxRequirements.jobId, jobId),
         eq(boxRequirements.boxNumber, boxNumber)
       ));
+  }
+
+  // PUT ASIDE STORAGE METHODS (using scan_events table)
+
+  async createPutAsideItem(jobId: string, barCode: string, productName: string, sessionId: string): Promise<ScanEvent> {
+    // Create scan event with eventType='put_aside', customerName=null, boxNumber=null
+    const putAsideEvent = {
+      sessionId,
+      barCode,
+      productName,
+      customerName: null, // Put Aside items have no customer initially
+      boxNumber: null, // Put Aside items have no box initially
+      eventType: 'put_aside' as const,
+      isExtraItem: false,
+      jobId
+    };
+
+    const [event] = await this.db
+      .insert(scanEvents)
+      .values(putAsideEvent)
+      .returning();
+
+    return event;
+  }
+
+  async getPutAsideItemsForJob(jobId: string): Promise<any[]> {
+    // Get Put Aside items (scan events with eventType='put_aside' and allocatedAt=null)
+    const putAsideEvents = await this.db
+      .select({
+        id: scanEvents.id,
+        barCode: scanEvents.barCode,
+        productName: scanEvents.productName,
+        scanTime: scanEvents.scanTime,
+        allocatedToBox: scanEvents.allocatedToBox,
+        allocatedAt: scanEvents.allocatedAt
+      })
+      .from(scanEvents)
+      .where(and(
+        eq(scanEvents.jobId, jobId),
+        eq(scanEvents.eventType, 'put_aside'),
+        isNull(scanEvents.allocatedAt) // Only unallocated items
+      ))
+      .orderBy(desc(scanEvents.scanTime));
+
+    // Group by barcode and combine quantities
+    const groupedItems = putAsideEvents.reduce((acc: any[], item: any) => {
+      const existing = acc.find((group: any) => group.barCode === item.barCode);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        acc.push({
+          barCode: item.barCode,
+          productName: item.productName,
+          qty: 1
+        });
+      }
+      return acc;
+    }, []);
+
+    return groupedItems;
+  }
+
+  async markPutAsideAllocated(putAsideEventId: string, allocatedToBox: number): Promise<ScanEvent | undefined> {
+    // Mark Put Aside scan event as allocated
+    const [updatedEvent] = await this.db
+      .update(scanEvents)
+      .set({
+        allocatedToBox,
+        allocatedAt: new Date()
+      })
+      .where(eq(scanEvents.id, putAsideEventId))
+      .returning();
+
+    return updatedEvent;
+  }
+
+  async checkUnallocatedCustomerRequirements(jobId: string, barCode: string): Promise<boolean> {
+    // Check if any unallocated customers (boxNumber=NULL) require this barcode
+    const normalizedBarCode = normalizeBarcodeFormat(barCode);
+    
+    const requirement = await this.db
+      .select()
+      .from(boxRequirements)
+      .where(and(
+        eq(boxRequirements.jobId, jobId),
+        sql`(${boxRequirements.barCode} = ${barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`,
+        isNull(boxRequirements.boxNumber), // Unallocated customers
+        sql`${boxRequirements.scannedQty} < ${boxRequirements.requiredQty}` // Still need items
+      ))
+      .limit(1);
+
+    return requirement.length > 0;
+  }
+
+  async getPutAsideCount(jobId: string): Promise<number> {
+    // Count unallocated Put Aside items for a job
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(scanEvents)
+      .where(and(
+        eq(scanEvents.jobId, jobId),
+        eq(scanEvents.eventType, 'put_aside'),
+        isNull(scanEvents.allocatedAt) // Only unallocated items
+      ));
+    
+    return result[0]?.count || 0;
   }
 }
 

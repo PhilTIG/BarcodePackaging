@@ -87,6 +87,10 @@ export const scanEvents = pgTable("scan_events", {
   // Extra Items tracking (NEW)
   isExtraItem: boolean("is_extra_item").default(false), // Mark if this is an extra item not in original job
   jobId: varchar("job_id").references(() => jobs.id), // Direct reference for extra items tracking
+  
+  // Put Aside functionality (NEW)
+  allocatedToBox: integer("allocated_to_box"), // Box number when Put Aside item is allocated
+  allocatedAt: timestamp("allocated_at"), // Timestamp when Put Aside item is allocated
 });
 
 export const jobTypes = pgTable("job_types", {

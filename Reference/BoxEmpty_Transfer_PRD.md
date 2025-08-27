@@ -101,14 +101,18 @@ This PRD defines the comprehensive Box Empty/Transfer system that provides insta
 - **Location**: Separate "Put Aside" button in Overall Progress panel (next to "Extra Items")
 - **NOT Customer Queue**: Completely separate from Customer Queue button
 - **Display Format**: "Put Aside: X" showing count of items awaiting allocation
-- **Button Behavior**: Click to view modal with list of put aside items and their details
+- **Button Styling**: Same styling as "Extra Items" button but with orange color and different icon
+- **Modal Content**: List showing barcode, product name, and total qty (combine duplicate barcodes)
+- **Modal Exclusions**: No unallocated customers, no timestamps, focus on item summary only
 
-#### 3.4 Put Aside Item Allocation (PRIORITY SYSTEM)
-- **Automatic Priority**: When any box becomes available, Put Aside items get first priority
-- **Allocation Logic**: If scanned barcode matches Put Aside item → allocate to box and remove from Put Aside list
-- **Box Assignment**: Put Aside items can be allocated to ANY available box that matches the barcode
-- **Lifecycle**: Items remain in Put Aside list indefinitely until allocated (no expiration)
-- **Real-time Updates**: Put Aside count updates immediately when items added/removed
+#### 3.4 Put Aside Item Allocation (SCAN-TRIGGERED PRIORITY)
+- **Allocation Trigger**: When Put Aside item is SCANNED and matching box is available
+- **NOT Automatic**: Put Aside items do NOT automatically allocate when boxes become available
+- **Allocation Logic**: Scan Put Aside barcode → find first available box following worker patterns → allocate
+- **Box Assignment**: First available box that accepts barcode, following worker allocation patterns (ascending/descending)
+- **Database Process**: Create new regular scan event AND mark Put Aside event as allocated
+- **WebSocket Updates**: Trigger same real-time updates as regular scans
+- **Lifecycle**: Items remain in Put Aside list until manually scanned and allocated (no expiration)
 
 ### 4. Manager Configuration
 
@@ -207,6 +211,7 @@ ALTER TABLE box_requirements ADD COLUMN box_status VARCHAR(20) DEFAULT 'active';
 
 -- Enhanced scan events for Put Aside (NO separate table needed)
 -- Put Aside items stored as scan events with eventType='put_aside'
+-- Put Aside items use: customerName=NULL, boxNumber=NULL initially
 -- Additional columns to support Put Aside functionality:
 ALTER TABLE scan_events ADD COLUMN allocated_to_box INTEGER DEFAULT NULL;
 ALTER TABLE scan_events ADD COLUMN allocated_at TIMESTAMP DEFAULT NULL;

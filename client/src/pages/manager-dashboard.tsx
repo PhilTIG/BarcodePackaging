@@ -39,15 +39,17 @@ const uploadFormSchema = z.object({
 
 type UploadForm = z.infer<typeof uploadFormSchema>;
 
-// Component for Extra Items and Boxes Complete buttons
+// Component for Extra Items, Put Aside, and Boxes Complete buttons
 function ExtraItemsAndBoxesButtons({
   jobId,
   onExtraItemsClick,
-  onBoxesCompleteClick
+  onBoxesCompleteClick,
+  onPutAsideClick
 }: {
   jobId: string;
   onExtraItemsClick: () => void;
   onBoxesCompleteClick: () => void;
+  onPutAsideClick: () => void;
 }) {
   // Connect to WebSocket for real-time updates (same as Job Monitoring)
   const { isConnected } = useWebSocket(jobId);
@@ -59,10 +61,19 @@ function ExtraItemsAndBoxesButtons({
     refetchInterval: 5000, // 5-second polling as requested
   });
 
+  // Fetch Put Aside count separately
+  const { data: putAsideData } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/put-aside/count`],
+    enabled: !!jobId,
+    refetchInterval: 5000, // 5-second polling for real-time updates
+  });
+
   // Extract consistent data from progress endpoint (matches SupervisorView)
   const extraItemsCount = (progressData as any)?.progress?.extraItemsCount || 0;
   const completedCustomers = (progressData as any)?.progress?.completedCustomers || 0;
   const totalCustomers = (progressData as any)?.progress?.totalCustomers || 0;
+  const jobHasBoxLimit = (progressData as any)?.job?.boxLimit != null; // Check if job has box limit
+  const putAsideCount = (putAsideData as any)?.count || 0;
 
   return (
     <>
@@ -76,6 +87,20 @@ function ExtraItemsAndBoxesButtons({
         <Package className="mr-1 h-4 w-4" />
         {extraItemsCount} Extra Items
       </Button>
+
+      {/* Put Aside Button - Only show when job has box limit */}
+      {jobHasBoxLimit && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onPutAsideClick}
+          className="border-orange-500 text-orange-600 hover:bg-orange-50"
+          data-testid={`button-put-aside-${jobId}`}
+        >
+          <Package className="mr-1 h-4 w-4" />
+          {putAsideCount} Put Aside
+        </Button>
+      )}
 
       {/* Boxes Complete Button */}
       <Button
@@ -182,6 +207,85 @@ function CompletedBoxesModal({
   );
 }
 
+// Component for Put Aside Modal
+function PutAsideModal({
+  isOpen,
+  onClose,
+  jobId
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  jobId: string | null;
+}) {
+  const { data: putAsideData, isLoading } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/put-aside`],
+    enabled: !!jobId && isOpen,
+    refetchInterval: 5000, // 5-second polling for real-time updates
+  });
+
+  const putAsideItems = (putAsideData as any)?.items || [];
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-orange-600">
+            <Package className="h-5 w-5" />
+            Put Aside Items ({putAsideItems.length})
+          </DialogTitle>
+          <DialogDescription>
+            Items that need to be allocated to available boxes
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="overflow-y-auto max-h-[60vh] space-y-3">
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-gray-500">Loading put aside items...</div>
+            </div>
+          ) : putAsideItems.length === 0 ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-gray-500">No put aside items found</div>
+            </div>
+          ) : (
+            putAsideItems.map((item: any, index: number) => (
+              <Card key={index} className="border-l-4 border-l-orange-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="font-mono text-sm bg-orange-100 px-2 py-1 rounded">
+                        {item.barCode}
+                      </div>
+                      <div className="font-medium">{item.productName}</div>
+                      <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                        Qty: {item.qty}
+                      </Badge>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="bg-orange-500 hover:bg-orange-600 text-white"
+                      onClick={() => {
+                        // TODO: Implement allocation logic
+                        console.log('Allocate item:', item);
+                      }}
+                    >
+                      Allocate to Box
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ManagerDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -199,6 +303,8 @@ export default function ManagerDashboard() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [isExtraItemsModalOpen, setIsExtraItemsModalOpen] = useState(false);
   const [extraItemsJobId, setExtraItemsJobId] = useState<string | null>(null);
+  const [isPutAsideModalOpen, setIsPutAsideModalOpen] = useState(false);
+  const [putAsideJobId, setPutAsideJobId] = useState<string | null>(null);
   const [isCompletedBoxesModalOpen, setIsCompletedBoxesModalOpen] = useState(false);
   const [completedBoxesJobId, setCompletedBoxesJobId] = useState<string | null>(null);
 
@@ -1008,11 +1114,15 @@ export default function ManagerDashboard() {
                           Export
                         </Button>
 
-                        {/* Extra Items and Boxes buttons now inline with other action buttons */}
+                        {/* Extra Items, Put Aside, and Boxes buttons now inline with other action buttons */}
                         <ExtraItemsAndBoxesButtons jobId={job.id}
                           onExtraItemsClick={() => {
                             setExtraItemsJobId(job.id);
                             setIsExtraItemsModalOpen(true);
+                          }}
+                          onPutAsideClick={() => {
+                            setPutAsideJobId(job.id);
+                            setIsPutAsideModalOpen(true);
                           }}
                           onBoxesCompleteClick={() => {
                             setCompletedBoxesJobId(job.id);
@@ -1242,6 +1352,18 @@ export default function ManagerDashboard() {
             setCompletedBoxesJobId(null);
           }}
           jobId={completedBoxesJobId}
+        />
+      )}
+
+      {/* Put Aside Modal */}
+      {putAsideJobId && (
+        <PutAsideModal
+          isOpen={isPutAsideModalOpen}
+          onClose={() => {
+            setIsPutAsideModalOpen(false);
+            setPutAsideJobId(null);
+          }}
+          jobId={putAsideJobId}
         />
       )}
     </div>

@@ -73,6 +73,17 @@ The application incorporates sophisticated performance tracking, including a sco
 - **Database Schema**: `isTransferred` boolean + `transferSequence` integer field for complete transfer history
 - **UI Display**: Only shows transferSequence=0 records, providing clean box assignments without data mixing
 
+**Put Aside System (August 2025)**:
+- **Implementation Status**: Core foundation complete with scan_events approach
+- **Critical Condition**: Only operates when job.boxLimit is set (mandatory precondition check)
+- **Database Schema**: Uses scan_events table with eventType='put_aside', allocated_to_box, allocated_at columns
+- **Storage Methods**: New scan_events approach with 5 core methods for create, retrieve, allocate, check, count
+- **API Endpoints**: 4 endpoints for put aside management with role-based permissions (manager/supervisor access)
+- **Scanning Logic**: Automatic put aside detection for unallocated customers when box limits exist
+- **UI Requirements**: Orange button next to Extra Items, modal with barcode/product/qty, allocation interface
+- **WebSocket Integration**: Real-time put_aside_allocated events for collaborative updates
+- **Box Allocation**: First available box following worker patterns with scan event creation and marking
+
 ### Mobile and Hardware Support
 
 The design is optimized for warehouse environments, featuring responsive layouts for tablets and mobile devices. It supports both camera-based and hardware HID barcode scanners. The UI is touch-friendly with large targets.
