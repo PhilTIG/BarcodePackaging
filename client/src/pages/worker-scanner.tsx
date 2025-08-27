@@ -263,6 +263,34 @@ export default function WorkerScanner() {
         return;
       }
 
+      if (data.scanEvent.eventType === 'put_aside') {
+        // Handle put aside items 
+        setScanError(`🔶\nPut Aside Required\nItem: ${data.scanEvent.productName || data.scanEvent.barCode}\nNeeds to be allocated to an available box\nItem added to Put Aside list`);
+
+        // After 3 seconds, clear error but keep put aside info until next scan
+        setTimeout(() => {
+          setScanError(null);
+          
+          // Set orange put aside display that persists until next scan
+          setScanResult({
+            boxNumber: null,
+            customerName: 'Put Aside Required',
+            productName: `${data.scanEvent.barCode} ${data.scanEvent.productName || 'Unknown'} - Put Aside`,
+            progress: null,
+            isPutAside: true, // New field to distinguish from extra items
+            timestamp: data.scanEvent.scanTime || new Date().toISOString()
+          });
+        }, 3000);
+        showScanFeedback(false);
+        
+        // Clear input and focus
+        if (barcodeInputRef.current) {
+          barcodeInputRef.current.value = "";
+          barcodeInputRef.current.focus();
+        }
+        return;
+      }
+
       // Set visual feedback for successful scan
       if (data.scanEvent?.boxNumber && data.scanEvent?.customerName && data.scanEvent?.productName) {
         // Update last scanned box for highlighting
