@@ -345,6 +345,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         // Invalidate box-specific queries to refresh UI immediately
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}`] }); // CRITICAL FIX: Update Customer Box Grid
         break;
       
       case "box_emptied":
@@ -355,6 +356,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         // Invalidate box-specific queries to refresh UI immediately
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}`] }); // CRITICAL FIX: Update Customer Box Grid
         break;
       
       default:
