@@ -656,6 +656,7 @@ export class DatabaseStorage implements IStorage {
           workers: workersData,
         },
         products: jobProducts, // ADD: Products array for completed boxes modal
+        job: job, // CRITICAL: Include job object so frontend can access job.boxLimit
       };
     } catch (error) {
       console.error(`[ERROR] getJobProgress failed for job ${id}:`, error);
