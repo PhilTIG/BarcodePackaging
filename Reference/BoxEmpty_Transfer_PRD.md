@@ -79,28 +79,36 @@ This PRD defines the comprehensive Box Empty/Transfer system that provides insta
 - **Organization**: Group boxes by transfer date and original assignment
 - **Archival**: All group/transfer data archived with job, purged when job is purged
 
-### 3. Put Aside System
+### 3. Put Aside System (FULLY CLARIFIED)
 
-#### 3.1 Put Aside Logic Flow (CLARIFIED)
-- **Trigger**: Individual scanned items that couldn't find a suitable box
-- **Decision Logic**: 
-  - IF unallocated customers (boxNumber=NULL) require this item → Create "Put Aside" entry
-  - IF unallocated customers do NOT require this item → Send to "Extra Items" list
-- **Storage**: Integrate with existing scan events table structure
-- **Naming**: "Put Aside - <CustomName>" format for identification
+#### 3.1 Critical Precondition: Box Limit Required
+- **MANDATORY CHECK**: Put Aside logic ONLY runs when job has a box limit set
+- **No Limit = No Put Aside**: If job has no box limit, all items go to regular boxes or Extra Items
+- **Implementation**: First check `job.boxLimit !== null` before any Put Aside logic
 
-#### 3.2 Put Aside Queue Management
-- **Display**: List next to Extra Items icon with similar UI pattern
-- **Status Indicator**: Red cross (no box) / Green tick (box available)
-- **Worker Notification**: "Check Put Aside" message on worker screen
-- **Item Details**: Show product name and availability status
+#### 3.2 Put Aside Logic Flow (FINALIZED)
+- **Trigger**: Scanned item cannot be allocated to any existing box
+- **System Decision Process**:
+  1. Check if job has box limit → If NO limit: skip Put Aside logic entirely
+  2. Item scanned → Cannot allocate to existing boxes
+  3. Check every unallocated customer's product list for this barcode
+  4. IF barcode matches unallocated customer requirements → "Put Aside"
+  5. IF barcode matches NO requirements (boxes OR unallocated customers) → "Extra Items"
+- **Worker Experience**: Worker scans normally, system makes all decisions automatically
+- **Storage**: Store as scan events with special "put_aside" type
 
-#### 3.3 Put Aside Item Allocation
-- **Process**: When put aside item scanned, allocate following worker's allocation pattern rules
-- **Priority**: Put aside items are prioritized and taken from list first during allocation
-- **Worker Instruction**: Manager directs worker to scan put aside items
-- **Removal**: Auto-remove from put aside list once allocated
-- **System Integration**: Use existing worker-based box allocation logic
+#### 3.3 Put Aside UI Integration
+- **Location**: Separate "Put Aside" button in Overall Progress panel (next to "Extra Items")
+- **NOT Customer Queue**: Completely separate from Customer Queue button
+- **Display Format**: "Put Aside: X" showing count of items awaiting allocation
+- **Button Behavior**: Click to view modal with list of put aside items and their details
+
+#### 3.4 Put Aside Item Allocation (PRIORITY SYSTEM)
+- **Automatic Priority**: When any box becomes available, Put Aside items get first priority
+- **Allocation Logic**: If scanned barcode matches Put Aside item → allocate to box and remove from Put Aside list
+- **Box Assignment**: Put Aside items can be allocated to ANY available box that matches the barcode
+- **Lifecycle**: Items remain in Put Aside list indefinitely until allocated (no expiration)
+- **Real-time Updates**: Put Aside count updates immediately when items added/removed
 
 ### 4. Manager Configuration
 
@@ -197,12 +205,14 @@ ALTER TABLE box_requirements ADD COLUMN box_status VARCHAR(20) DEFAULT 'active';
 -- Add empty/transfer permission (already exists as canEmptyAndTransfer)
 -- ALTER TABLE user_preferences ADD COLUMN can_empty_and_transfer BOOLEAN DEFAULT FALSE;
 
--- Enhanced scan events for put aside
-ALTER TABLE scan_events ADD COLUMN put_aside_item_id UUID REFERENCES put_aside_items(id);
+-- Enhanced scan events for Put Aside (NO separate table needed)
+-- Put Aside items stored as scan events with eventType='put_aside'
+-- Additional columns to support Put Aside functionality:
+ALTER TABLE scan_events ADD COLUMN allocated_to_box INTEGER DEFAULT NULL;
+ALTER TABLE scan_events ADD COLUMN allocated_at TIMESTAMP DEFAULT NULL;
 
 -- Add version column for optimistic locking
 ALTER TABLE box_requirements ADD COLUMN version INTEGER DEFAULT 1;
-ALTER TABLE put_aside_items ADD COLUMN version INTEGER DEFAULT 1;
 ```
 
 ### API Endpoints
@@ -226,7 +236,8 @@ ALTER TABLE put_aside_items ADD COLUMN version INTEGER DEFAULT 1;
 type BoxTransferEvents = 
   | { type: 'BOX_EMPTIED', data: { boxNumber: number, newCustomer?: string }}
   | { type: 'BOX_TRANSFERRED', data: { boxNumber: number, groupName: string }}
-  | { type: 'PUT_ASIDE_UPDATED', data: { jobId: string, availableCount: number }}
+  | { type: 'PUT_ASIDE_UPDATED', data: { jobId: string, putAsideCount: number }}
+  | { type: 'PUT_ASIDE_ALLOCATED', data: { jobId: string, barCode: string, boxNumber: number }}
   | { type: 'BOX_REALLOCATED', data: { boxNumber: number, oldCustomer: string, newCustomer: string }};
 ```
 
@@ -269,6 +280,8 @@ type BoxTransferEvents =
 - [x] Add storage methods for retrieving unallocated customers (boxNumber=NULL) ✅ COMPLETED
 - [ ] Add methods for box limit validation and warnings
 - [ ] Update existing storage methods to handle NULL box numbers
+- [ ] Add Put Aside item storage methods (create, list, remove)
+- [ ] Add methods to check unallocated customer requirements for barcode matching
 
 #### Manager Dashboard Integration
 - [x] Create unallocated customers section in job management area ✅ COMPLETED - Customer Queue shows count
@@ -279,6 +292,16 @@ type BoxTransferEvents =
 - [ ] Update worker patterns to skip NULL boxes dynamically
 - [ ] Test allocation patterns with mixed NULL and assigned boxes
 - [ ] Ensure workers can still follow their sequences effectively
+
+#### Put Aside System Implementation
+- [ ] Add Put Aside scanning logic: check job box limit first, then unallocated customer requirements
+- [ ] Implement Put Aside decision flow in scan processing (vs Extra Items)
+- [ ] Create Put Aside storage using scan_events table with "put_aside" eventType
+- [ ] Add Put Aside button to Overall Progress panel (separate from Customer Queue)
+- [ ] Create Put Aside modal showing items awaiting allocation
+- [ ] Implement automatic priority allocation when boxes become available
+- [ ] Add real-time WebSocket updates for Put Aside count changes
+- [ ] Test Put Aside logic with various barcode matching scenarios
 
 #### UI TERMINOLOGY UPDATES (COMPLETED) ✅
 - [x] Change "Boxes: 0/6" to "Customers: X/Y" in Overall Progress section ✅ COMPLETED
