@@ -591,12 +591,13 @@ export class DatabaseStorage implements IStorage {
         .from(boxRequirements)
         .where(and(eq(boxRequirements.jobId, id), sql`${boxRequirements.boxNumber} IS NULL`));
 
-      // Calculate completed customers (customers where ALL their items are complete)
-      // Group by customer and check if all items are complete
+      // Calculate completed customers (customers where ALL their items are 100% fulfilled)
+      // Group by customer and check if all items have scannedQty >= requiredQty
+      // This includes both active and archived (emptied/transferred) customers
       const customerCompletionData = await this.db
         .select({
           customerName: boxRequirements.customerName,
-          allComplete: sql<boolean>`BOOL_AND(${boxRequirements.isComplete})`
+          allComplete: sql<boolean>`BOOL_AND(${boxRequirements.scannedQty} >= ${boxRequirements.requiredQty})`
         })
         .from(boxRequirements)
         .where(eq(boxRequirements.jobId, id))
