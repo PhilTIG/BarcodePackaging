@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Users, Package, Search, Filter, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Loader2, Users, Package, Search, Filter, ToggleLeft, ToggleRight, Hash, ArrowUpDown } from 'lucide-react';
 import { CustomerProductDetailsModal } from './customer-product-details-modal';
 
 interface CustomerProgressModalProps {
@@ -50,6 +50,8 @@ export function CustomerProgressModal({ isOpen, onClose, jobId, jobName }: Custo
     Completed: true,
     Archived: true
   });
+  const [sortBy, setSortBy] = useState<'name' | 'progress' | 'box'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
   const { data: progressData, isLoading, error } = useQuery({
     queryKey: ['/api/jobs', jobId, 'customer-progress'],
@@ -59,9 +61,9 @@ export function CustomerProgressModal({ isOpen, onClose, jobId, jobName }: Custo
 
   const { customers = [], summary } = (progressData as CustomerProgressData) || { customers: [], summary: { totalCustomers: 0, completedCustomers: 0, completionPercentage: 0 } };
 
-  // Filter and search customers
+  // Filter, search, and sort customers
   const filteredCustomers = useMemo(() => {
-    return customers.filter(customer => {
+    let result = customers.filter(customer => {
       // Search filter
       const matchesSearch = customer.customerName.toLowerCase().includes(searchTerm.toLowerCase());
       
@@ -75,7 +77,32 @@ export function CustomerProgressModal({ isOpen, onClose, jobId, jobName }: Custo
       
       return matchesSearch && matchesStatus;
     });
-  }, [customers, searchTerm, statusFilters]);
+
+    // Sort customers
+    result.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.customerName.localeCompare(b.customerName);
+          break;
+        case 'progress':
+          comparison = a.completionPercentage - b.completionPercentage;
+          break;
+        case 'box':
+          // Handle null box numbers - put them at the end
+          if (a.boxNumber == null && b.boxNumber == null) return 0;
+          if (a.boxNumber == null) return 1;
+          if (b.boxNumber == null) return -1;
+          comparison = a.boxNumber - b.boxNumber;
+          break;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [customers, searchTerm, statusFilters, sortBy, sortOrder]);
 
   // Group customers by groupName for group view
   const groupedCustomers = useMemo(() => {
@@ -142,6 +169,12 @@ export function CustomerProgressModal({ isOpen, onClose, jobId, jobName }: Custo
                 <span className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
                   Group: {customer.groupName}
+                </span>
+              )}
+              {customer.boxNumber && (
+                <span className="flex items-center gap-1">
+                  <Hash className="w-4 h-4" />
+                  Box: {customer.boxNumber}
                 </span>
               )}
             </div>
@@ -229,6 +262,23 @@ export function CustomerProgressModal({ isOpen, onClose, jobId, jobName }: Custo
                     data-testid="customer-search-input"
                   />
                 </div>
+                <select
+                  value={`${sortBy}-${sortOrder}`}
+                  onChange={(e) => {
+                    const [newSortBy, newSortOrder] = e.target.value.split('-') as [typeof sortBy, typeof sortOrder];
+                    setSortBy(newSortBy);
+                    setSortOrder(newSortOrder);
+                  }}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
+                  data-testid="sort-dropdown"
+                >
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="progress-asc">Progress (Low-High)</option>
+                  <option value="progress-desc">Progress (High-Low)</option>
+                  <option value="box-asc">Box (Low-High)</option>
+                  <option value="box-desc">Box (High-Low)</option>
+                </select>
                 <Button
                   variant="outline"
                   size="sm"
@@ -327,6 +377,9 @@ export function CustomerProgressModal({ isOpen, onClose, jobId, jobName }: Custo
           }}
           jobId={jobId}
           customerName={selectedCustomer.customerName}
+          totalItems={selectedCustomer.totalItems}
+          productCount={selectedCustomer.totalItems} // Using totalItems as productCount for now
+          groupName={selectedCustomer.groupName}
         />
       )}
     </>
