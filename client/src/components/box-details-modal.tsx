@@ -65,6 +65,9 @@ export function BoxDetailsModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // State for tracking modal closing delay (for WebSocket event processing)
+  const [isClosingDelayed, setIsClosingDelayed] = useState(false);
+  
   // Fetch box requirements for this specific box using the default query function
   const { data: boxRequirementsResponse, isLoading } = useQuery({
     queryKey: [`/api/jobs/${jobId}/box-requirements`],
@@ -88,10 +91,19 @@ export function BoxDetailsModal({
         description: data.message || `Box ${boxNumber} has been emptied and reassigned.`,
         variant: "default"
       });
+      console.log(`[BoxModal] Box ${boxNumber} emptied - starting WebSocket delay timer`);
+      
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
       queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-      onClose();
+      
+      // Delay modal close to allow WebSocket events to process
+      setIsClosingDelayed(true);
+      setTimeout(() => {
+        console.log(`[BoxModal] WebSocket delay complete - closing modal for box ${boxNumber}`);
+        setIsClosingDelayed(false);
+        onClose();
+      }, 750); // 750ms delay to ensure WebSocket events arrive and process
     },
     onError: (error: any) => {
       toast({
@@ -116,10 +128,19 @@ export function BoxDetailsModal({
         description: data.message || `Box ${boxNumber} has been transferred and reassigned.`,
         variant: "default"
       });
+      console.log(`[BoxModal] Box ${boxNumber} transferred - starting WebSocket delay timer`);
+      
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
       queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
-      onClose();
+      
+      // Delay modal close to allow WebSocket events to process
+      setIsClosingDelayed(true);
+      setTimeout(() => {
+        console.log(`[BoxModal] WebSocket delay complete - closing modal for box ${boxNumber}`);
+        setIsClosingDelayed(false);
+        onClose();
+      }, 750); // 750ms delay to ensure WebSocket events arrive and process
     },
     onError: (error: any) => {
       toast({
@@ -357,13 +378,17 @@ export function BoxDetailsModal({
                     return (
                       <Button
                         onClick={handleEmptyTransferAction}
-                        disabled={transferBoxMutation.isPending}
+                        disabled={transferBoxMutation.isPending || isClosingDelayed}
                         className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity ml-4"
                         style={{ backgroundColor: getThemeColor() }}
                         data-testid="transfer-box-button"
                       >
                         <ArrowRight className="w-4 h-4" />
-                        {transferBoxMutation.isPending ? 'Transferring...' : 'Transfer Box'}
+                        {transferBoxMutation.isPending 
+                          ? 'Transferring...' 
+                          : isClosingDelayed 
+                          ? 'Processing...' 
+                          : 'Transfer Box'}
                       </Button>
                     );
                   } else {
@@ -371,13 +396,17 @@ export function BoxDetailsModal({
                     return (
                       <Button
                         onClick={handleEmptyTransferAction}
-                        disabled={emptyBoxMutation.isPending}
+                        disabled={emptyBoxMutation.isPending || isClosingDelayed}
                         className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity ml-4"
                         style={{ backgroundColor: getThemeColor() }}
                         data-testid="empty-box-button"
                       >
                         <PackageOpen className="w-4 h-4" />
-                        {emptyBoxMutation.isPending ? 'Emptying...' : 'Empty Box'}
+                        {emptyBoxMutation.isPending 
+                          ? 'Emptying...' 
+                          : isClosingDelayed 
+                          ? 'Processing...' 
+                          : 'Empty Box'}
                       </Button>
                     );
                   }
