@@ -805,12 +805,12 @@ export default function ManagerDashboard() {
                           <FormItem>
                             <FormLabel>Box Limit</FormLabel>
                             <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                min="1"
-                                placeholder="No Limit"
-                                data-testid="input-box-limit"
+                              <Input 
+                                {...field} 
+                                type="number" 
+                                min="1" 
+                                placeholder="No Limit" 
+                                data-testid="input-box-limit" 
                               />
                             </FormControl>
                             <FormMessage />
@@ -975,8 +975,8 @@ export default function ManagerDashboard() {
                           </Badge>
                           <Button
                             variant={
-                              job.status === "completed"
-                                ? (job.isActive ? "default" : "outline")
+                              job.status === "completed" 
+                                ? (job.isActive ? "default" : "outline") 
                                 : (job.isActive ? "default" : "outline")
                             }
                             size="sm"
@@ -984,8 +984,8 @@ export default function ManagerDashboard() {
                             className="h-6 px-2 text-xs font-medium"
                             data-testid={`button-toggle-scanning-${job.id}`}
                           >
-                            {job.status === "completed"
-                              ? (job.isActive ? "Lock Job" : "Locked")
+                            {job.status === "completed" 
+                              ? (job.isActive ? "Lock Job" : "Locked") 
                               : (job.isActive ? "Scanning Active" : "Scanning Paused")
                             }
                           </Button>

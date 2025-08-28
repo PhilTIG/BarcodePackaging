@@ -1,3 +1,4 @@
+
 # Barcode System Optimization Plan
 
 ## Overview
@@ -138,7 +139,7 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 
 ### Tasks:
 
-#### **Step 1: Eliminate Polling Mechanisms (HIGH PRIORITY)** ✅ **COMPLETED**
+#### **Step 1: Eliminate Polling Mechanisms (HIGH PRIORITY)**
 - [x] **Task 4.1.1**: Remove job progress polling intervals **COMPLETED**
   - Target endpoints: `/api/jobs/:jobId/progress` (currently polling every 10-15 seconds)
   - Replace with WebSocket-only progress updates
@@ -146,43 +147,37 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
   - **COMPLETED**: Removed polling from Manager dashboard, Supervisor view, Put aside manager
   - Files: Manager dashboard components, progress tracking hooks
 
-- [x] **Task 4.1.2**: Remove check sessions polling **COMPLETED**
+- [ ] **Task 4.1.2**: Remove check sessions polling
   - Target endpoint: `/api/check-sessions` (currently polling every 3-4 seconds)
   - Implement WebSocket-based session management
-  - **COMPLETED**: Removed polling intervals and added WebSocket-based session conflict checking
   - Files: Session management components, authentication hooks
 
-- [x] **Task 4.1.3**: Remove put aside count polling **COMPLETED**
+- [ ] **Task 4.1.3**: Remove put aside count polling
   - Target endpoints: `/api/jobs/:jobId/put-aside/count` (currently polling every 10 seconds)
   - Replace with WebSocket put aside count updates
-  - **COMPLETED**: Removed 10-second polling interval from put aside manager
   - **⚠️ PUT ASIDE REMINDER**: Ensure WebSocket messages use `scanEvents` data only
   - Files: Put aside count components, WebSocket handlers
 
-- [x] **Task 4.1.4**: Remove jobs list polling **COMPLETED**
+- [ ] **Task 4.1.4**: Remove jobs list polling
   - Target endpoint: `/api/jobs` (currently polling every 10-15 seconds)
   - Implement WebSocket job list updates
-  - **COMPLETED**: Removed 15-second polling interval from manager dashboard
   - Files: Job list components, manager dashboard
 
-#### **Step 2: Remove Client-Side Query Invalidations (HIGH PRIORITY)** ✅ **COMPLETED**
-- [x] **Task 4.2.1**: Identify mutation-triggered invalidations **COMPLETED**
+#### **Step 2: Remove Client-Side Query Invalidations (HIGH PRIORITY)**
+- [ ] **Task 4.2.1**: Identify mutation-triggered invalidations
   - Search for React Query `invalidateQueries` calls in scan mutations
   - Document which mutations trigger broad invalidations
-  - **COMPLETED**: Located scan mutation invalidations in scan processing
   - Files: Client mutation hooks, `client/src/lib/queryClient.ts`
 
-- [x] **Task 4.2.2**: Replace invalidations with WebSocket updates **COMPLETED**
+- [ ] **Task 4.2.2**: Replace invalidations with WebSocket updates
   - Remove `invalidateQueries` calls that conflict with WebSocket updates
   - Ensure WebSocket messages provide all necessary data for UI updates
-  - **COMPLETED**: Removed invalidateQueries from scan, undo, and box empty mutations
-  - **⚠️ PUT ASIDE REMINDER**: Verified Put Aside mutations use WebSocket-only updates
-  - Files: worker-scanner.tsx, manager-dashboard.tsx, supervisor-view.tsx
+  - **⚠️ PUT ASIDE REMINDER**: Verify Put Aside mutations use WebSocket-only updates
+  - Files: Scan mutation hooks, WebSocket message handlers
 
-- [x] **Task 4.2.3**: Fix double data fetching **COMPLETED**
+- [ ] **Task 4.2.3**: Fix double data fetching
   - Prevent both mutation response AND WebSocket events from triggering same data fetches
   - Implement WebSocket-only data flow for real-time operations
-  - **COMPLETED**: Verified no duplicate API calls in console logs, WebSocket-only updates working
   - Files: WebSocket hooks, mutation response handlers
 
 #### **Step 3: Optimize WebSocket Message Payloads (MEDIUM PRIORITY)**
@@ -191,12 +186,11 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
   - Real-time updates broadcasting `scan_update`, `box_emptied`, `box_transferred` events
   - Client integration complete with TypeScript interfaces
 
-- [x] **Task 4.3.2**: Implement delta updates **COMPLETED**
+- [ ] **Task 4.3.2**: Implement delta updates
   - Send only changed box data instead of full products array (currently 40+ objects per update)
   - Reduce WebSocket message size by 70-80%
-  - **COMPLETED**: Implemented delta updates sending only changed product data instead of full arrays
-  - **⚠️ PUT ASIDE REMINDER**: Verified no references to removed table
-  - Files: `server/routes.ts` WebSocket broadcasting, `client/src/hooks/use-websocket.tsx`
+  - **⚠️ PUT ASIDE REMINDER**: Ensure delta updates don't reference removed table
+  - Files: `server/routes.ts` WebSocket broadcasting, message optimization
 
 - [ ] **Task 4.3.3**: Optimize message structure
   - Remove redundant data from WebSocket messages

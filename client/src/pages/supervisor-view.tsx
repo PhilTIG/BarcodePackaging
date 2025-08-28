@@ -135,11 +135,7 @@ export default function SupervisorView() {
   // Check for session conflicts - WebSocket updates only
   const { data: sessionData } = useQuery({
     queryKey: ["/api/check-sessions"],
-    queryFn: async () => {
-      const response = await fetch("/api/check-sessions");
-      return response.json();
-    },
-    enabled: !!user && (user.role === 'supervisor' || user.role === 'manager'),
+    enabled: !!user,
     // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
