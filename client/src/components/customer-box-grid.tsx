@@ -65,18 +65,20 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       workerColor,
       workerStaffId,
       supervisorView,
-      currentUser: user?.id
+      currentUser: user?.id,
+      currentHighlighting: highlighting
     });
 
     if (supervisorView && workerColor && workerStaffId) {
       // Managers/Supervisors: Show all worker colors
       updateHighlighting(boxNumber, workerId, workerColor, workerStaffId);
+      console.log(`[CustomerBoxGrid] Updated manager highlighting for box ${boxNumber} with worker color ${workerColor}`);
     } else if (!supervisorView && workerColor && workerStaffId && workerId === user?.id) {
       // Workers: Only show their own color background
       updateHighlighting(boxNumber, workerId, workerColor, workerStaffId);
     }
     // Note: All numerical updates (box counts, percentages) happen via React Query invalidation
-  }, [supervisorView, user?.id, updateHighlighting]);
+  }, [supervisorView, user?.id, updateHighlighting, highlighting]);
 
   // Connect WebSocket for all views (workers need numerical updates, supervisors need highlighting)
   useWebSocket(jobId, handleWebSocketUpdate);
@@ -159,6 +161,15 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     const boxProducts = products.filter(p => p.boxNumber === boxNumber);
     const hasScannedItems = boxProducts.some(p => p.scannedQty > 0);
     
+    console.log(`[BoxHighlight] Box ${boxNumber} Priority 3 check:`, {
+      workerColor,
+      workerStaffId,
+      hasScannedItems,
+      highlightingWorkerColor: highlighting.workerColors[boxNumber],
+      databaseWorkerColor: lastWorkerColor,
+      boxProducts: boxProducts.length
+    });
+    
     if (workerColor && hasScannedItems) {
       return {
         backgroundColor: '#f3f4f6', // Gray-100 (default)
@@ -225,12 +236,22 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       boxes[product.boxNumber].isComplete = boxes[product.boxNumber].totalQty > 0 &&
                                            boxes[product.boxNumber].scannedQty === boxes[product.boxNumber].totalQty;
 
-      // Update worker color and staffId tracking
+      // Update worker color and staffId tracking - ensure we capture the latest worker info
       if (product.lastWorkerColor) {
         boxes[product.boxNumber].lastWorkerColor = product.lastWorkerColor;
       }
       if (product.lastWorkerStaffId) {
         boxes[product.boxNumber].lastWorkerStaffId = product.lastWorkerStaffId;
+      }
+      
+      // Debug logging for worker color tracking
+      if (product.boxNumber === 6) { // Debug box 6 specifically
+        console.log(`[BoxData] Box ${product.boxNumber} worker tracking:`, {
+          productId: product.id,
+          lastWorkerColor: product.lastWorkerColor,
+          lastWorkerStaffId: product.lastWorkerStaffId,
+          scannedQty: product.scannedQty
+        });
       }
     });
 

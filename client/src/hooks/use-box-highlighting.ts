@@ -86,6 +86,7 @@ export function useBoxHighlighting(currentUser?: { role: string; id: string }) {
     if (!highlighting.lastScannedBoxNumber) return;
 
     const timer = setTimeout(() => {
+      console.log(`[useBoxHighlighting] Auto-clearing green highlight for box ${highlighting.lastScannedBoxNumber} while preserving worker colors:`, highlighting.workerColors);
       setHighlighting(prev => ({
         ...prev,
         lastScannedBoxNumber: null
