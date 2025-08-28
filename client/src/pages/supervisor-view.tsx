@@ -250,7 +250,7 @@ export default function SupervisorView() {
             ) : (
               <div className="grid gap-4">
                 {visibleJobs.map((job: any) => {
-                  // Unified progress calculation: includes items from ALL transfer sequences
+                  // Progress calculation: job.completedItems includes ALL customer items (allocated + unallocated)
                   const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
                   const assignedWorkers = job.assignments || [];
 
@@ -354,7 +354,7 @@ export default function SupervisorView() {
 
   const { job, products } = jobData as any;
   const progress = (progressData as any)?.progress;
-  // Unified progress calculation: includes items from ALL transfer sequences
+  // Progress calculation: job.completedItems includes ALL customer items (allocated + unallocated)
   const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
 
   return (
