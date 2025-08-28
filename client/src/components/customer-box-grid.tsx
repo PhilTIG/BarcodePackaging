@@ -109,12 +109,28 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
 
   // Helper function to determine box background color and styling
   const getBoxHighlight = useCallback((boxNumber: number, products: any[], isComplete: boolean, lastWorkerColor: string | null, lastWorkerUserId: string | null) => {
-    // Priority 1: GREEN - Just scanned (highest priority) - using highlighting from hook
+    // Priority 1: WORKER COLOR WITH 60% TRANSPARENCY - Just scanned (highest priority)
     if (highlighting.lastScannedBoxNumber === boxNumber) {
+      const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
+      if (workerColor) {
+        // Convert hex to rgba with 60% opacity
+        const hex = workerColor.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        return {
+          backgroundColor: `rgba(${r}, ${g}, ${b}, 0.6)`, // 60% transparency
+          borderColor: workerColor,
+          textColor: 'black',
+          workerStaffId: highlighting.workerStaffIds[boxNumber],
+          numberCircleColor: workerColor // Keep circle color solid
+        };
+      }
+      // Fallback if no worker color
       return {
-        backgroundColor: '#22c55e', // Green-500
-        borderColor: '#16a34a', // Green-600
-        textColor: 'white',
+        backgroundColor: 'rgba(34, 197, 94, 0.6)', // Green with 60% transparency
+        borderColor: '#16a34a',
+        textColor: 'black',
         workerStaffId: highlighting.workerStaffIds[boxNumber]
       };
     }
@@ -128,14 +144,16 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       };
     }
 
-    // Priority 3: WORKER COLOR - Box has items but not complete (third priority)
-    const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
+    // Priority 3: NO BACKGROUND COLOR - Box has items but not just scanned (third priority)
+    // The number circle should keep the worker color, but no background highlight
+    const workerColor = lastWorkerColor;
     if (workerColor && products.some(p => p.scannedQty > 0)) {
       return {
-        backgroundColor: workerColor,
-        borderColor: workerColor,
-        textColor: 'white',
-        workerStaffId: highlighting.workerStaffIds[boxNumber] || lastWorkerUserId
+        backgroundColor: '#f3f4f6', // Gray-100 (default)
+        borderColor: '#d1d5db', // Gray-300 (default)
+        textColor: 'black',
+        workerStaffId: lastWorkerUserId,
+        numberCircleColor: workerColor // Keep the worker color on number circle
       };
     }
 
@@ -341,10 +359,10 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                   <div className="flex-shrink-0 mt-1">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border border-white shadow text-white ${
-                        (box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? '' : 'bg-primary'
+                        (boxHighlighting.numberCircleColor || box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? '' : 'bg-primary'
                       }`}
-                      style={(box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? {
-                        backgroundColor: box.lastWorkerColor || highlighting.workerColors[box.boxNumber]
+                      style={(boxHighlighting.numberCircleColor || box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? {
+                        backgroundColor: boxHighlighting.numberCircleColor || box.lastWorkerColor || highlighting.workerColors[box.boxNumber]
                       } : undefined}
                     >
                       {box.boxNumber}
@@ -415,10 +433,10 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                 <div className="absolute top-10 right-2">
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
-                      (box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? '' : 'bg-primary'
+                      (boxHighlighting.numberCircleColor || box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? '' : 'bg-primary'
                     }`}
-                    style={(box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? {
-                      backgroundColor: box.lastWorkerColor || highlighting.workerColors[box.boxNumber]
+                    style={(boxHighlighting.numberCircleColor || box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? {
+                      backgroundColor: boxHighlighting.numberCircleColor || box.lastWorkerColor || highlighting.workerColors[box.boxNumber]
                     } : undefined}
                   >
                     {box.boxNumber}
