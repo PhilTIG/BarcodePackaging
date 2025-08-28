@@ -90,11 +90,16 @@ export function useBoxHighlighting(currentUser?: { role: string; id: string }) {
 
     const timer = setTimeout(() => {
       console.log(`[useBoxHighlighting] Auto-clearing green highlight for box ${highlighting.lastScannedBoxNumber} while preserving worker colors:`, highlighting.workerColors);
-      setHighlighting(prev => ({
-        ...prev,
-        lastScannedBoxNumber: null
-        // Keep workerColors and workerStaffIds - only clear the temporary green highlighting
-      }));
+      setHighlighting(prev => {
+        // Create new state preserving all worker color data
+        const newState = {
+          ...prev,
+          lastScannedBoxNumber: null
+          // Explicitly keep workerColors and workerStaffIds - DO NOT clear them
+        };
+        console.log(`[useBoxHighlighting] Timer cleared - preserved worker colors:`, newState.workerColors);
+        return newState;
+      });
     }, 3000);
 
     return () => clearTimeout(timer);

@@ -151,9 +151,8 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       };
     }
 
-    // Priority 3: NO WORKER COLOR BACKGROUND - Only show worker color on number circle
-    // Worker background colors are only shown during the 3-second green highlight period
-    // After that, only the number circle retains the worker color
+    // Priority 3: WORKER COLOR BACKGROUND WITH 40% TRANSPARENCY - Box has items but not just scanned
+    // Use both WebSocket state AND database fallback to ensure persistence
     const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
     const workerStaffId = highlighting.workerStaffIds[boxNumber] || lastWorkerUserId;
     
@@ -161,13 +160,29 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     const boxProducts = products.filter(p => p.boxNumber === boxNumber);
     const hasScannedItems = boxProducts.some(p => p.scannedQty > 0);
     
+    // Debug logging for persistence
+    if (boxNumber === 6 || boxNumber === 2) { // Debug specific boxes
+      console.log(`[BoxHighlight] Box ${boxNumber} worker color logic:`, {
+        hasScannedItems,
+        websocketWorkerColor: highlighting.workerColors[boxNumber],
+        databaseWorkerColor: lastWorkerColor,
+        finalWorkerColor: workerColor,
+        workerStaffId: workerStaffId
+      });
+    }
+    
     if (workerColor && hasScannedItems) {
+      // Convert hex to rgba with 40% opacity for persistent worker color background
+      const hex = workerColor.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
       return {
-        backgroundColor: '#f3f4f6', // Gray-100 (default background)
-        borderColor: '#d1d5db', // Gray-300 (default border)
+        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.4)`, // 40% transparency for persistent display
+        borderColor: workerColor,
         textColor: 'black',
         workerStaffId: workerStaffId,
-        numberCircleColor: workerColor // Only the number circle shows worker color
+        numberCircleColor: workerColor
       };
     }
 
