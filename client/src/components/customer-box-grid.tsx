@@ -126,7 +126,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
           borderColor: workerColor,
           textColor: 'black',
           workerStaffId: highlighting.workerStaffIds[boxNumber],
-          numberCircleColor: isEmptyBox ? '#6b7280' : workerColor // Grey for empty, worker color for non-empty
+          numberCircleColor: workerColor
         };
       }
       // Fallback if no worker color
@@ -135,7 +135,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         borderColor: '#16a34a',
         textColor: 'black',
         workerStaffId: highlighting.workerStaffIds[boxNumber],
-        numberCircleColor: isEmptyBox ? '#6b7280' : undefined // Grey for empty boxes
+        numberCircleColor: isEmptyBox ? '#6b7280' : undefined // Grey for empty boxes only
       };
     }
 
@@ -166,7 +166,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       backgroundColor: '#f3f4f6', // Gray-100
       borderColor: '#d1d5db', // Gray-300
       textColor: 'black',
-      numberCircleColor: '#6b7280' // Grey circle for empty boxes
+      numberCircleColor: '#6b7280' // Grey circle for empty boxes only
     };
   }, [highlighting]);
 

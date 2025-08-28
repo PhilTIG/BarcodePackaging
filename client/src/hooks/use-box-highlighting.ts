@@ -83,9 +83,8 @@ export function useBoxHighlighting(currentUser?: { role: string; id: string }) {
     const timer = setTimeout(() => {
       setHighlighting(prev => ({
         ...prev,
-        lastScannedBoxNumber: null,
-        workerColors: {},
-        workerStaffIds: {}
+        lastScannedBoxNumber: null
+        // Keep workerColors and workerStaffIds - only clear the temporary green highlighting
       }));
     }, 3000);
 
