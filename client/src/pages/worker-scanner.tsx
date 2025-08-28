@@ -1393,6 +1393,10 @@ export default function WorkerScanner() {
                 // POC-style single box highlighting - only one box highlighted at a time
                 setLastScannedBoxNumber(boxNumber);
               }}
+              onBoxClick={(boxNumber, customerName, products) => {
+                // Box click handler for worker view - could show box details
+                console.log(`Box ${boxNumber} clicked for customer ${customerName}`);
+              }}
               onCheckCount={(boxNumber, jobId) => {
                 // Navigate to dedicated CheckCount page
                 setLocation(`/check-count/${jobId}/${boxNumber}`);

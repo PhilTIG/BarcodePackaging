@@ -14,6 +14,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const [reconnectAttempts, setReconnectAttempts] = useState(0); // State to track reconnect attempts
 
   const connect = useCallback(() => {
     if (!user || wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -65,11 +66,18 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
       const wsUrl = getWebSocketUrl();
       console.log(`[WebSocket] Creating connection for user ${user.id}${jobId ? ` on job ${jobId}` : ''}`);
 
+      // Validate WebSocket URL before creating connection
+      if (!wsUrl || wsUrl.includes('undefined')) {
+        console.error('[WebSocket] Invalid WebSocket URL:', wsUrl);
+        return;
+      }
+
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
         console.log(`[WebSocket] Connection established successfully`);
         setIsConnected(true);
+        setReconnectAttempts(0); // Reset reconnect attempts on successful connection
 
         // Authenticate with the WebSocket server
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -101,12 +109,19 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
 
         // Only attempt to reconnect if it wasn't a manual close (code 1000)
         if (event.code !== 1000 && user) {
-          const delay = Math.min(3000 * Math.pow(1.5, 0), 30000); // Exponential backoff with max 30s
-          console.log(`[WebSocket] Scheduling reconnection in ${delay}ms`);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            console.log(`[WebSocket] Attempting reconnection...`);
-            void connect();
-          }, delay);
+          const maxReconnectAttempts = 10; // Set a limit for reconnection attempts
+          if (reconnectAttempts < maxReconnectAttempts) {
+            // Exponential backoff for reconnection delay
+            const delay = Math.min(5000 * Math.pow(2, reconnectAttempts), 30000); // Start with 5s, double each time, max 30s
+            console.log(`[WebSocket] Scheduling reconnection attempt ${reconnectAttempts + 1} in ${delay}ms`);
+            reconnectTimeoutRef.current = setTimeout(() => {
+              setReconnectAttempts(prev => prev + 1); // Increment reconnect attempts
+              console.log(`[WebSocket] Attempting reconnection...`);
+              void connect();
+            }, delay);
+          } else {
+            console.error(`[WebSocket] Max reconnection attempts (${maxReconnectAttempts}) reached. Connection will not be re-established.`);
+          }
         }
       };
 
@@ -114,6 +129,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         console.error("[WebSocket] Connection error:", error);
         console.error("[WebSocket] Error details - ReadyState:", wsRef.current?.readyState, "URL:", wsRef.current?.url);
         setIsConnected(false);
+        // The onclose handler will typically trigger reconnection logic, so no direct reconnection here.
       };
     } catch (error) {
       console.error("[WebSocket] Failed to create connection:", error);
@@ -121,14 +137,15 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
       setIsConnected(false);
 
       // Retry connection after delay with exponential backoff
-      const retryDelay = 5000;
+      const retryDelay = Math.min(5000 * Math.pow(2, reconnectAttempts), 30000); // Same backoff as onclose
       console.log(`[WebSocket] Scheduling retry in ${retryDelay}ms due to connection creation failure`);
       reconnectTimeoutRef.current = setTimeout(() => {
+        setReconnectAttempts(prev => prev + 1); // Increment reconnect attempts
         console.log(`[WebSocket] Retrying connection after creation failure...`);
         void connect();
       }, retryDelay);
     }
-  }, [user, jobId]);
+  }, [user, jobId, reconnectAttempts]); // Include reconnectAttempts in dependencies
 
   const handleMessage = useCallback((message: WSMessage) => {
     switch (message.type) {
@@ -151,7 +168,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
               boxes: oldData.boxes.map((box: any) => {
                 if (box.number === message.data.boxNumber) {
                   let updatedProducts = box.products;
-                  
+
                   // Update only the changed product using delta data if available
                   if (message.data.changedProduct) {
                     updatedProducts = box.products.map((product: any) => {
@@ -406,16 +423,16 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
     }
   }, [jobId, onWorkerBoxUpdate]);
 
-  const sendMessage = (message: WSMessage) => {
+  const sendMessage = useCallback((message: WSMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       console.log(`[WebSocket] Sending message:`, message);
       wsRef.current.send(JSON.stringify(message));
     } else {
       console.warn(`[WebSocket] Cannot send message - connection not open. ReadyState: ${wsRef.current?.readyState}`, message);
     }
-  };
+  }, []);
 
-  const disconnect = () => {
+  const disconnect = useCallback(() => {
     console.log(`[WebSocket] Manual disconnection requested`);
 
     if (reconnectTimeoutRef.current) {
@@ -430,7 +447,8 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
     }
 
     setIsConnected(false);
-  };
+    setReconnectAttempts(0); // Reset reconnect attempts on manual disconnect
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -440,7 +458,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
     return () => {
       disconnect();
     };
-  }, [connect]);
+  }, [connect, disconnect]); // Depend on connect and disconnect
 
   return {
     isConnected,

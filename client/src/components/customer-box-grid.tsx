@@ -82,7 +82,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     });
 
     updateWorkerBoxHighlighting(boxNumber, workerId, workerColor, workerStaffId);
-  }, [updateWorkerBoxHighlighting, onBoxClick, user?.id]);
+  }, [updateWorkerBoxHighlighting, user?.id]); // Removed onBoxClick from dependencies as it's not used here
 
   // Connect WebSocket for all views (workers need numerical updates, supervisors need highlighting)
   const { isConnected } = useWebSocket(jobId, handleWebSocketUpdate);
