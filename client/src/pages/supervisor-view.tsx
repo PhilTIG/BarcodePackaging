@@ -132,6 +132,13 @@ export default function SupervisorView() {
   // Get available products and groups for filtering (always fetch when job is available)
   const { availableProducts, availableGroups } = useFilteredBoxData(jobId || "", [], []);
 
+  // Check for session conflicts - WebSocket updates only
+  const { data: sessionData } = useQuery({
+    queryKey: ["/api/check-sessions"],
+    enabled: !!user,
+    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
+  });
+
   // Redirect if not authenticated or not a supervisor/manager
   useEffect(() => {
     if (!isLoading && !user) {
@@ -375,7 +382,7 @@ export default function SupervisorView() {
                     <h1 className="text-xl font-bold text-gray-900">Job Monitor</h1>
                     <p className="text-sm text-gray-600">{job.name}</p>
                   </div>
-                  
+
                   {/* Filters - Same row as title */}
                   <div className="flex-shrink-0 flex items-center gap-3">
                     <ItemFilter
@@ -475,7 +482,7 @@ export default function SupervisorView() {
                   </Button>
                 </div>
               )}
-              
+
               {/* BOX LIMIT: Customer Queue Button */}
               <div>
                 <Button 

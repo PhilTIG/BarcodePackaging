@@ -31,7 +31,7 @@ export default function WorkerScanner() {
     customerName: string;
     boxNumber: number;
   } | null>(null);
-  
+
   // State for displaying undo events
   const [undoDisplay, setUndoDisplay] = useState<Array<{
     productName: string;
@@ -58,7 +58,7 @@ export default function WorkerScanner() {
     isExtraItem?: boolean;
     timestamp?: string;
   } | null>(null);
-  
+
   // Runtime single box mode state (separate from settings preference)
   const [runtimeSingleBoxMode, setRuntimeSingleBoxMode] = useState(false);
 
@@ -121,7 +121,7 @@ export default function WorkerScanner() {
           boxNumber: event.boxNumber,
           timestamp: event.scanTime || new Date().toISOString()
         }));
-        
+
         // Set undo display (replaces last scan temporarily)
         setUndoDisplay(undoItems);
         setLastScanEvent(null); // Clear last scan event
@@ -131,7 +131,7 @@ export default function WorkerScanner() {
 
     // Store the handler for potential cleanup
     (window as any).handleUndoSuccess = handleUndoSuccess;
-    
+
     return () => {
       delete (window as any).handleUndoSuccess;
     };
@@ -222,7 +222,7 @@ export default function WorkerScanner() {
         }
         setTimeout(() => setScanError(null), 3000);
         showScanFeedback(false);
-        
+
         // Clear input and focus
         if (barcodeInputRef.current) {
           barcodeInputRef.current.value = "";
@@ -242,7 +242,7 @@ export default function WorkerScanner() {
         // After 3 seconds, clear error but keep extra item info until next scan
         setTimeout(() => {
           setScanError(null);
-          
+
           // Set orange extra item display that persists until next scan
           setScanResult({
             boxNumber: null,
@@ -254,7 +254,7 @@ export default function WorkerScanner() {
           });
         }, 3000);
         showScanFeedback(false);
-        
+
         // Clear input and focus
         if (barcodeInputRef.current) {
           barcodeInputRef.current.value = "";
@@ -270,7 +270,7 @@ export default function WorkerScanner() {
         // After 3 seconds, clear error but keep put aside info until next scan
         setTimeout(() => {
           setScanError(null);
-          
+
           // Set orange put aside display that persists until next scan
           setScanResult({
             boxNumber: null,
@@ -282,7 +282,7 @@ export default function WorkerScanner() {
           });
         }, 3000);
         showScanFeedback(false);
-        
+
         // Clear input and focus
         if (barcodeInputRef.current) {
           barcodeInputRef.current.value = "";
@@ -308,7 +308,7 @@ export default function WorkerScanner() {
 
       // PHASE 1 OPTIMIZATION: Remove all query invalidations - WebSocket handles updates
       // No longer invalidating queries to prevent 3+ API calls per scan
-      
+
       // Delay box switching for mobile mode - reduced from 100ms to 50ms
       if (runtimeSingleBoxMode && data.scanEvent?.customerName) {
         setTimeout(() => {
@@ -501,14 +501,14 @@ export default function WorkerScanner() {
     // Maintain order of first appearance in CSV, don't sort alphabetically
     const seenCustomers = new Set();
     const customers: string[] = [];
-    
+
     products.forEach((p: any) => {
       if (!seenCustomers.has(p.customerName)) {
         seenCustomers.add(p.customerName);
         customers.push(p.customerName);
       }
     });
-    
+
     return customers;
   };
 
@@ -524,12 +524,12 @@ export default function WorkerScanner() {
     if ((jobPerformanceData?.performance?.totalScans || 0) === 0) {
       return { completed: 0, total: 0 };
     }
-    
+
     const currentCustomer = getCurrentCustomer();
     if (currentCustomer === "Ready to Scan") {
       return { completed: 0, total: 0 };
     }
-    
+
     const products = (jobData as any)?.products || [];
     const customerProducts = products.filter((p: any) => p.customerName === currentCustomer);
 
@@ -845,7 +845,7 @@ export default function WorkerScanner() {
                   Switch Job
                 </Button>
               )}
-              
+
               {/* Single Box Mode Toggle - Always Visible */}
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-600">Single Box</span>
@@ -860,7 +860,7 @@ export default function WorkerScanner() {
                   <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                 </label>
               </div>
-              
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -1085,7 +1085,7 @@ export default function WorkerScanner() {
                       {scanResult.isExtraItem ? 'Added to Extra Items' : `Just scanned into Box ${scanResult.boxNumber}`}
                     </p>
                   </div>
-                  
+
                   {/* Box tile on the right - Orange for Extra Items */}
                   <div className="flex-shrink-0">
                     <div 
@@ -1153,7 +1153,7 @@ export default function WorkerScanner() {
                           </p>
                         </div>
                       </div>
-                      
+
                       {/* Red-styled box tile on the right */}
                       <div className="flex-shrink-0">
                         <div 
@@ -1198,7 +1198,7 @@ export default function WorkerScanner() {
                       Just scanned into Box {lastScanEvent.boxNumber}
                     </p>
                   </div>
-                  
+
                   {/* Box tile on the right - exact CustomerBoxGrid styling */}
                   <div className="flex-shrink-0">
                     {(() => {
@@ -1208,7 +1208,7 @@ export default function WorkerScanner() {
                       const scannedQty = boxProducts.reduce((sum: number, p: any) => sum + (p.scannedQty || 0), 0);
                       const completionPercentage = totalQty > 0 ? Math.round((scannedQty / totalQty) * 100) : 0;
                       const isComplete = totalQty > 0 && scannedQty === totalQty;
-                      
+
                       return (
                         <div 
                           className="border rounded-lg p-3 relative bg-green-100 border-green-300 transition-all duration-200 cursor-pointer hover:shadow-lg"
@@ -1251,7 +1251,7 @@ export default function WorkerScanner() {
                                 {completionPercentage}%
                               </p>
                             )}
-                            
+
                             {/* Centered progress bar */}
                             <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                               <div 

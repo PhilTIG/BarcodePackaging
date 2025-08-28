@@ -338,6 +338,13 @@ export default function ManagerDashboard() {
     enabled: !!user,
   });
 
+  // Check for session conflicts - WebSocket updates only
+  const { data: sessionConflicts } = useQuery({
+    queryKey: ["/api/check-sessions"],
+    enabled: !!user,
+    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
+  });
+
   // Upload CSV mutation
   const uploadMutation = useMutation({
     mutationFn: async (data: UploadForm & { file: File }) => {
@@ -368,7 +375,7 @@ export default function ManagerDashboard() {
       form.reset();
       setSelectedFile(null); // Clear selected file on success
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      
+
       // Show warning if box limit is less than 80% of customers
       if (data.warning) {
         toast({
