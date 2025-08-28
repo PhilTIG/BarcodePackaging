@@ -175,16 +175,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.getUserByStaffId(staffId);
       if (!user) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       const validPin = await bcrypt.compare(pin, user.pin);
       if (!validPin) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       if (!user.isActive) {
-        return res.status(401).json({ message: 'Account is deactivated' });
+        return res.status(401).json({ error: 'Account is deactivated' });
       }
 
       // Return user ID as token (in production use proper JWT)
@@ -1659,15 +1659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // DEPRECATED: Use /api/users?role=worker instead
-  app.get('/api/users/workers', requireAuth, requireRole(['manager']), async (req, res) => {
-    try {
-      const workers = await storage.getUsersByRole('worker');
-      res.json({ workers });
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch workers' });
-    }
-  });
+  
 
 
 
@@ -2288,17 +2280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============== DUPLICATE ENDPOINTS REMOVED ==============
   // Box Empty/Transfer endpoints are defined above with automatic reallocation
 
-  // Get box history for a job
-  app.get('/api/jobs/:jobId/box-history', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
-    try {
-      const { jobId } = req.params;
-      const history = await storage.getBoxHistory(jobId);
-      res.json({ history });
-    } catch (error) {
-      console.error('Failed to fetch box history:', error);
-      res.status(500).json({ message: 'Failed to fetch box history' });
-    }
-  });
+  
 
   // Get box history for a specific box
   app.get('/api/jobs/:jobId/boxes/:boxNumber/history', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
