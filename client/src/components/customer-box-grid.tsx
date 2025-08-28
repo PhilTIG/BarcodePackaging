@@ -151,8 +151,9 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       };
     }
 
-    // Priority 3: WORKER COLOR BACKGROUND - Box has items but not just scanned (third priority)
-    // Use highlighting state worker color if available, otherwise fallback to database worker color
+    // Priority 3: NO WORKER COLOR BACKGROUND - Only show worker color on number circle
+    // Worker background colors are only shown during the 3-second green highlight period
+    // After that, only the number circle retains the worker color
     const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
     const workerStaffId = highlighting.workerStaffIds[boxNumber] || lastWorkerUserId;
     
@@ -161,17 +162,12 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     const hasScannedItems = boxProducts.some(p => p.scannedQty > 0);
     
     if (workerColor && hasScannedItems) {
-      // Convert hex to rgba with 40% opacity for subtle background
-      const hex = workerColor.replace('#', '');
-      const r = parseInt(hex.substr(0, 2), 16);
-      const g = parseInt(hex.substr(2, 2), 16);
-      const b = parseInt(hex.substr(4, 2), 16);
       return {
-        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.4)`, // 40% transparency
-        borderColor: workerColor,
+        backgroundColor: '#f3f4f6', // Gray-100 (default background)
+        borderColor: '#d1d5db', // Gray-300 (default border)
         textColor: 'black',
         workerStaffId: workerStaffId,
-        numberCircleColor: workerColor
+        numberCircleColor: workerColor // Only the number circle shows worker color
       };
     }
 
