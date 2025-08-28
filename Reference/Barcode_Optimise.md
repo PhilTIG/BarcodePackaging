@@ -169,13 +169,15 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 - [x] **Task 4.2.1**: Identify mutation-triggered invalidations **COMPLETED**
   - Search for React Query `invalidateQueries` calls in scan mutations
   - Document which mutations trigger broad invalidations
+  - **COMPLETED**: Located scan mutation invalidations in scan processing
   - Files: Client mutation hooks, `client/src/lib/queryClient.ts`
 
-- [ ] **Task 4.2.2**: Replace invalidations with WebSocket updates
+- [x] **Task 4.2.2**: Replace invalidations with WebSocket updates **COMPLETED**
   - Remove `invalidateQueries` calls that conflict with WebSocket updates
   - Ensure WebSocket messages provide all necessary data for UI updates
-  - **⚠️ PUT ASIDE REMINDER**: Verify Put Aside mutations use WebSocket-only updates
-  - Files: Scan mutation hooks, WebSocket message handlers
+  - **COMPLETED**: Removed invalidateQueries from scan, undo, and box empty mutations
+  - **⚠️ PUT ASIDE REMINDER**: Verified Put Aside mutations use WebSocket-only updates
+  - Files: worker-scanner.tsx, manager-dashboard.tsx, supervisor-view.tsx
 
 - [ ] **Task 4.2.3**: Fix double data fetching
   - Prevent both mutation response AND WebSocket events from triggering same data fetches
