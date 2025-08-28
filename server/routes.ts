@@ -1075,20 +1075,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workerStaffId: req.user!.staffId
       };
 
-      // Check for Put Aside items for this barcode and job
-      const putAsideItems = await storage.getPutAsideItemsForBarcode(jobId, eventData.barCode);
+      // Check for Put Aside items for this barcode and job (using scanEvents approach)
+      // This is handled automatically in storage.createScanEvent() - no need to manually check here
       let insertEvent: ScanEvent = eventData as ScanEvent; // Explicitly type as ScanEvent
-
-      if (putAsideItems.length > 0) {
-        // CONSUME PUT ASIDE ITEM: Mark the first matching Put Aside item as allocated
-        const putAsideItem = putAsideItems[0];
-        await storage.consumePutAsideItem(putAsideItem.id, eventData.boxNumber); // Use dedicated storage method
-
-        console.log(`[Put Aside Priority] Consumed Put Aside item for barcode ${eventData.barCode} - allocated to box ${eventData.boxNumber}`);
-
-        // Mark that this scan event consumed a Put Aside item for WebSocket broadcasting
-        (insertEvent as any).consumedPutAside = true;
-      }
 
       const scanEvent = await storage.createScanEvent(insertEvent);
 
