@@ -55,18 +55,16 @@ function ExtraItemsAndBoxesButtons({
   // Connect to WebSocket for real-time updates (same as Job Monitoring)
   const { isConnected } = useWebSocket(jobId);
 
-  // Use single /progress endpoint for consistent real-time data - WebSocket updates only
+  // Use single /progress endpoint for real-time data - WebSocket updates only
   const { data: progressData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/progress`],
     enabled: !!jobId,
-    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   // Fetch Put Aside count separately - WebSocket updates only
   const { data: putAsideData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/put-aside/count`],
     enabled: !!jobId,
-    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   // Extract consistent data from progress endpoint (matches SupervisorView)
@@ -131,7 +129,6 @@ function CompletedBoxesModal({
   const { data: progressData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/progress`],
     enabled: !!jobId && isOpen,
-    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   // Get completed boxes from progress data - now includes products array
@@ -221,7 +218,6 @@ function PutAsideModal({
   const { data: putAsideData, isLoading } = useQuery({
     queryKey: [`/api/jobs/${jobId}/put-aside`],
     enabled: !!jobId && isOpen,
-    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   const putAsideItems = (putAsideData as any)?.items || [];
@@ -319,8 +315,14 @@ export default function ManagerDashboard() {
   // Fetch jobs with WebSocket real-time updates - no polling needed
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
     queryKey: ["/api/jobs"],
-    enabled: !!user,
-    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
+    queryFn: async () => {
+      const response = await fetch("/api/jobs", {
+        headers: { Authorization: `Bearer ${user.id}` }
+      });
+      if (!response.ok) throw new Error("Failed to fetch jobs");
+      return response.json();
+    },
+    staleTime: 300000, // 5 minutes - rely on WebSocket updates
   });
 
   // Connect to WebSocket for real-time updates on all active jobs
@@ -342,7 +344,6 @@ export default function ManagerDashboard() {
   const { data: sessionConflicts } = useQuery({
     queryKey: ["/api/check-sessions"],
     enabled: !!user,
-    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   // Upload CSV mutation
@@ -805,12 +806,12 @@ export default function ManagerDashboard() {
                           <FormItem>
                             <FormLabel>Box Limit</FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
-                                type="number" 
-                                min="1" 
-                                placeholder="No Limit" 
-                                data-testid="input-box-limit" 
+                              <Input
+                                {...field}
+                                type="number"
+                                min="1"
+                                placeholder="No Limit"
+                                data-testid="input-box-limit"
                               />
                             </FormControl>
                             <FormMessage />
@@ -975,8 +976,8 @@ export default function ManagerDashboard() {
                           </Badge>
                           <Button
                             variant={
-                              job.status === "completed" 
-                                ? (job.isActive ? "default" : "outline") 
+                              job.status === "completed"
+                                ? (job.isActive ? "default" : "outline")
                                 : (job.isActive ? "default" : "outline")
                             }
                             size="sm"
@@ -984,8 +985,8 @@ export default function ManagerDashboard() {
                             className="h-6 px-2 text-xs font-medium"
                             data-testid={`button-toggle-scanning-${job.id}`}
                           >
-                            {job.status === "completed" 
-                              ? (job.isActive ? "Lock Job" : "Locked") 
+                            {job.status === "completed"
+                              ? (job.isActive ? "Lock Job" : "Locked")
                               : (job.isActive ? "Scanning Active" : "Scanning Paused")
                             }
                           </Button>

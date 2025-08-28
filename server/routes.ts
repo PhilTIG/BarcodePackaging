@@ -1054,6 +1054,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { jobId, sessionId, ...scanEventData } = req.body; // Destructure to get jobId and sessionId
 
+      console.log('[Scan Event Debug] Request data:', req.body);
+
       const eventData = {
         ...scanEventData,
         jobId: jobId,
@@ -1063,84 +1065,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workerStaffId: req.user!.staffId
       };
 
+      console.log('[Scan Event Debug] Event data being sent to storage:', eventData);
+
       const scanEvent = await storage.createScanEvent(eventData);
+      
+      console.log('[Scan Event Debug] Created scan event:', scanEvent);
 
-      // Update session statistics
-      await storage.updateScanSessionStats(sessionId);
+      // PERFORMANCE FIX: Return response immediately, do heavy work async
+      res.json({ scanEvent });
 
-      // Auto-update job status based on scan progress
-      await storage.updateJobStatusBasedOnProgress(jobId);
+      // ASYNC: Do heavy operations after response is sent
+      setImmediate(async () => {
+        try {
+          // Update session statistics
+          await storage.updateScanSessionStats(sessionId);
 
-      // Get worker's assigned color from job assignments
-      const workerAssignment = await storage.checkExistingAssignment(jobId, req.user!.id);
-
-      // PHASE 1 OPTIMIZATION: Get complete updated data for WebSocket broadcast
-      // This eliminates the need for clients to make additional API calls
-
-      // Get updated box requirements (replaces products query)
-      const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
-
-      // Transform box requirements to product format for UI compatibility
-      const updatedProducts = [];
-      const productMap = new Map();
-
-      for (const req of updatedBoxRequirements) {
-        const key = `${req.customerName}-${req.boxNumber}`;
-        if (!productMap.has(key)) {
-          const worker = req.lastWorkerUserId ? await storage.getUserById(req.lastWorkerUserId) : null;
-          productMap.set(key, {
-            id: `${req.customerName}-${req.boxNumber}`,
-            customerName: req.customerName,
-            qty: 0,
-            scannedQty: 0,
-            boxNumber: req.boxNumber,
-            isComplete: true,
-            lastWorkerUserId: req.lastWorkerUserId,
-            lastWorkerColor: req.lastWorkerColor,
-            lastWorkerStaffId: worker?.staffId
-          });
+          // Auto-update job status based on scan progress
+          await storage.updateJobStatusBasedOnProgress(jobId);
+        } catch (error) {
+          console.error('[Scan Event] Async processing error:', error);
         }
-      }
-
-      for (const req of updatedBoxRequirements) {
-        const key = `${req.customerName}-${req.boxNumber}`;
-        const product = productMap.get(key);
-        product.qty += req.requiredQty;
-        product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
-        product.isComplete = product.isComplete && req.isComplete;
-
-        if (req.lastWorkerUserId) {
-          product.lastWorkerUserId = req.lastWorkerUserId;
-          product.lastWorkerColor = req.lastWorkerColor;
-        }
-      }
-
-      const transformedProducts = Array.from(productMap.values());
-
-      // Get worker performance data
-      const workerPerformance = await storage.getJobWorkerPerformance(jobId, req.user!.id);
-
-      // Send real-time update with complete data to eliminate client-side API calls
-      broadcastToJob(String(jobId), {
-        type: "scan_update",
-        data: {
-          scanEvent: {
-            ...scanEvent,
-            sessionId: sessionId,
-            userId: req.user!.id,
-            userName: req.user!.name,
-            workerColor: workerAssignment?.assignedColor || '#3B82F6',
-            workerStaffId: req.user!.staffId
-          },
-          products: transformedProducts,
-          performance: workerPerformance,
-          boxNumber: scanEvent.boxNumber,
-          jobId: String(jobId)
-        },
-        jobId: String(jobId)
       });
 
-      res.json({ scanEvent });
+      // Get worker's assigned color from job assignments (keep for WebSocket)
+      const workerAssignment = await storage.checkExistingAssignment(jobId, req.user!.id);
+
+      // PERFORMANCE FIX: Send minimal WebSocket data, remove expensive aggregations
+
+      // PERFORMANCE FIX: Send lightweight WebSocket broadcast with minimal data
+      broadcastToJob(jobId, {
+        type: 'scan_update',
+        data: {
+          jobId,
+          boxNumber: scanEvent.boxNumber,
+          customerName: scanEvent.customerName,
+          productName: scanEvent.productName,
+          barcode: scanEvent.barCode,
+          scannerId: req.user!.id,
+          timestamp: scanEvent.scanTime
+        }
+      });
     } catch (error) {
       console.error('Failed to record scan event:', error);
       res.status(500).json({ message: 'Failed to record scan event' });
@@ -1159,6 +1123,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (session) {
         // Auto-update job status after undo
         await storage.updateJobStatusBasedOnProgress(session.jobId);
+
+        // Get the relevant box requirement for the undone event
+        const updatedRequirement = undoneEvents.length > 0 ? await storage.getBoxRequirementById(undoneEvents[0].boxRequirementId) : null;
+
+        // Find the box details for broadcasting
+        const box = updatedRequirement ? await storage.getBoxDetailsByRequirementId(updatedRequirement.id) : null;
+        
+        if (box && updatedRequirement) {
+          const workerId = req.user!.id;
+          const workerAssignment = await storage.checkExistingAssignment(session.jobId, workerId);
+
+          // Broadcast scan update with delta for the undone product
+          broadcastToJob(session.jobId, {
+            type: 'scan_update',
+            data: {
+              jobId: session.jobId,
+              boxNumber: box.number,
+              customerName: box.customerName,
+              // Send only the changed product for undo operations
+              changedProduct: {
+                id: updatedRequirement.id,
+                productName: updatedRequirement.productName,
+                scannedQty: updatedRequirement.scannedQty,
+                targetQty: updatedRequirement.targetQty,
+                barcode: updatedRequirement.barcode
+              },
+              isComplete: box.isComplete,
+              totalItems: box.totalItems,
+              scannedItems: box.scannedItems,
+              completionPercentage: box.completionPercentage,
+              scannerId: workerId
+            }
+          });
+        }
 
         broadcastToJob(session.jobId, {
           type: 'undo_event',
@@ -1616,6 +1614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           enableAutoUndo: false,
           undoTimeLimit: 30,
           batchScanMode: false,
+          canEmptyAndTransfer: false // Default to false unless explicitly enabled by manager
         };
 
         const newPreferences = await storage.createUserPreferences(defaultPrefs);
@@ -1887,7 +1886,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // BOX EMPTY/TRANSFER ROUTES
+  // BOX EMPTY/TRANSFERROUTES
   // ========================
 
   // Permission check helper for box management
@@ -1935,20 +1934,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
 
       // Transform box requirements to product format for UI compatibility
-      const updatedProducts = [];
+      const transformedProducts = [];
       const productMap = new Map();
 
+      // Collect unique product entries and aggregate quantities
       for (const req of updatedBoxRequirements) {
-        const key = `${req.customerName}-${req.boxNumber}`;
+        const key = `${req.customerName}-${req.boxNumber}-${req.barCode}`; // Include barcode for product uniqueness
         if (!productMap.has(key)) {
           const worker = req.lastWorkerUserId ? await storage.getUserById(req.lastWorkerUserId) : null;
           productMap.set(key, {
-            id: `${req.customerName}-${req.boxNumber}`,
+            id: `${req.customerName}-${req.boxNumber}-${req.barCode}`, // Unique ID for the product within the box
             customerName: req.customerName,
-            qty: 0,
-            scannedQty: 0,
+            productName: req.productName,
+            barcode: req.barCode,
+            qty: 0, // Total required quantity for this product in this box
+            scannedQty: 0, // Total scanned quantity for this product in this box
             boxNumber: req.boxNumber,
-            isComplete: true,
+            isComplete: true, // Assume complete unless a requirement is not
             lastWorkerUserId: req.lastWorkerUserId,
             lastWorkerColor: req.lastWorkerColor,
             lastWorkerStaffId: worker?.staffId
@@ -1956,20 +1958,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Aggregate scanned quantities and check completion status
       for (const req of updatedBoxRequirements) {
-        const key = `${req.customerName}-${req.boxNumber}`;
-        const product = productMap.get(key);
-        product.qty += req.requiredQty;
-        product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
-        product.isComplete = product.isComplete && req.isComplete;
+        const key = `${req.customerName}-${req.boxNumber}-${req.barCode}`;
+        const productEntry = productMap.get(key);
 
+        productEntry.qty += req.requiredQty;
+        productEntry.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
+        productEntry.isComplete = productEntry.isComplete && req.isComplete;
+
+        // Update worker info if this requirement has more recent worker data
         if (req.lastWorkerUserId) {
-          product.lastWorkerUserId = req.lastWorkerUserId;
-          product.lastWorkerColor = req.lastWorkerColor;
+          productEntry.lastWorkerUserId = req.lastWorkerUserId;
+          productEntry.lastWorkerColor = req.lastWorkerColor;
+          productEntry.lastWorkerStaffId = (await storage.getUserById(req.lastWorkerUserId))?.staffId;
         }
       }
 
-      const transformedProducts = Array.from(productMap.values());
+      const finalProducts = Array.from(productMap.values());
 
       // Broadcast real-time update with complete data (like scan_update)
       broadcastToJob(jobId, {
@@ -1979,7 +1985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           performedBy: req.user!.name,
           timestamp: new Date().toISOString(),
           jobId,
-          products: transformedProducts // NEW: Include products data for instant UI updates
+          products: finalProducts // NEW: Include products data for instant UI updates
         }
       });
 
@@ -2053,20 +2059,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
 
       // Transform box requirements to product format for UI compatibility
-      const updatedProducts = [];
+      const transformedProducts = [];
       const productMap = new Map();
 
+      // Collect unique product entries and aggregate quantities
       for (const req of updatedBoxRequirements) {
-        const key = `${req.customerName}-${req.boxNumber}`;
+        const key = `${req.customerName}-${req.boxNumber}-${req.barCode}`; // Include barcode for product uniqueness
         if (!productMap.has(key)) {
           const worker = req.lastWorkerUserId ? await storage.getUserById(req.lastWorkerUserId) : null;
           productMap.set(key, {
-            id: `${req.customerName}-${req.boxNumber}`,
+            id: `${req.customerName}-${req.boxNumber}-${req.barCode}`, // Unique ID for the product within the box
             customerName: req.customerName,
-            qty: 0,
-            scannedQty: 0,
+            productName: req.productName,
+            barcode: req.barCode,
+            qty: 0, // Total required quantity for this product in this box
+            scannedQty: 0, // Total scanned quantity for this product in this box
             boxNumber: req.boxNumber,
-            isComplete: true,
+            isComplete: true, // Assume complete unless a requirement is not
             lastWorkerUserId: req.lastWorkerUserId,
             lastWorkerColor: req.lastWorkerColor,
             lastWorkerStaffId: worker?.staffId
@@ -2074,20 +2083,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Aggregate scanned quantities and check completion status
       for (const req of updatedBoxRequirements) {
-        const key = `${req.customerName}-${req.boxNumber}`;
-        const product = productMap.get(key);
-        product.qty += req.requiredQty;
-        product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
-        product.isComplete = product.isComplete && req.isComplete;
+        const key = `${req.customerName}-${req.boxNumber}-${req.barCode}`;
+        const productEntry = productMap.get(key);
 
+        productEntry.qty += req.requiredQty;
+        productEntry.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
+        productEntry.isComplete = productEntry.isComplete && req.isComplete;
+
+        // Update worker info if this requirement has more recent worker data
         if (req.lastWorkerUserId) {
-          product.lastWorkerUserId = req.lastWorkerUserId;
-          product.lastWorkerColor = req.lastWorkerColor;
+          productEntry.lastWorkerUserId = req.lastWorkerUserId;
+          productEntry.lastWorkerColor = req.lastWorkerColor;
+          productEntry.lastWorkerStaffId = (await storage.getUserById(req.lastWorkerUserId))?.staffId;
         }
       }
 
-      const transformedProducts = Array.from(productMap.values());
+      const finalProducts = Array.from(productMap.values());
+
 
       // Broadcast real-time update with complete data (like scan_update)
       broadcastToJob(jobId, {
@@ -2098,7 +2112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           performedBy: req.user!.name,
           timestamp: new Date().toISOString(),
           jobId,
-          products: transformedProducts // NEW: Include products data for instant UI updates
+          products: finalProducts // NEW: Include products data for instant UI updates
         }
       });
 

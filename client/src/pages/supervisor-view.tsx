@@ -113,10 +113,17 @@ export default function SupervisorView() {
   });
 
   // Fetch job progress
-  const { data: progressData } = useQuery({
-    queryKey: ["/api/jobs", jobId, "progress"],
-    enabled: !!jobId && !!user,
-    refetchInterval: 10000, // Reduced from 5s to 10s for better performance
+  const { data: progressData, isLoading: progressLoading, refetch: refetchProgress } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/progress`],
+    queryFn: async () => {
+      const response = await fetch(`/api/jobs/${jobId}/progress`, {
+        headers: { Authorization: `Bearer ${user.id}` }
+      });
+      if (!response.ok) throw new Error("Failed to fetch progress");
+      return response.json();
+    },
+    staleTime: 300000, // 5 minutes - rely on WebSocket updates
+    // PHASE 4: Polling removed - WebSocket updates provide real-time data
   });
 
   // Fetch Put Aside count - WebSocket updates only
@@ -135,7 +142,11 @@ export default function SupervisorView() {
   // Check for session conflicts - WebSocket updates only
   const { data: sessionData } = useQuery({
     queryKey: ["/api/check-sessions"],
-    enabled: !!user,
+    queryFn: async () => {
+      const response = await fetch("/api/check-sessions");
+      return response.json();
+    },
+    enabled: !!user && (user.role === 'supervisor' || user.role === 'manager'),
     // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
