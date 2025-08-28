@@ -12,7 +12,14 @@ import {
   type Job,
   // Product type removed - table eliminated
   type ScanSession,
-  type ScanEvent
+  type ScanEvent,
+  type WSMessage,
+  type WSAuthenticateMessage,
+  type WSScanUpdateMessage,
+  type WSJobStatusMessage,
+  type WSBoxActionMessage,
+  type WSCheckCountMessage,
+  type WSPutAsideMessage
 } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -41,13 +48,7 @@ interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
-// WebSocket message types
-interface WSMessage {
-  type: string;
-  data: any;
-  jobId?: string;
-  sessionId?: string;
-}
+// WebSocket message types now imported from schema
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -68,20 +69,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[WebSocket Server] Message received from client ${clientId}:`, data);
 
         if (data.type === 'authenticate') {
+          const authData = data as WSAuthenticateMessage;
           connectedClients.set(clientId, { 
             ws, 
-            userId: data.data.userId,
-            jobId: data.data.jobId 
+            userId: authData.data.userId,
+            jobId: authData.data.jobId 
           });
-          console.log(`[WebSocket Server] Client ${clientId} authenticated as user ${data.data.userId}${data.data.jobId ? ` for job ${data.data.jobId}` : ''}`);
+          console.log(`[WebSocket Server] Client ${clientId} authenticated as user ${authData.data.userId}${authData.data.jobId ? ` for job ${authData.data.jobId}` : ''}`);
 
           // Send authentication confirmation
           ws.send(JSON.stringify({
             type: 'authenticated',
             data: { 
               clientId,
-              userId: data.data.userId,
-              jobId: data.data.jobId 
+              userId: authData.data.userId,
+              jobId: authData.data.jobId 
             }
           }));
         }
@@ -111,7 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }));
   });
 
-  function broadcastToJob(jobId: string, message: WSMessage) {
+  function broadcastToJob(jobId: string, message: WSMessage | WSJobStatusMessage | WSBoxActionMessage | WSCheckCountMessage | WSPutAsideMessage) {
     let broadcastCount = 0;
     connectedClients.forEach((client, clientId) => {
       if (client.jobId === jobId && client.ws.readyState === WebSocket.OPEN) {
@@ -128,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`[WebSocket Server] Broadcasted message to ${broadcastCount} clients for job ${jobId}:`, message);
   }
 
-  function broadcastToUser(userId: string, message: WSMessage) {
+  function broadcastToUser(userId: string, message: WSMessage | WSJobStatusMessage) {
     connectedClients.forEach((client) => {
       if (client.userId === userId && client.ws.readyState === WebSocket.OPEN) {
         client.ws.send(JSON.stringify(message));

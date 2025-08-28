@@ -43,7 +43,7 @@ export const boxRequirements = pgTable("box_requirements", {
   scannedQty: integer("scanned_qty").default(0),
   isComplete: boolean("is_complete").default(false),
   isTransferred: boolean("is_transferred").default(false), // NEW: Tracks customers transferred to groups (excluded from reallocation)
-  transferSequence: integer("transfer_sequence").default(0), // NEW: Transfer tracking (0 = active, 1+ = archived transfers)
+  transferSequence: integer("transfer_sequence").default(0), // PHASE 2 CLEANUP: This field is not actively used - candidate for removal
   groupName: text("group_name"), // NEW: Group information for filtering
   boxStatus: varchar("box_status", { length: 20 }).default('active'), // BOX STATUS: 'active', 'emptied', 'transferred_to_group'
   
@@ -88,7 +88,7 @@ export const scanEvents = pgTable("scan_events", {
   isExtraItem: boolean("is_extra_item").default(false), // Mark if this is an extra item not in original job
   jobId: varchar("job_id").references(() => jobs.id), // Direct reference for extra items tracking
   
-  // Put Aside functionality (NEW)
+  // Put Aside functionality (NEW) - PHASE 2 CLEANUP: These fields overlap with putAsideItems table functionality
   allocatedToBox: integer("allocated_to_box"), // Box number when Put Aside item is allocated
   allocatedAt: timestamp("allocated_at"), // Timestamp when Put Aside item is allocated
 });
@@ -737,7 +737,94 @@ export type InsertCheckResult = z.infer<typeof insertCheckResultSchema>;
 export type BoxRequirement = typeof boxRequirements.$inferSelect;
 export type InsertBoxRequirement = z.infer<typeof insertBoxRequirementSchema>;
 
+// Missing type exports - Phase 1 Task 1.1
+export type BoxHistory = typeof boxHistory.$inferSelect;
+export type PutAsideItem = typeof putAsideItems.$inferSelect;
+
 export type Login = z.infer<typeof loginSchema>;
 export type CsvRow = z.infer<typeof csvRowSchema>;
 export type Theme = z.infer<typeof themeSchema>;
 export type PerformanceReport = z.infer<typeof performanceReportSchema>;
+
+// WebSocket Message Types - Phase 1 Task 1.2
+export interface WSMessage {
+  type: string;
+  data: any;
+  jobId?: string;
+  sessionId?: string;
+}
+
+export interface WSAuthenticateMessage {
+  type: 'authenticate';
+  data: {
+    userId: string;
+    jobId?: string;
+  };
+}
+
+export interface WSScanUpdateMessage {
+  type: 'scan_update';
+  data: {
+    scanEvent: ScanEvent & {
+      sessionId: string;
+      userId: string;
+      userName: string;
+      workerColor: string;
+      workerStaffId: string;
+    };
+    products: any[];
+    performance: any;
+    boxNumber: number;
+    jobId: string;
+  };
+  jobId: string;
+}
+
+export interface WSJobStatusMessage {
+  type: 'job_status_update' | 'job_scanning_update' | 'job_locked' | 'job_unlocked';
+  data: {
+    jobId: string;
+    status?: string;
+    isActive?: boolean;
+    jobName?: string;
+    message?: string;
+  };
+}
+
+export interface WSBoxActionMessage {
+  type: 'box_emptied' | 'box_transferred';
+  data: {
+    boxNumber: number;
+    performedBy: string;
+    timestamp: string;
+    jobId: string;
+    products: any[];
+    targetGroup?: string;
+  };
+}
+
+export interface WSCheckCountMessage {
+  type: 'check_count_update';
+  data: {
+    sessionId: string;
+    boxNumber: number;
+    applyCorrections: boolean;
+    corrections: any[];
+    extraItems: any[];
+    extraItemsCount: number;
+    progress: any;
+    timestamp: string;
+    userId: string;
+    userName: string;
+  };
+}
+
+export interface WSPutAsideMessage {
+  type: 'put_aside_allocated';
+  data: {
+    allocatedEvent: any;
+    boxNumber: number;
+    performedBy: string;
+    timestamp: string;
+  };
+}
