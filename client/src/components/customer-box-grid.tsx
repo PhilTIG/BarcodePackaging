@@ -53,11 +53,11 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
   // Use actual user preferences for box layout
   const { preferences } = useUserPreferences();
 
-  // Worker box highlighting system - behavior depends on supervisorView
-  const { highlighting, updateHighlighting, clearHighlighting } = useBoxHighlighting(user);
-
   // Get current user for worker filtering
   const { user } = useAuth();
+
+  // Worker box highlighting system - behavior depends on supervisorView
+  const { highlighting, updateHighlighting, clearHighlighting } = useBoxHighlighting(user);
 
   // WebSocket handler for real-time highlighting
   const handleWebSocketUpdate = useCallback((boxNumber: number, workerId: string, workerColor?: string, workerStaffId?: string) => {
