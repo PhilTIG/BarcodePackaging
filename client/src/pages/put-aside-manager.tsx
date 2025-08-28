@@ -84,7 +84,7 @@ export function PutAsideManagerPage() {
       }).then(res => res.json());
     },
     enabled: !!user && (user.role === 'manager' || user.role === 'supervisor'),
-    refetchInterval: 10000 // Refresh every 10 seconds for real-time updates
+    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   // Reallocate mutation

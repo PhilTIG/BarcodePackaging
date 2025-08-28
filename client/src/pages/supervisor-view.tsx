@@ -119,11 +119,11 @@ export default function SupervisorView() {
     refetchInterval: 10000, // Reduced from 5s to 10s for better performance
   });
 
-  // Fetch Put Aside count
+  // Fetch Put Aside count - WebSocket updates only
   const { data: putAsideData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/put-aside/count`],
     enabled: !!jobId && !!user,
-    refetchInterval: 10000, // Real-time updates
+    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   // Connect to WebSocket for real-time updates 

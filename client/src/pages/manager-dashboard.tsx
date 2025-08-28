@@ -55,18 +55,18 @@ function ExtraItemsAndBoxesButtons({
   // Connect to WebSocket for real-time updates (same as Job Monitoring)
   const { isConnected } = useWebSocket(jobId);
 
-  // Use single /progress endpoint for consistent real-time data (same as Job Monitoring)
+  // Use single /progress endpoint for consistent real-time data - WebSocket updates only
   const { data: progressData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/progress`],
     enabled: !!jobId,
-    refetchInterval: 5000, // 5-second polling as requested
+    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
-  // Fetch Put Aside count separately
+  // Fetch Put Aside count separately - WebSocket updates only
   const { data: putAsideData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/put-aside/count`],
     enabled: !!jobId,
-    refetchInterval: 5000, // 5-second polling for real-time updates
+    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   // Extract consistent data from progress endpoint (matches SupervisorView)
@@ -127,11 +127,11 @@ function CompletedBoxesModal({
   onClose: () => void;
   jobId: string | null;
 }) {
-  // Use same real-time progress endpoint as Job Monitoring
+  // Use same real-time progress endpoint as Job Monitoring - WebSocket updates only
   const { data: progressData } = useQuery({
     queryKey: [`/api/jobs/${jobId}/progress`],
     enabled: !!jobId && isOpen,
-    refetchInterval: 5000, // 5-second polling for consistency
+    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   // Get completed boxes from progress data - now includes products array
@@ -221,7 +221,7 @@ function PutAsideModal({
   const { data: putAsideData, isLoading } = useQuery({
     queryKey: [`/api/jobs/${jobId}/put-aside`],
     enabled: !!jobId && isOpen,
-    refetchInterval: 5000, // 5-second polling for real-time updates
+    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   const putAsideItems = (putAsideData as any)?.items || [];
@@ -316,11 +316,11 @@ export default function ManagerDashboard() {
     },
   });
 
-  // Fetch jobs with WebSocket real-time updates
+  // Fetch jobs with WebSocket real-time updates - no polling needed
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
     queryKey: ["/api/jobs"],
     enabled: !!user,
-    refetchInterval: 5000, // 5-second polling as fallback
+    // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
   // Connect to WebSocket for real-time updates on all active jobs
