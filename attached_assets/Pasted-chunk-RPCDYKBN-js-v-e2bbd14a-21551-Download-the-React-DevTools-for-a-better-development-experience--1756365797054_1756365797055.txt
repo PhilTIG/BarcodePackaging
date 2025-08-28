@@ -1,0 +1,59 @@
+chunk-RPCDYKBN.js?v=e2bbd14a:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+websocket-error-filter.ts:58 [WebSocket Error Filter] Development tool WebSocket error suppression enabled
+worker-scanner.tsx:83 Uncaught ReferenceError: Cannot access 'assignmentsData' before initialization
+    at WorkerScanner (worker-scanner.tsx:83:14)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=e2bbd14a:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=e2bbd14a:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=e2bbd14a:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=e2bbd14a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=e2bbd14a:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=e2bbd14a:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=e2bbd14a:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=e2bbd14a:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=e2bbd14a:19137:13)
+worker-scanner.tsx:83 Uncaught ReferenceError: Cannot access 'assignmentsData' before initialization
+    at WorkerScanner (worker-scanner.tsx:83:14)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=e2bbd14a:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=e2bbd14a:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=e2bbd14a:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=e2bbd14a:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=e2bbd14a:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=e2bbd14a:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=e2bbd14a:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=e2bbd14a:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=e2bbd14a:19137:13)
+websocket-error-filter.ts:47 The above error occurred in the <WorkerScanner> component:
+
+    at WorkerScanner (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/pages/worker-scanner.tsx:37:21)
+    at Route (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:323:16)
+    at Switch (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:379:17)
+    at Router
+    at Provider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=e2bbd14a:38:15)
+    at TooltipProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e2bbd14a:64:5)
+    at AuthProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-auth.tsx:22:32)
+    at ThemeProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/theme-provider.tsx:20:33)
+    at UserPreferencesProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-user-preferences.tsx:37:43)
+    at ErrorProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/lib/error-context.tsx:20:33)
+    at QueryClientProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e2bbd14a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+filteredConsoleError @ websocket-error-filter.ts:47
+chunk-RPCDYKBN.js?v=e2bbd14a:19413 Uncaught ReferenceError: Cannot access 'assignmentsData' before initialization
+    at WorkerScanner (worker-scanner.tsx:83:14)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=e2bbd14a:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=e2bbd14a:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=e2bbd14a:15914:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=e2bbd14a:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=e2bbd14a:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=e2bbd14a:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=e2bbd14a:19116:15)
+    at recoverFromConcurrentError (chunk-RPCDYKBN.js?v=e2bbd14a:18736:28)
+    at performConcurrentWorkOnRoot (chunk-RPCDYKBN.js?v=e2bbd14a:18684:30)
+client:536 WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/?token=t9UJ4EZ-iH8J' failed: 
+setupWebSocket @ client:536
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=t9UJ4EZ-iH8J' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
