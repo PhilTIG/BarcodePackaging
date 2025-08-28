@@ -103,23 +103,23 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 **Testing**: All functionality preserved, no broken client calls
 
 ### Tasks:
-- [ ] **Task 3.1**: Remove deprecated user management endpoints
+- [x] **Task 3.1**: Remove deprecated user management endpoints
   - Remove `/api/users/workers` endpoint
   - Ensure all client code uses `/api/users` with role filtering
   - Files: `server/routes.ts`, client components
 
-- [ ] **Task 3.2**: Consolidate box history endpoints
+- [x] **Task 3.2**: Consolidate box history endpoints
   - Remove redundant `/api/jobs/:jobId/box-history` endpoint
   - Ensure `/api/jobs/:jobId/boxes/:boxNumber/history` handles all cases
   - Update client code to use specific endpoint
   - Files: `server/routes.ts`, client components
 
-- [ ] **Task 3.3**: Clean up unused CheckCount endpoints
+- [x] **Task 3.3**: Clean up unused CheckCount endpoints
   - Identify which CheckCount endpoints are actively used
   - Remove unused endpoints or complete their integration
   - Files: `server/routes.ts`
 
-- [ ] **Task 3.4**: Standardize error response format
+- [x] **Task 3.4**: Standardize error response format
   - Define consistent error response structure
   - Update all endpoints to use standard error format
   - Add proper error type definitions

@@ -435,7 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract and parse box limit
       const boxLimitStr = req.body.boxLimit;
       const boxLimit = boxLimitStr && boxLimitStr.trim() ? parseInt(boxLimitStr.trim()) : null;
-      
+
       // Create job
       const jobData = {
         name: req.body.name || `Job ${new Date().toISOString().split('T')[0]}`,
@@ -453,13 +453,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // BOX LIMIT FOUNDATION: Enhanced Box Assignment with optional limit
       const uniqueCustomers = Array.from(new Set(csvData.map(row => row.CustomName)));
       const totalCustomers = uniqueCustomers.length;
-      
+
       // Check for box limit warning (< 80% of customers)
       let warningMessage = null;
       if (boxLimit && boxLimit < Math.ceil(totalCustomers * 0.8)) {
         warningMessage = `Warning: Box limit (${boxLimit}) is less than 80% of unique customers (${totalCustomers}). ${totalCustomers - boxLimit} customers will be unallocated and be assigned to a box when made available.`;
       }
-      
+
       const customerToBoxMap = new Map<string, number | null>();
       let nextBoxNumber = 1;
 
@@ -631,7 +631,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ jobs: jobsWithAssignments });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch jobs' });
+      console.error('Failed to fetch jobs:', error);
+      res.status(500).json({ error: 'Failed to fetch jobs' });
     }
   });
 
@@ -712,7 +713,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ job, products, sessions });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch job details' });
+      console.error('Failed to fetch job:', error);
+      res.status(500).json({ error: 'Failed to fetch job' });
     }
   });
 
@@ -733,6 +735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ job });
     } catch (error) {
+      console.error('Failed to update job status:', error);
       res.status(500).json({ message: 'Failed to update job status' });
     }
   });
@@ -1218,7 +1221,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ boxRequirements, workers: Object.fromEntries(workers) });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch box requirements' });
+      console.error('Failed to fetch box requirements:', error);
+      res.status(500).json({ error: 'Failed to fetch box requirements' });
     }
   });
 
@@ -1235,6 +1239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ targetBox });
     } catch (error) {
+      console.error('Failed to find target box:', error);
       res.status(500).json({ message: 'Failed to find target box' });
     }
   });
@@ -1294,7 +1299,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ session });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch check session' });
+      console.error('Failed to fetch check session:', error);
+      res.status(500).json({ error: 'Failed to fetch check session' });
     }
   });
 
@@ -1308,7 +1314,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessions = await storage.getCheckSessionsByJobId(jobId as string);
       res.json({ sessions });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch check sessions' });
+      console.error('Failed to fetch check sessions:', error);
+      res.status(500).json({ error: 'Failed to fetch check sessions' });
     }
   });
 
@@ -1323,6 +1330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ session });
     } catch (error) {
+      console.error('Failed to update check session:', error);
       res.status(500).json({ message: 'Failed to update check session' });
     }
   });
@@ -1417,7 +1425,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const events = await storage.getCheckEventsBySessionId(req.params.id);
       res.json({ events });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch check events' });
+      console.error('Failed to fetch check events:', error);
+      res.status(500).json({ error: 'Failed to fetch check events' });
     }
   });
 
@@ -1439,7 +1448,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const results = await storage.getCheckResultsBySessionId(req.params.id);
       res.json({ results });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch check results' });
+      console.error('Failed to fetch check results:', error);
+      res.status(500).json({ error: 'Failed to fetch check results' });
     }
   });
 
@@ -1469,7 +1479,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessions = await storage.getCheckSessionsByJobId(req.params.id);
       res.json({ sessions });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch check sessions' });
+      console.error('Failed to fetch check sessions:', error);
+      res.status(500).json({ error: 'Failed to fetch check sessions' });
     }
   });
 
@@ -1506,6 +1517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const performance = await storage.getSessionPerformance(req.params.id);
       res.json({ performance });
     } catch (error) {
+      console.error('Failed to fetch performance data:', error);
       res.status(500).json({ message: 'Failed to fetch performance data' });
     }
   });
@@ -1517,6 +1529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const performance = await storage.getJobWorkerPerformance(jobId, userId);
       res.json({ performance });
     } catch (error) {
+      console.error('Failed to fetch job worker performance:', error);
       res.status(500).json({ message: 'Failed to fetch job worker performance' });
     }
   });
@@ -1526,6 +1539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const progressData = await storage.getJobProgress(req.params.id);
       res.json(progressData);
     } catch (error) {
+      console.error('Failed to fetch job progress:', error);
       res.status(500).json({ message: 'Failed to fetch job progress' });
     }
   });
@@ -1536,6 +1550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const unallocatedCustomers = await storage.getUnallocatedCustomers(req.params.id);
       res.json({ customers: unallocatedCustomers });
     } catch (error) {
+      console.error('Failed to fetch unallocated customers:', error);
       res.status(500).json({ message: 'Failed to fetch unallocated customers' });
     }
   });
@@ -1546,6 +1561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const products = await storage.getCustomerProductDetails(req.params.id, req.params.customerName);
       res.json({ products });
     } catch (error) {
+      console.error('Failed to fetch customer product details:', error);
       res.status(500).json({ message: 'Failed to fetch customer product details' });
     }
   });
@@ -1567,6 +1583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const extraItems = await storage.getExtraItemsDetails(req.params.id);
       res.json({ extraItems });
     } catch (error) {
+      console.error('Failed to fetch extra items:', error);
       res.status(500).json({ message: 'Failed to fetch extra items' });
     }
   });
@@ -1655,11 +1672,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ users });
       }
     } catch (error) {
+      console.error('Failed to fetch users:', error);
       res.status(500).json({ message: 'Failed to fetch users' });
     }
   });
 
-  
+
 
 
 
@@ -1703,6 +1721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
+      console.error('Failed to create user:', error);
       res.status(500).json({ message: 'Failed to create user' });
     }
   });
@@ -1758,6 +1777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
+      console.error('Failed to update user:', error);
       res.status(500).json({ message: 'Failed to update user' });
     }
   });
@@ -1778,6 +1798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: 'User deleted successfully' });
     } catch (error) {
+      console.error('Failed to delete user:', error);
       res.status(500).json({ message: 'Failed to delete user' });
     }
   });
@@ -1788,6 +1809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const jobTypes = await storage.getJobTypes();
       res.json({ jobTypes });
     } catch (error) {
+      console.error('Failed to fetch job types:', error);
       res.status(500).json({ message: 'Failed to fetch job types' });
     }
   });
@@ -1813,6 +1835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error.message?.includes('unique')) {
         return res.status(400).json({ message: 'Job type name already exists' });
       }
+      console.error('Failed to create job type:', error);
       res.status(500).json({ message: 'Failed to create job type' });
     }
   });
@@ -1842,6 +1865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error.message?.includes('unique')) {
         return res.status(400).json({ message: 'Job type name already exists' });
       }
+      console.error('Failed to update job type:', error);
       res.status(500).json({ message: 'Failed to update job type' });
     }
   });
@@ -1857,6 +1881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: 'Job type deleted successfully' });
     } catch (error) {
+      console.error('Failed to delete job type:', error);
       res.status(500).json({ message: 'Failed to delete job type' });
     }
   });
@@ -1877,7 +1902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/jobs/:jobId/boxes/:boxNumber/empty', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId, boxNumber } = req.params;
-      
+
       // Check permissions
       const userPreferences = await storage.getUserPreferences(req.user!.id);
       if (!canEmptyAndTransfer(req.user!, userPreferences)) {
@@ -1904,7 +1929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Perform empty operation with automatic reallocation
       const emptyResult = await storage.emptyBox(jobId, boxNum, req.user!.id);
-      
+
       // PHASE 1 OPTIMIZATION: Get complete updated data for WebSocket broadcast
       // This follows the proven scan_update pattern for instant UI updates
       const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
@@ -1945,7 +1970,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const transformedProducts = Array.from(productMap.values());
-      
+
       // Broadcast real-time update with complete data (like scan_update)
       broadcastToJob(jobId, {
         type: 'box_emptied',
@@ -1976,11 +2001,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/jobs/:jobId/boxes/:boxNumber/transfer', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId, boxNumber } = req.params;
-      
+
       // Check permissions
       const userPreferences = await storage.getUserPreferences(req.user!.id);
       console.log(`[Transfer Permission Debug] User: ${req.user!.id}, Role: ${req.user!.role}, canEmptyAndTransfer: ${userPreferences?.canEmptyAndTransfer}`);
-      
+
       if (!canEmptyAndTransfer(req.user!, userPreferences)) {
         console.log(`[Transfer Permission Debug] Permission denied for user ${req.user!.id} with role ${req.user!.role}`);
         return res.status(403).json({ 
@@ -2022,7 +2047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Perform transfer operation with automatic reallocation
       const transferResult = await storage.transferBoxToGroup(jobId, boxNum, customerGroup, req.user!.id);
-      
+
       // PHASE 1 OPTIMIZATION: Get complete updated data for WebSocket broadcast
       // This follows the proven scan_update pattern for instant UI updates
       const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
@@ -2063,7 +2088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const transformedProducts = Array.from(productMap.values());
-      
+
       // Broadcast real-time update with complete data (like scan_update)
       broadcastToJob(jobId, {
         type: 'box_transferred',
@@ -2095,7 +2120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/jobs/:jobId/boxes/:boxNumber/history', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId, boxNumber } = req.params;
-      
+
       // Validate job exists
       const job = await storage.getJobById(jobId);
       if (!job) {
@@ -2110,7 +2135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get box history
       const history = await storage.getBoxHistoryByBoxNumber(jobId, boxNum);
-      
+
       res.json({ 
         success: true,
         boxNumber: boxNum,
@@ -2129,10 +2154,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { checkBoxEnabled, canEmptyAndTransfer } = req.body;
       const updates: any = {};
-      
+
       if (checkBoxEnabled !== undefined) updates.checkBoxEnabled = checkBoxEnabled;
       if (canEmptyAndTransfer !== undefined) updates.canEmptyAndTransfer = canEmptyAndTransfer;
-      
+
       const preferences = await storage.updateUserPreferences(req.params.id, updates);
 
       if (!preferences) {
@@ -2280,7 +2305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============== DUPLICATE ENDPOINTS REMOVED ==============
   // Box Empty/Transfer endpoints are defined above with automatic reallocation
 
-  
+
 
   // Get box history for a specific box
   app.get('/api/jobs/:jobId/boxes/:boxNumber/history', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
@@ -2404,10 +2429,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/jobs/:jobId/groups/:groupName/export', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId, groupName } = req.params;
-      
+
       // Get all customers in the group
       const customers = await storage.getGroupCustomers(jobId, groupName);
-      
+
       if (customers.length === 0) {
         return res.status(404).json({ message: 'No customers found in this group' });
       }
