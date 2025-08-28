@@ -48,32 +48,52 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 **Testing**: Database queries work correctly, no data loss
 
 ### Tasks:
-- [ ] **Task 2.1**: Analyze `workerBoxAssignments` vs `jobAssignments` overlap
-  - Document which table contains which functionality
-  - Identify migration path to consolidate into `jobAssignments`
-  - Files: `shared/schema.ts`, analysis documentation
+- ~~**Task 2.1**: Analyze `workerBoxAssignments` vs `jobAssignments` overlap~~ **HIGH RISK - DEFERRED**
+  - ~~Document which table contains which functionality~~
+  - ~~Identify migration path to consolidate into `jobAssignments`~~
+  - **RISK ASSESSMENT**: HIGH - Critical dependencies on worker allocation logic, real-time updates, and color assignment
+  - **DEPENDENCIES**: lib/worker-allocation.ts, 15+ API endpoints, WebSocket broadcasting, UI components
+  - **DEFERRED REASON**: Current structure needed for WebSocket efficiency improvements in Phase 4-6
 
-- [ ] **Task 2.2**: Create migration plan for worker assignments consolidation
-  - Design data migration from `workerBoxAssignments` to `jobAssignments`
-  - Ensure all worker assignment data is preserved
-  - Files: Migration script, documentation
+- ~~**Task 2.2**: Create migration plan for worker assignments consolidation~~ **HIGH RISK - DEFERRED**
+  - ~~Design data migration from `workerBoxAssignments` to `jobAssignments`~~
+  - ~~Ensure all worker assignment data is preserved~~
+  - **DEFERRED**: Dependencies on Task 2.1
 
-- [ ] **Task 2.3**: Implement worker assignments table consolidation
-  - Execute migration to move data to `jobAssignments`
-  - Update all queries to use consolidated table
-  - Remove `workerBoxAssignments` table
+- ~~**Task 2.3**: Implement worker assignments table consolidation~~ **HIGH RISK - DEFERRED**
+  - ~~Execute migration to move data to `jobAssignments`~~
+  - ~~Update all queries to use consolidated table~~
+  - ~~Remove `workerBoxAssignments` table~~
+  - **DEFERRED**: Dependencies on Tasks 2.1-2.2
+
+- [x] **Task 2.4**: Standardize Put Aside implementation approach **COMPLETED ANALYSIS**
+  - **ANALYSIS COMPLETE**: Chosen `scanEvents` approach over `putAsideItems` table
+  - **RECOMMENDATION**: Keep current `scanEvents` implementation with `eventType='put_aside'`
+  - **REASONING**: Already integrated, WebSocket compatible, maintains audit trail
+  - Files: Analysis documented in Phase2_Analysis_Report.md
+
+- [ ] **Task 2.5**: Implement Put Aside consolidation **MEDIUM RISK - PROCEED WITH CAUTION**
+  - **RISK LEVEL**: Medium-High due to data consistency concerns
+  - Remove unused `putAsideItems` table and related code
+  - Remove unused storage methods: `createPutAsideItem`, `getPutAsideItems`, `getPutAsideItemsByStatus`
+  - Remove unused type definitions: `InsertPutAsideItem`, `PutAsideItem`
+  - **TESTING REQUIRED**: Verify Put Aside functionality, allocation workflows, WebSocket updates
+  - **BACKUP REQUIRED**: Full database backup before implementation
   - Files: `shared/schema.ts`, `server/routes.ts`, `server/storage.ts`
 
-- [ ] **Task 2.4**: Standardize Put Aside implementation approach
-  - Choose between `scanEvents` vs `putAsideItems` approach
-  - Document decision and migration plan
-  - Files: Analysis documentation
+### **NEW TASKS - PUT ASIDE ANALYSIS FINDINGS**:
 
-- [ ] **Task 2.5**: Implement Put Aside consolidation
-  - Migrate to chosen approach (recommend `scanEvents`)
-  - Update all related queries and API endpoints
-  - Remove redundant table and fields
-  - Files: `shared/schema.ts`, `server/routes.ts`, `server/storage.ts`
+- [ ] **Task 2.6**: Pre-consolidation verification
+  - Confirm no production data exists in `putAsideItems` table
+  - Verify all active Put Aside functionality uses `scanEvents` approach
+  - Document current Put Aside workflow completely
+  - Test Put Aside creation, allocation, and WebSocket updates
+
+- [ ] **Task 2.7**: Post-consolidation validation
+  - Verify Put Aside functionality works correctly after cleanup
+  - Test allocation/reallocation workflows in multi-client environment
+  - Confirm WebSocket updates function properly for Put Aside events
+  - Test UI components (Manager/Supervisor Put Aside modals)
 
 ---
 
@@ -116,21 +136,25 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 - [ ] **Task 4.1**: Implement targeted WebSocket data updates
   - Replace broad query invalidations with specific data updates
   - Ensure WebSocket messages contain necessary data for direct updates
+  - **⚠️ PUT ASIDE REMINDER**: Verify no WebSocket code references `putAsideItems` table
   - Files: `server/routes.ts`, client WebSocket hooks
 
 - [ ] **Task 4.2**: Eliminate double data fetching
   - Remove mutation-triggered invalidations that conflict with WebSocket updates
   - Implement WebSocket-only data updates for real-time operations
+  - **⚠️ PUT ASIDE REMINDER**: Ensure Put Aside WebSocket messages use `scanEvents` data only
   - Files: Client mutation hooks, WebSocket handlers
 
 - [ ] **Task 4.3**: Optimize WebSocket message payloads
   - Reduce message size by sending only changed data
   - Implement delta updates instead of full data refreshes
+  - **⚠️ PUT ASIDE REMINDER**: Check Put Aside message format doesn't reference removed table
   - Files: `server/routes.ts`, WebSocket message handlers
 
 - [ ] **Task 4.4**: Remove polling fallback mechanisms
   - Eliminate 10-second polling intervals
   - Ensure WebSocket-only updates maintain data consistency
+  - **⚠️ PUT ASIDE REMINDER**: Verify Put Aside count updates use WebSocket only
   - Files: Client components with polling logic
 
 ---
@@ -154,6 +178,7 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 - [ ] **Task 5.3**: Implement selective component updates
   - Update components based on actual data changes only
   - Optimize state management to prevent unnecessary renders
+  - **⚠️ PUT ASIDE REMINDER**: Ensure Put Aside modal components use correct data source
   - Files: Various client components
 
 - [ ] **Task 5.4**: Remove artificial delays
@@ -172,6 +197,7 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 - [ ] **Task 6.1**: Convert performance polling to WebSocket updates
   - Replace 5-second job performance polling with WebSocket events
   - Implement real-time performance stats via WebSocket messages
+  - **⚠️ PUT ASIDE REMINDER**: Verify Put Aside counts in performance data use correct source
   - Files: Performance dashboard, WebSocket handlers
 
 - [ ] **Task 6.2**: Remove performance polling intervals
@@ -266,7 +292,37 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 - [ ] **Task 9.5**: Comprehensive regression testing
   - Test all existing functionality still works correctly
   - Verify no breaking changes introduced
+  - **⚠️ PUT ASIDE REMINDER**: Comprehensive Put Aside workflow testing required
   - Files: Regression test results
+
+---
+
+## PUT ASIDE CONSOLIDATION - DETAILED ANALYSIS
+
+### **Current Implementation Status**
+- **ACTIVE**: `scanEvents` table with `eventType='put_aside'`
+- **UNUSED**: `putAsideItems` table exists but contains no active code references
+- **RISK LEVEL**: Medium-High (manageable with proper testing)
+
+### **Consolidation Benefits**
+- **Code Clarity**: Eliminates developer confusion about which table to use
+- **Performance**: Reduces database overhead and query complexity
+- **Maintenance**: Simplifies schema and reduces redundant code paths
+- **Architecture**: Aligns with existing scan event infrastructure
+
+### **Testing Requirements Before Consolidation**
+1. **Put Aside Creation**: When box limit reached and item scanned
+2. **Allocation Workflow**: Manager/Supervisor allocating Put Aside items
+3. **WebSocket Updates**: Real-time updates across multiple clients
+4. **Box Availability**: Proper allocation to first available box
+5. **Data Integrity**: No orphaned records or references
+
+### **Implementation Safety Measures**
+- Full database backup before changes
+- Verify no production data in `putAsideItems` table
+- Test in development environment thoroughly
+- Monitor Put Aside functionality post-changes
+- Rollback plan available if issues arise
 
 ---
 
@@ -290,21 +346,33 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 - Document all changes made for easy rollback if needed
 - Test rollback procedures during development
 
+### **⚠️ CRITICAL WEBSOCKET REMINDER FOR PHASES 4-6**
+**Before implementing any WebSocket optimizations, search the entire codebase for:**
+- References to `putAsideItems` table in WebSocket messages
+- WebSocket handlers that query the unused table
+- Client-side WebSocket consumers expecting `putAsideItems` data
+- Any polling mechanisms that fetch from the redundant table
+
+**If found, these MUST be removed/updated to use `scanEvents` approach before proceeding with WebSocket optimizations.**
+
 ## Success Validation
 
 ### After Phase 1-3:
 - [ ] TypeScript compiles with zero errors
 - [ ] Database schema is clean and non-redundant
 - [ ] API endpoints are optimized and documented
+- [ ] Put Aside consolidation completed successfully
 
 ### After Phase 4-6:
 - [ ] WebSocket updates work without API polling
 - [ ] Component re-renders are minimized
 - [ ] Performance stats update in real-time
+- [ ] No references to `putAsideItems` table in WebSocket code
 
 ### After Phase 7-9:
 - [ ] Database queries are optimized
 - [ ] Code is well-organized and maintainable
 - [ ] System passes all performance and reliability tests
+- [ ] Put Aside functionality maintains 100% reliability
 
-This plan provides a systematic approach to optimizing the barcode scanning system while maintaining reliability and functionality throughout the process.
+This plan provides a systematic approach to optimizing the barcode scanning system while maintaining reliability and functionality throughout the process. High-risk Phase 2 worker assignment tasks have been deferred until after WebSocket optimizations are complete.
