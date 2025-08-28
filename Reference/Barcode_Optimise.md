@@ -129,33 +129,119 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 
 ## Phase 4: WebSocket Optimization Implementation
 **Objective**: Eliminate query invalidation storms and optimize real-time updates
-**Duration**: 2-3 implementation sessions
+**Duration**: 4-6 implementation sessions (UPDATED based on analysis)
 **Testing**: Real-time updates work correctly, reduced API calls
 
+### **CRITICAL FINDINGS FROM CONSOLE ANALYSIS**:
+- **EXCESSIVE POLLING DETECTED**: 10-15 second job progress polling, 3-4 second check sessions polling, 10 second put aside count polling
+- **DUPLICATE API CALLS**: Multiple requests despite functional WebSocket updates
+- **PERFORMANCE IMPACT**: System making far too many redundant API calls
+
 ### Tasks:
-- [ ] **Task 4.1**: Implement targeted WebSocket data updates
-  - Replace broad query invalidations with specific data updates
-  - Ensure WebSocket messages contain necessary data for direct updates
-  - **⚠️ PUT ASIDE REMINDER**: Verify no WebSocket code references `putAsideItems` table
-  - Files: `server/routes.ts`, client WebSocket hooks
 
-- [ ] **Task 4.2**: Eliminate double data fetching
-  - Remove mutation-triggered invalidations that conflict with WebSocket updates
-  - Implement WebSocket-only data updates for real-time operations
-  - **⚠️ PUT ASIDE REMINDER**: Ensure Put Aside WebSocket messages use `scanEvents` data only
-  - Files: Client mutation hooks, WebSocket handlers
+#### **Step 1: Eliminate Polling Mechanisms (HIGH PRIORITY)**
+- [🔄] **Task 4.1.1**: Remove job progress polling intervals **IN PROGRESS**
+  - Target endpoints: `/api/jobs/:jobId/progress` (currently polling every 10-15 seconds)
+  - Replace with WebSocket-only progress updates
+  - **⚠️ PUT ASIDE REMINDER**: Verify no polling references to `putAsideItems` table
+  - **ANALYSIS NEEDED**: Search codebase for polling implementation
+  - Files: Manager dashboard components, progress tracking hooks
 
-- [ ] **Task 4.3**: Optimize WebSocket message payloads
-  - Reduce message size by sending only changed data
-  - Implement delta updates instead of full data refreshes
-  - **⚠️ PUT ASIDE REMINDER**: Check Put Aside message format doesn't reference removed table
-  - Files: `server/routes.ts`, WebSocket message handlers
+- [ ] **Task 4.1.2**: Remove check sessions polling
+  - Target endpoint: `/api/check-sessions` (currently polling every 3-4 seconds)
+  - Implement WebSocket-based session management
+  - Files: Session management components, authentication hooks
 
-- [ ] **Task 4.4**: Remove polling fallback mechanisms
-  - Eliminate 10-second polling intervals
-  - Ensure WebSocket-only updates maintain data consistency
-  - **⚠️ PUT ASIDE REMINDER**: Verify Put Aside count updates use WebSocket only
-  - Files: Client components with polling logic
+- [ ] **Task 4.1.3**: Remove put aside count polling
+  - Target endpoints: `/api/jobs/:jobId/put-aside/count` (currently polling every 10 seconds)
+  - Replace with WebSocket put aside count updates
+  - **⚠️ PUT ASIDE REMINDER**: Ensure WebSocket messages use `scanEvents` data only
+  - Files: Put aside count components, WebSocket handlers
+
+- [ ] **Task 4.1.4**: Remove jobs list polling
+  - Target endpoint: `/api/jobs` (currently polling every 10-15 seconds)
+  - Implement WebSocket job list updates
+  - Files: Job list components, manager dashboard
+
+#### **Step 2: Remove Client-Side Query Invalidations (HIGH PRIORITY)**
+- [ ] **Task 4.2.1**: Identify mutation-triggered invalidations
+  - Search for React Query `invalidateQueries` calls in scan mutations
+  - Document which mutations trigger broad invalidations
+  - Files: Client mutation hooks, `client/src/lib/queryClient.ts`
+
+- [ ] **Task 4.2.2**: Replace invalidations with WebSocket updates
+  - Remove `invalidateQueries` calls that conflict with WebSocket updates
+  - Ensure WebSocket messages provide all necessary data for UI updates
+  - **⚠️ PUT ASIDE REMINDER**: Verify Put Aside mutations use WebSocket-only updates
+  - Files: Scan mutation hooks, WebSocket message handlers
+
+- [ ] **Task 4.2.3**: Fix double data fetching
+  - Prevent both mutation response AND WebSocket events from triggering same data fetches
+  - Implement WebSocket-only data flow for real-time operations
+  - Files: WebSocket hooks, mutation response handlers
+
+#### **Step 3: Optimize WebSocket Message Payloads (MEDIUM PRIORITY)**
+- [x] **Task 4.3.1**: WebSocket infrastructure already functional ✓
+  - WebSocket server fully operational with client management
+  - Real-time updates broadcasting `scan_update`, `box_emptied`, `box_transferred` events
+  - Client integration complete with TypeScript interfaces
+
+- [ ] **Task 4.3.2**: Implement delta updates
+  - Send only changed box data instead of full products array (currently 40+ objects per update)
+  - Reduce WebSocket message size by 70-80%
+  - **⚠️ PUT ASIDE REMINDER**: Ensure delta updates don't reference removed table
+  - Files: `server/routes.ts` WebSocket broadcasting, message optimization
+
+- [ ] **Task 4.3.3**: Optimize message structure
+  - Remove redundant data from WebSocket messages
+  - Compress large data payloads where possible
+  - Files: WebSocket message handlers, data transformation logic
+
+#### **Step 4: PUT ASIDE WebSocket Verification (LOW PRIORITY)**
+- [ ] **Task 4.4.1**: Search for putAsideItems WebSocket references
+  - Scan entire codebase for WebSocket code referencing `putAsideItems` table
+  - Identify any WebSocket handlers querying the unused table
+  - Files: All WebSocket-related files
+
+- [ ] **Task 4.4.2**: Remove putAsideItems WebSocket dependencies
+  - Update any found references to use `scanEvents` approach
+  - Ensure client WebSocket consumers expect correct data structure
+  - **COMPLIANCE**: Required before Phase 4-6 WebSocket optimizations
+  - Files: WebSocket handlers, client WebSocket hooks
+
+#### **Step 5: Performance Validation and Testing**
+- [ ] **Task 4.5.1**: Measure API call reduction
+  - Baseline: Current excessive polling (10+ calls per 30 seconds)
+  - Target: 0 polling calls (WebSocket-only updates)
+  - Files: Performance monitoring, console analysis
+
+- [ ] **Task 4.5.2**: Test multi-client synchronization
+  - Verify WebSocket-only updates maintain data consistency
+  - Test real-time updates across multiple connected clients
+  - Files: WebSocket connection testing, data consistency validation
+
+- [ ] **Task 4.5.3**: Connection recovery testing
+  - Test WebSocket reliability under various conditions
+  - Verify graceful handling of connection drops
+  - Files: WebSocket connection stability testing
+
+### **IMPLEMENTATION DEPENDENCIES IDENTIFIED**:
+
+**High Risk Areas Requiring Testing:**
+1. **Real-time UI Updates**: Removing API polling must not break UI responsiveness
+2. **Multi-client Synchronization**: WebSocket-only updates must maintain consistency
+3. **Connection Recovery**: System behavior when WebSocket connection drops
+
+### **EVIDENCE FROM CONSOLE LOGS**:
+```
+Current Polling Intervals Detected:
+- Job progress: GET /api/jobs/:jobId/progress (10-15 second intervals)
+- Check sessions: GET /api/check-sessions (3-4 second intervals)  
+- Put aside count: GET /api/jobs/:jobId/put-aside/count (10 second intervals)
+- Jobs list: GET /api/jobs (10-15 second intervals)
+```
+
+**This phase will provide SIGNIFICANT performance improvements once completed - the system is currently making far too many redundant API calls despite having functional WebSocket updates.**
 
 ---
 
