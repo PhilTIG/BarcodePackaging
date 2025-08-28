@@ -35,9 +35,9 @@ interface CustomerBoxGridProps {
 
 const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId, supervisorView = false, lastScannedBoxNumber = null, onBoxScanUpdate, onCheckCount, filterByProducts = [], filterByGroups = [] }: CustomerBoxGridProps) {
 
-  // Use filtered box data when filtering is requested
+  // Always use filtered box data to apply user's box display rules
   const { boxData: filteredBoxData, availableProducts, isLoading: filterDataLoading } = useFilteredBoxData(
-    (filterByProducts.length > 0 || filterByGroups.length > 0) ? jobId : "", // Only fetch when filtering is active
+    jobId, // Always fetch to apply box display rules
     filterByProducts,
     filterByGroups
   );
@@ -170,64 +170,15 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     };
   }, [highlighting]);
 
-  // Choose between filtered data (from box requirements) or legacy product data
+  // Always use filtered box data to apply user's box display rules
   const boxData = useMemo(() => {
-    const isFiltering = filterByProducts.length > 0 || filterByGroups.length > 0;
-
-    // When filtering is active, use the filtered box data
-    if (isFiltering && filteredBoxData.length > 0) {
-      return filteredBoxData;
-    }
-
-    // Otherwise, use legacy product-based calculation
-    const boxes: { [key: number]: {
-      boxNumber: number;
-      customerName: string;
-      totalQty: number;
-      scannedQty: number;
-      isComplete: boolean;
-      assignedWorker?: string;
-      lastWorkerColor?: string;
-      lastWorkerStaffId?: string;
-      filteredTotalQty?: number;
-      filteredScannedQty?: number;
-    }} = {};
-
-    // BOX LIMIT FIX: Filter out NULL boxNumber products as backup protection
-    products
-      .filter(product => product.boxNumber !== null && product.boxNumber !== undefined)
-      .forEach(product => {
-        if (!boxes[product.boxNumber]) {
-          boxes[product.boxNumber] = {
-            boxNumber: product.boxNumber,
-            customerName: product.customerName,
-            totalQty: 0,
-            scannedQty: 0,
-            isComplete: false,
-            lastWorkerColor: product.lastWorkerColor,
-            filteredTotalQty: 0,
-            filteredScannedQty: 0,
-          };
-        }
-
-      boxes[product.boxNumber].totalQty += product.qty;
-      boxes[product.boxNumber].scannedQty += product.scannedQty;
-
-      // Box Complete = 100% fulfillment: scannedQty exactly equals totalQty
-      boxes[product.boxNumber].isComplete = boxes[product.boxNumber].totalQty > 0 &&
-                                           boxes[product.boxNumber].scannedQty === boxes[product.boxNumber].totalQty;
-
-      // Update worker color and staffId tracking
-      if (product.lastWorkerColor) {
-        boxes[product.boxNumber].lastWorkerColor = product.lastWorkerColor;
-      }
-      if (product.lastWorkerStaffId) {
-        boxes[product.boxNumber].lastWorkerStaffId = product.lastWorkerStaffId;
-      }
-    });
-
-    return Object.values(boxes).sort((a, b) => a.boxNumber - b.boxNumber);
-  }, [products, preferences.maxBoxesPerRow, filterByProducts, filterByGroups, filteredBoxData]);
+    // Always use the filteredBoxData which applies the correct box display rules:
+    // 1. Number of customers = boxes to show on screen
+    // 2. If boxLimit exists and customers < boxLimit: show totalCustomers boxes  
+    // 3. If boxLimit exists and customers >= boxLimit: show boxLimit boxes (lower number)
+    // 4. Show "Empty" styling for any gaps in database records
+    return filteredBoxData;
+  }, [filteredBoxData]);
 
   // Determine if we should use simplified design (when > 16 boxes per row)
   const isSimplifiedMode = preferences.maxBoxesPerRow > 16;
