@@ -1,4 +1,3 @@
-
 # Barcode System Optimization Plan
 
 ## Overview
