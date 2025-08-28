@@ -54,15 +54,13 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
   const { preferences } = useUserPreferences();
 
   // Worker box highlighting system - behavior depends on supervisorView
-  const { updateBoxHighlighting, clearHighlighting, getBoxHighlight: getHighlightingInfo } = useBoxHighlighting({
-    workerMode: !supervisorView // Workers only see their last scan, supervisors see all workers
-  });
+  const { highlighting, updateHighlighting, clearHighlighting } = useBoxHighlighting(user);
 
   // Get current user for worker filtering
   const { user } = useAuth();
 
   // WebSocket handler for real-time highlighting
-  const handleWebSocketUpdate = (boxNumber: number, workerId: string, workerColor?: string, workerStaffId?: string) => {
+  const handleWebSocketUpdate = useCallback((boxNumber: number, workerId: string, workerColor?: string, workerStaffId?: string) => {
     console.log(`[CustomerBoxGrid] WebSocket scan update: Box ${boxNumber}, Worker ${workerId}`, {
       workerColor,
       workerStaffId,
@@ -72,13 +70,13 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
 
     if (supervisorView && workerColor && workerStaffId) {
       // Managers/Supervisors: Show all worker colors
-      updateBoxHighlighting(boxNumber, workerId, workerColor, workerStaffId);
+      updateHighlighting(boxNumber, workerId, workerColor, workerStaffId);
     } else if (!supervisorView && workerColor && workerStaffId && workerId === user?.id) {
       // Workers: Only show their own color background
-      updateBoxHighlighting(boxNumber, workerId, workerColor, workerStaffId);
+      updateHighlighting(boxNumber, workerId, workerColor, workerStaffId);
     }
     // Note: All numerical updates (box counts, percentages) happen via React Query invalidation
-  };
+  }, [supervisorView, user?.id, updateHighlighting]);
 
   // Connect WebSocket for all views (workers need numerical updates, supervisors need highlighting)
   useWebSocket(jobId, handleWebSocketUpdate);
@@ -111,12 +109,13 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
 
   // Helper function to determine box background color and styling
   const getBoxHighlight = useCallback((boxNumber: number, products: any[], isComplete: boolean, lastWorkerColor: string | null, lastWorkerUserId: string | null) => {
-    // Priority 1: GREEN - Just scanned (highest priority)
-    if (lastScannedBoxNumber === boxNumber) {
+    // Priority 1: GREEN - Just scanned (highest priority) - using highlighting from hook
+    if (highlighting.lastScannedBoxNumber === boxNumber) {
       return {
         backgroundColor: '#22c55e', // Green-500
         borderColor: '#16a34a', // Green-600
-        textColor: 'white'
+        textColor: 'white',
+        workerStaffId: highlighting.workerStaffIds[boxNumber]
       };
     }
 
@@ -130,11 +129,13 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     }
 
     // Priority 3: WORKER COLOR - Box has items but not complete (third priority)
-    if (lastWorkerColor && products.some(p => p.scannedQty > 0)) {
+    const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
+    if (workerColor && products.some(p => p.scannedQty > 0)) {
       return {
-        backgroundColor: lastWorkerColor,
-        borderColor: lastWorkerColor,
-        textColor: 'white'
+        backgroundColor: workerColor,
+        borderColor: workerColor,
+        textColor: 'white',
+        workerStaffId: highlighting.workerStaffIds[boxNumber]
       };
     }
 
@@ -144,7 +145,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       borderColor: '#d1d5db', // Gray-300
       textColor: 'black'
     };
-  }, [lastScannedBoxNumber]); // Added lastScannedBoxNumber as dependency
+  }, [highlighting]); // Use highlighting from hook instead of lastScannedBoxNumber
 
   // Choose between filtered data (from box requirements) or legacy product data
   const boxData = useMemo(() => {
@@ -248,14 +249,16 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     if (lastScannedBoxNumber !== null && !supervisorView) {
       // Worker view: Use static box data for highlighting
       const scannedBox = boxData.find(box => box.boxNumber === lastScannedBoxNumber);
-      updateBoxHighlighting(
-        lastScannedBoxNumber,
-        scannedBox?.assignedWorker,
-        scannedBox?.lastWorkerColor,
-        scannedBox?.lastWorkerStaffId
-      );
+      if (scannedBox) {
+        updateHighlighting(
+          lastScannedBoxNumber,
+          scannedBox.assignedWorker || user?.id || '',
+          scannedBox.lastWorkerColor || '',
+          scannedBox.lastWorkerStaffId || ''
+        );
+      }
     }
-  }, [lastScannedBoxNumber, boxData, updateBoxHighlighting, supervisorView]);
+  }, [lastScannedBoxNumber, boxData, updateHighlighting, supervisorView, user?.id]);
 
   return (
     <div className={getGridClasses()} data-testid="customer-box-grid">
@@ -267,13 +270,13 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         const completionPercentage = displayTotalQty > 0 ? Math.round((displayScannedQty / displayTotalQty) * 100) : 0;
 
         // POC-style highlighting with worker color support
-        const isLastScanned = lastScannedBoxNumber === box.boxNumber;
-        const highlighting = getBoxHighlight(box.boxNumber, products, box.isComplete, box.lastWorkerColor, box.lastWorkerStaffId);
+        const isLastScanned = highlighting.lastScannedBoxNumber === box.boxNumber;
+        const boxHighlighting = getBoxHighlight(box.boxNumber, products, box.isComplete, box.lastWorkerColor, box.lastWorkerStaffId);
 
         // Handle custom background colors (rgba) vs Tailwind classes
-        const customStyle = highlighting.backgroundColor.startsWith('rgba') ? {
-          backgroundColor: highlighting.backgroundColor,
-          borderColor: highlighting.borderColor,
+        const customStyle = boxHighlighting.backgroundColor.startsWith('rgba') ? {
+          backgroundColor: boxHighlighting.backgroundColor,
+          borderColor: boxHighlighting.borderColor,
         } : {};
 
         // Dynamic box sizing and styling based on mode
@@ -290,8 +293,8 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         const boxClasses = [
           "border rounded-lg relative transition-all duration-200 cursor-pointer hover:shadow-lg group",
           getPadding(),
-          !highlighting.backgroundColor.startsWith('rgba') ? highlighting.backgroundColor : '',
-          !highlighting.borderColor.startsWith('rgba') ? highlighting.borderColor : '',
+          !boxHighlighting.backgroundColor.startsWith('rgba') ? boxHighlighting.backgroundColor : '',
+          !boxHighlighting.borderColor.startsWith('rgba') ? boxHighlighting.borderColor : '',
         ].filter(Boolean).join(" ");
 
         const handleBoxClick = () => {
@@ -321,7 +324,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                 {/* Lock icon for completed boxes */}
                 {box.isComplete && (
                   <div className="absolute top-1 right-1 z-10">
-                    <Lock className={`w-3 h-3 ${highlighting.textColor}`} />
+                    <Lock className={`w-3 h-3 ${boxHighlighting.textColor === 'white' ? 'text-white' : 'text-black'}`} />
                   </div>
                 )}
 
@@ -374,7 +377,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                         100%
                       </div>
                     ) : (
-                      <p className={`text-xs font-medium ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-700'}`} data-testid={`percentage-${box.boxNumber}`}>
+                      <p className={`text-xs font-medium ${boxHighlighting.textColor === 'white' ? 'text-gray-200' : 'text-gray-700'}`} data-testid={`percentage-${box.boxNumber}`}>
                         {completionPercentage}%
                       </p>
                     )}
