@@ -73,7 +73,8 @@ function ExtraItemsAndBoxesButtons({
   const extraItemsCount = (progressData as any)?.progress?.extraItemsCount || 0;
   const completedCustomers = (progressData as any)?.progress?.completedCustomers || 0;
   const totalCustomers = (progressData as any)?.progress?.totalCustomers || 0;
-  const jobHasBoxLimit = (progressData as any)?.job?.boxLimit != null; // Check if job has box limit
+  const boxLimit = (progressData as any)?.job?.boxLimit;
+  const shouldShowLimitedBoxInterfaces = boxLimit && (boxLimit < totalCustomers);
   const putAsideCount = (putAsideData as any)?.count || 0;
 
   return (
@@ -89,8 +90,8 @@ function ExtraItemsAndBoxesButtons({
         {extraItemsCount} Extra Items
       </Button>
 
-      {/* Put Aside Button - Only show when job has box limit */}
-      {jobHasBoxLimit && (
+      {/* Put Aside Button - Only show when box limit < total customers */}
+      {shouldShowLimitedBoxInterfaces && (
         <Button
           variant="outline"
           size="sm"

@@ -356,6 +356,11 @@ export default function SupervisorView() {
   const progress = (progressData as any)?.progress;
   // Progress calculation: job.completedItems includes ALL customer items (allocated + unallocated)
   const completionPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
+  
+  // Conditional logic for Put Aside and Customer Queue interfaces
+  const boxLimit = job?.boxLimit;
+  const totalCustomers = progress?.totalCustomers || job.totalCustomers || 0;
+  const shouldShowLimitedBoxInterfaces = boxLimit && (boxLimit < totalCustomers);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -473,8 +478,8 @@ export default function SupervisorView() {
                 </Button>
               </div>
 
-              {/* Put Aside Button - Only show when job has box limit */}
-              {job?.boxLimit && (
+              {/* Put Aside Button - Only show when box limit < total customers */}
+              {shouldShowLimitedBoxInterfaces && (
                 <div>
                   <Button 
                     variant="outline" 
@@ -489,19 +494,21 @@ export default function SupervisorView() {
                 </div>
               )}
 
-              {/* BOX LIMIT: Customer Queue Button */}
-              <div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-auto p-2 flex flex-col items-start"
-                  onClick={() => setIsCustomerQueueModalOpen(true)}
-                  data-testid="button-customer-queue"
-                >
-                  <span className="text-gray-600">Customer Queue: {progress?.unallocatedCustomers || 0}</span>
-                  <div className="text-xs text-gray-500">Unallocated customers</div>
-                </Button>
-              </div>
+              {/* Customer Queue Button - Only show when box limit < total customers */}
+              {shouldShowLimitedBoxInterfaces && (
+                <div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-auto p-2 flex flex-col items-start"
+                    onClick={() => setIsCustomerQueueModalOpen(true)}
+                    data-testid="button-customer-queue"
+                  >
+                    <span className="text-gray-600">Customer Queue: {progress?.unallocatedCustomers || 0}</span>
+                    <div className="text-xs text-gray-500">Unallocated customers</div>
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
