@@ -1,0 +1,123 @@
+client:536 WebSocket connection to 'wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/?token=NpxpMXg32sK3' failed: 
+setupWebSocket @ client:536
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=NpxpMXg32sK3' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+chunk-RPCDYKBN.js?v=e2bbd14a:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+websocket-error-filter.ts:58 [WebSocket Error Filter] Development tool WebSocket error suppression enabled
+websocket-error-filter.ts:47 Warning: Cannot update a component (`WorkerScanner`) while rendering a different component (`WorkerScanner`). To locate the bad setState() call inside `WorkerScanner`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+    at WorkerScanner (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/pages/worker-scanner.tsx:37:21)
+    at Route (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:323:16)
+    at Switch (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:379:17)
+    at Router
+    at Provider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=e2bbd14a:38:15)
+    at TooltipProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e2bbd14a:64:5)
+    at AuthProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-auth.tsx:22:32)
+    at ThemeProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/theme-provider.tsx:20:33)
+    at UserPreferencesProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-user-preferences.tsx:37:43)
+    at ErrorProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/lib/error-context.tsx:20:33)
+    at QueryClientProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e2bbd14a:2805:3)
+    at App
+filteredConsoleError @ websocket-error-filter.ts:47
+use-websocket.tsx:442 [WebSocket] Manual disconnection requested
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/scanner
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 66c2f804-647e-41d4-bf15-bbbf1ffaed9a
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: Object
+use-websocket.tsx:442 [WebSocket] Manual disconnection requested
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/scanner/4e2f1715-eb61-4e9f-8f0f-2fe82990b920
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 66c2f804-647e-41d4-bf15-bbbf1ffaed9a on job 4e2f1715-eb61-4e9f-8f0f-2fe82990b920
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true
+use-websocket.tsx:51 [WebSocket] Attempting connection to: wss://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/ws
+use-websocket.tsx:52 [WebSocket] Current location: https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/scanner/4e2f1715-eb61-4e9f-8f0f-2fe82990b920
+use-websocket.tsx:53 [WebSocket] Detected environment: Replit Production
+use-websocket.tsx:66 [WebSocket] Creating connection for user 66c2f804-647e-41d4-bf15-bbbf1ffaed9a on job 4e2f1715-eb61-4e9f-8f0f-2fe82990b920
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: Object
+use-websocket.tsx:71 [WebSocket] Connection established successfully
+use-websocket.tsx:83 [WebSocket] Sending authentication: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:137 [WebSocket] Server connection confirmed: Object
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:142 [WebSocket] Authentication confirmed: Object
+worker-scanner.tsx:176 [WorkerScanner] Session created successfully: Object
+box-details-modal.tsx:235 [BoxModal] Box 6 workers: Array(0)
+box-details-modal.tsx:235 [BoxModal] Box 6 workers: Array(0)
+box-details-modal.tsx:235 [BoxModal] Box 6 workers: Array(1)
+box-details-modal.tsx:235 [BoxModal] Box 6 workers: Array(1)
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:147 [WebSocket] Scan update received: Object
+use-websocket.tsx:154 [WebSocket] Optimized scan update with complete data
+use-websocket.tsx:91 [WebSocket] Message received: Object
+use-websocket.tsx:147 [WebSocket] Scan update received: Object
+use-websocket.tsx:154 [WebSocket] Optimized scan update with complete data
+customer-box-grid.tsx:66 [CustomerBoxGrid] WebSocket scan update: Box 6, Worker 66c2f804-647e-41d4-bf15-bbbf1ffaed9a Object
+websocket-error-filter.ts:47 [WebSocket] Failed to parse message: TypeError: updateBoxHighlighting is not a function
+    at handleWebSocketUpdate (customer-box-grid.tsx:78:7)
+    at use-websocket.tsx:174:13
+    at wsRef.current.onmessage (use-websocket.tsx:92:11) Raw data: {"type":"scan_update","data":{"scanEvent":{"id":"6a4fbaab-1d5b-4e81-99c8-976735b8c0e1","sessionId":"75e8559c-be49-4191-8bc9-a0b744da2f18","barCode":"63","productName":"Ladies Tunic - Patterned - 14","customerName":"1155728","boxNumber":6,"calculatedTargetBox":6,"eventType":"scan","scanTime":"2025-08-28T08:50:29.473Z","timeSincePrevious":54572,"workerColor":"#3c8301","isExtraItem":false,"jobId":"4e2f1715-eb61-4e9f-8f0f-2fe82990b920","allocatedToBox":null,"allocatedAt":null,"userId":"66c2f804-647e-41d4-bf15-bbbf1ffaed9a","userName":"Test Worker 1","workerStaffId":"W001","consumedPutAside":false},"products":[{"id":"1155548-1","customerName":"1155548","qty":2,"scannedQty":0,"boxNumber":1,"isComplete":false,"lastWorkerUserId":null,"lastWorkerColor":null},{"id":"1155080-2","customerName":"1155080","qty":2,"scannedQty":0,"boxNumber":2,"isComplete":false,"lastWorkerUserId":null,"lastWorkerColor":null},{"id":"1155101-3","customerName":"1155101","qty":5,"scannedQty":3,"boxNumber":3,"isComplete":false,"lastWorkerUserId":"66c2f804-647e-41d4-bf15-bbbf1ffaed9a","lastWorkerColor":"#3c8301","lastWorkerStaffId":"W001"},{"id":"1155535-4","customerName":"1155535","qty":3,"scannedQty":2,"boxNumber":4,"isComplete":false,"lastWorkerUserId":"66c2f804-647e-41d4-bf15-bbbf1ffaed9a","lastWorkerColor":"#3c8301","lastWorkerStaffId":"W001"},{"id":"1155524-5","customerName":"1155524","qty":3,"scannedQty":0,"boxNumber":5,"isComplete":false,"lastWorkerUserId":null,"lastWorkerColor":null},{"id":"1155728-6","customerName":"1155728","qty":3,"scannedQty":2,"boxNumber":6,"isComplete":false,"lastWorkerUserId":"66c2f804-647e-41d4-bf15-bbbf1ffaed9a","lastWorkerColor":"#3c8301","lastWorkerStaffId":"W001"}],"performance":{"totalScans":254,"scansPerHour":422,"accuracy":100,"score":9.9,"activeScanningTime":2169,"errorCount":0,"undoCount":3},"boxNumber":6,"jobId":"4e2f1715-eb61-4e9f-8f0f-2fe82990b920"},"jobId":"4e2f1715-eb61-4e9f-8f0f-2fe82990b920"}
+filteredConsoleError @ websocket-error-filter.ts:47
+chunk-RPCDYKBN.js?v=e2bbd14a:16670 Uncaught TypeError: updateBoxHighlighting is not a function
+    at customer-box-grid.tsx:251:7
+    at commitHookEffectListMount (chunk-RPCDYKBN.js?v=e2bbd14a:16915:34)
+    at commitPassiveMountOnFiber (chunk-RPCDYKBN.js?v=e2bbd14a:18156:19)
+    at commitPassiveMountEffects_complete (chunk-RPCDYKBN.js?v=e2bbd14a:18129:17)
+    at commitPassiveMountEffects_begin (chunk-RPCDYKBN.js?v=e2bbd14a:18119:15)
+    at commitPassiveMountEffects (chunk-RPCDYKBN.js?v=e2bbd14a:18109:11)
+    at flushPassiveEffectsImpl (chunk-RPCDYKBN.js?v=e2bbd14a:19490:11)
+    at flushPassiveEffects (chunk-RPCDYKBN.js?v=e2bbd14a:19447:22)
+    at chunk-RPCDYKBN.js?v=e2bbd14a:19328:17
+    at workLoop (chunk-RPCDYKBN.js?v=e2bbd14a:197:42)
+websocket-error-filter.ts:47 The above error occurred in the <CustomerBoxGrid> component:
+
+    at CustomerBoxGrid (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/customer-box-grid.tsx:27:77)
+    at div
+    at _c9 (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at div
+    at WorkerScanner (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/pages/worker-scanner.tsx:37:21)
+    at Route (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:323:16)
+    at Switch (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=e2bbd14a:379:17)
+    at Router
+    at Provider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=e2bbd14a:38:15)
+    at TooltipProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=e2bbd14a:64:5)
+    at AuthProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-auth.tsx:22:32)
+    at ThemeProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/components/theme-provider.tsx:20:33)
+    at UserPreferencesProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/hooks/use-user-preferences.tsx:37:43)
+    at ErrorProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/src/lib/error-context.tsx:20:33)
+    at QueryClientProvider (https://e2cb8136-be03-428a-9aab-30e1ef2a1c9b-00-bbqwll6tqpyw.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=e2bbd14a:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+filteredConsoleError @ websocket-error-filter.ts:47
+chunk-RPCDYKBN.js?v=e2bbd14a:9129 Uncaught TypeError: updateBoxHighlighting is not a function
+    at customer-box-grid.tsx:251:7
+    at commitHookEffectListMount (chunk-RPCDYKBN.js?v=e2bbd14a:16915:34)
+    at commitPassiveMountOnFiber (chunk-RPCDYKBN.js?v=e2bbd14a:18156:19)
+    at commitPassiveMountEffects_complete (chunk-RPCDYKBN.js?v=e2bbd14a:18129:17)
+    at commitPassiveMountEffects_begin (chunk-RPCDYKBN.js?v=e2bbd14a:18119:15)
+    at commitPassiveMountEffects (chunk-RPCDYKBN.js?v=e2bbd14a:18109:11)
+    at flushPassiveEffectsImpl (chunk-RPCDYKBN.js?v=e2bbd14a:19490:11)
+    at flushPassiveEffects (chunk-RPCDYKBN.js?v=e2bbd14a:19447:22)
+    at chunk-RPCDYKBN.js?v=e2bbd14a:19328:17
+    at workLoop (chunk-RPCDYKBN.js?v=e2bbd14a:197:42)
+use-websocket.tsx:442 [WebSocket] Manual disconnection requested
+use-websocket.tsx:442 [WebSocket] Manual disconnection requested
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true
+use-websocket.tsx:99 [WebSocket] Connection closed. Code: 1000, Reason: Manual disconnect, Clean: true
