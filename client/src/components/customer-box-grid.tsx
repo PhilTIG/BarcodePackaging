@@ -166,7 +166,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       backgroundColor: '#f3f4f6', // Gray-100
       borderColor: '#d1d5db', // Gray-300
       textColor: 'black',
-      numberCircleColor: '#6b7280' // Grey circle for empty boxes
+      numberCircleColor: 'rgba(107, 114, 128, 0.3)' // 30% grey circle for empty boxes
     };
   }, [highlighting]);
 
@@ -283,6 +283,9 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
           });
         };
 
+        // Check if box is empty for conditional rendering
+        const isEmptyBox = box.customerName === "Empty" || box.customerName === "Unassigned" || !box.customerName;
+
         return (
           <div
             key={box.boxNumber}
@@ -364,7 +367,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                 {/* Lock icon for 100% completed boxes */}
                 {box.isComplete && (
                   <div className="absolute top-1 right-1">
-                    <Lock className={`w-5 h-5 ${highlighting.textColor}`} />
+                    <Lock className={`w-5 h-5 ${boxHighlighting.textColor === 'white' ? 'text-white' : 'text-black'}`} />
                   </div>
                 )}
 
@@ -377,12 +380,9 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
 
                 {/* Customer name spanning full width with proper spacing */}
                 <div className="mb-4 pr-2">
-                  <h3 className={`font-medium text-sm truncate ${highlighting.textColor}`} data-testid={`customer-name-${box.boxNumber}`}>
+                  <h3 className={`font-medium text-sm truncate ${boxHighlighting.textColor === 'white' ? 'text-white' : 'text-black'}`} data-testid={`customer-name-${box.boxNumber}`}>
                     {(box.customerName === "Empty" || box.customerName === "Unassigned" || !box.customerName) ? "Empty" : box.customerName}
                   </h3>
-                  {supervisorView && box.assignedWorker && (
-                    <p className={`text-xs truncate ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`}>Worker: {box.assignedWorker}</p>
-                  )}
                 </div>
 
                 {/* Box Number Badge - Top Right with spacing from customer name */}
@@ -418,41 +418,45 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                   )}
                 </div>
 
-                {/* Quantity fraction - Left side at same height as box number */}
-                <div className="absolute top-12 left-2">
-                  <div className={`text-lg font-bold ${highlighting.textColor}`} data-testid={`quantity-${box.boxNumber}`}>
-                    {displayScannedQty}/{displayTotalQty}
-                  </div>
-                  {/* Worker staffId under quantity if available */}
-                  {highlighting.workerStaffId && (
-                    <div className={`text-xs font-medium mt-1 ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-700'}`} data-testid={`worker-code-${box.boxNumber}`}>
-                      {highlighting.workerStaffId}
+                {/* Quantity fraction - Left side at same height as box number (hidden for empty boxes) */}
+                {!isEmptyBox && (
+                  <div className="absolute top-12 left-2">
+                    <div className={`text-lg font-bold ${boxHighlighting.textColor === 'white' ? 'text-white' : 'text-black'}`} data-testid={`quantity-${box.boxNumber}`}>
+                      {displayScannedQty}/{displayTotalQty}
                     </div>
-                  )}
-                </div>
-
-                {/* Centered percentage text and progress bar at bottom */}
-                <div className="absolute bottom-3 left-0 right-0 flex flex-col items-center">
-                  {box.isComplete ? (
-                    <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium mb-1">
-                      100%
-                    </div>
-                  ) : (
-                    <p className={`text-xs text-center mb-1 ${highlighting.textColor === 'text-white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
-                      {completionPercentage}%
-                    </p>
-                  )}
-
-                  {/* Centered progress bar */}
-                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        isLastScanned ? 'bg-red-500' : 'bg-green-500'
-                      }`}
-                      style={{ width: `${completionPercentage}%` }}
-                    ></div>
+                    {/* Worker staffId under quantity if available */}
+                    {highlighting.workerStaffIds[box.boxNumber] && (
+                      <div className={`text-xs font-medium mt-1 ${boxHighlighting.textColor === 'white' ? 'text-gray-200' : 'text-gray-700'}`} data-testid={`worker-code-${box.boxNumber}`}>
+                        {highlighting.workerStaffIds[box.boxNumber]}
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
+
+                {/* Centered percentage text and progress bar at bottom (hidden for empty boxes) */}
+                {!isEmptyBox && (
+                  <div className="absolute bottom-3 left-0 right-0 flex flex-col items-center">
+                    {box.isComplete ? (
+                      <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium mb-1">
+                        100%
+                      </div>
+                    ) : (
+                      <p className={`text-xs text-center mb-1 ${boxHighlighting.textColor === 'white' ? 'text-gray-200' : 'text-gray-600'}`} data-testid={`percentage-${box.boxNumber}`}>
+                        {completionPercentage}%
+                      </p>
+                    )}
+
+                    {/* Centered progress bar */}
+                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          isLastScanned ? 'bg-red-500' : 'bg-green-500'
+                        }`}
+                        style={{ width: `${completionPercentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
