@@ -18,7 +18,7 @@ import {
   checkResults,
   // Box Empty/Transfer tables
   boxHistory,
-  putAsideItems,
+  // putAsideItems, // REMOVED - Functionality migrated to scanEvents
   type User, 
   type InsertUser,
   type Job,
@@ -55,8 +55,8 @@ import {
   // Box Empty/Transfer types
   type BoxHistory,
   type InsertBoxHistory,
-  type PutAsideItem,
-  type InsertPutAsideItem
+  // type PutAsideItem, // REMOVED
+  // type InsertPutAsideItem // REMOVED
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, ne, desc, sql, inArray, isNotNull, isNull } from "drizzle-orm";
@@ -115,9 +115,9 @@ export interface IStorage {
   getBoxRequirementsByBoxNumber(jobId: string, boxNumber: number): Promise<BoxRequirement[]>;
   findNextTargetBox(barCode: string, jobId: string, workerId: string): Promise<number | null>;
   updateBoxRequirementScannedQty(boxNumber: number, barCode: string, jobId: string, workerId: string, workerColor: string): Promise<BoxRequirement | undefined>;
-  
+
   // BOX LIMIT: Unallocated customers methods
-  getUnallocatedCustomers(jobId: string): Promise<{ customerName: string; totalItems: number; productCount: number; }[]>;
+  getUnallocatedCustomers(jobId: string): Promise<{ customerName: string; totalItems: number; productCount: number; groupName: string | null; }[]>;
   // Migration method removed - not needed after full migration completed
 
   // Scan session methods
@@ -168,11 +168,11 @@ export interface IStorage {
   getJobArchives(): Promise<JobArchive[]>;
   getJobArchiveById(id: string): Promise<JobArchive | undefined>;
   deleteJobArchive(id: string): Promise<boolean>;
-  
+
   // Archive worker stats methods
   createArchiveWorkerStats(stats: InsertArchiveWorkerStats[]): Promise<ArchiveWorkerStats[]>;
   getArchiveWorkerStatsByArchiveId(archiveId: string): Promise<ArchiveWorkerStats[]>;
-  
+
   // Advanced archiving methods
   archiveJob(jobId: string, archivedBy: string): Promise<JobArchive>;
   unarchiveJob(archiveId: string): Promise<boolean>;
@@ -190,17 +190,17 @@ export interface IStorage {
   // Check event methods
   createCheckEvent(event: InsertCheckEvent): Promise<CheckEvent>;
   getCheckEventsBySessionId(sessionId: string): Promise<CheckEvent[]>;
-  
+
   // Check result methods
   createCheckResult(result: InsertCheckResult): Promise<CheckResult>;
   getCheckResultsBySessionId(sessionId: string): Promise<CheckResult[]>;
   updateCheckResult(id: string, updates: Partial<InsertCheckResult>): Promise<CheckResult | undefined>;
-  
+
   // Check correction methods
   applyCheckCorrections(jobId: string, boxNumber: number, corrections: any[], sessionUserId: string, resolvedBy: string): Promise<void>;
   createRejectedCheckResults(checkSessionId: string, corrections: any[], resolvedBy: string): Promise<void>;
   createExtraItemsFromCheck(jobId: string, extraItems: any[], sessionUserId: string): Promise<void>;
-  
+
   // QA reporting methods
   getJobQAReport(jobId: string): Promise<any>;
   getDiscrepancyReport(jobId: string): Promise<any>;
@@ -210,14 +210,14 @@ export interface IStorage {
   transferBoxToGroup(jobId: string, boxNumber: number, targetGroup: string, performedBy: string): Promise<{message: string, history: BoxHistory, reallocation?: any}>;
   getBoxHistory(jobId: string): Promise<BoxHistory[]>;
   getBoxHistoryByBoxNumber(jobId: string, boxNumber: number): Promise<BoxHistory[]>;
-  
-  // Put Aside methods
-  createPutAsideItem(item: InsertPutAsideItem): Promise<PutAsideItem>;
-  getPutAsideItems(jobId: string): Promise<PutAsideItem[]>;
-  getPutAsideItemsByStatus(jobId: string, status: string): Promise<PutAsideItem[]>;
-  getAllPutAsideItems(status?: string): Promise<PutAsideItem[]>;
-  reallocatePutAsideItem(itemId: string, targetBoxNumber: number, reallocatedBy: string): Promise<PutAsideItem | undefined>;
-  
+
+  // Put Aside methods (now using scan_events)
+  createPutAsideItem(jobId: string, barCode: string, productName: string, sessionId: string): Promise<ScanEvent>;
+  getPutAsideItemsForJob(jobId: string): Promise<any[]>;
+  markPutAsideAllocated(putAsideEventId: string, allocatedToBox: number): Promise<ScanEvent | undefined>;
+  checkUnallocatedCustomerRequirements(jobId: string, barCode: string): Promise<boolean>;
+  getPutAsideCount(jobId: string): Promise<number>;
+
   // Group management methods
   getGroupCustomers(jobId: string, groupName: string): Promise<BoxRequirement[]>;
   getJobGroups(jobId: string): Promise<string[]>;
@@ -279,12 +279,12 @@ export class DatabaseStorage implements IStorage {
   async getAllUsersWithPreferences(): Promise<(User & { preferences?: any })[]> {
     const allUsers = await this.db.select().from(users).where(eq(users.isActive, true));
     const usersWithPreferences = [];
-    
+
     for (const user of allUsers) {
       const preferences = await this.getUserPreferences(user.id);
       usersWithPreferences.push({ ...user, preferences });
     }
-    
+
     return usersWithPreferences;
   }
 
@@ -476,7 +476,7 @@ export class DatabaseStorage implements IStorage {
           await tx
             .delete(checkResults)
             .where(eq(checkResults.checkSessionId, checkSession.id));
-          
+
           // Delete check events (references check sessions)
           await tx
             .delete(checkEvents)
@@ -527,7 +527,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get job with products
       const job = await this.getJobById(id);
-      
+
       // OPTIMIZED: Use direct database aggregation instead of loading all records
       // BOX LIMIT FIX: Filter out NULL boxNumber entries entirely
       const [progressStats] = await this.db
@@ -542,7 +542,7 @@ export class DatabaseStorage implements IStorage {
 
       const totalItems = progressStats.totalItems || 0;
       const scannedItems = progressStats.scannedItems || 0;
-      
+
       // Get box data efficiently with aggregation query
       // BOX LIMIT FIX: Filter out NULL boxNumber entries entirely
       const boxData = await this.db
@@ -562,7 +562,7 @@ export class DatabaseStorage implements IStorage {
 
       const sessions = await this.getScanSessionsByJobId(id);
       const assignments = await this.getJobAssignmentsWithUsers(id);
-      
+
       // Get extra items count and details (items scanned that are not in the original job)
       const extraItemsCount = await this.getExtraItemsCount(id);
       const extraItemsDetails = await this.getExtraItemsDetails(id);
@@ -677,7 +677,7 @@ export class DatabaseStorage implements IStorage {
           // Check if using new box requirements system or legacy products
           const boxRequirements = await this.getBoxRequirementsByJobId(job.id);
           const assignments = await this.getJobAssignmentsWithUsers(job.id);
-          
+
           let totalProducts = 0;
           let completedItems = 0;
           let products: any[] = [];
@@ -687,7 +687,7 @@ export class DatabaseStorage implements IStorage {
             // NEW SYSTEM: Use box requirements
             totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
             completedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
-            
+
             // Transform to products format for box completion calculation
             const productMap = new Map();
             boxRequirements.forEach(req => {
@@ -944,7 +944,7 @@ export class DatabaseStorage implements IStorage {
       let productName = null;
       let customerName = null;
       let targetBox = null;
-      
+
       // Get worker's assigned color from job assignments
       const workerAssignment = await this.checkExistingAssignment(session.jobId, session.userId);
       let workerColor = workerAssignment?.assignedColor || insertEvent.workerColor || 'blue'; // Use assigned color, fallback to provided or default
@@ -961,7 +961,7 @@ export class DatabaseStorage implements IStorage {
           if (job?.boxLimit) {
             // BARCODE FIX: Normalize barcode for Put Aside checks
             const normalizedBarCode = normalizeBarcodeFormat(insertEvent.barCode);
-            
+
             // Look for unallocated Put Aside items with matching barcode
             const putAsideItems = await this.db
               .select()
@@ -1009,7 +1009,7 @@ export class DatabaseStorage implements IStorage {
           if (job?.boxLimit) {
             // BARCODE FIX: Normalize barcode for put aside checks
             const normalizedBarCode = normalizeBarcodeFormat(insertEvent.barCode);
-            
+
             // STEP 1: Check if unallocated customers (boxNumber: NULL) need this item
           const unallocatedRequirement = await this.db
             .select()
@@ -1025,7 +1025,7 @@ export class DatabaseStorage implements IStorage {
           if (unallocatedRequirement.length > 0) {
             // CREATE PUT ASIDE SCAN EVENT: Unallocated customer needs this item
             console.log(`[Put Aside] Creating put aside scan event for unallocated customer "${unallocatedRequirement[0].customerName}" - item: ${unallocatedRequirement[0].productName}`);
-            
+
             // Mark scan event as put aside type
             insertEvent.eventType = 'put_aside';
             productName = unallocatedRequirement[0].productName;
@@ -1060,7 +1060,7 @@ export class DatabaseStorage implements IStorage {
             // No box limit: Skip Put Aside logic, go directly to extra items
             // BARCODE FIX: Normalize barcode for checks
             const normalizedBarCode = normalizeBarcodeFormat(insertEvent.barCode);
-            
+
             // Check if this is a known product anywhere in the job (excess quantity)
             const existingProduct = await this.db
               .select()
@@ -1298,11 +1298,11 @@ export class DatabaseStorage implements IStorage {
     // Calculate active scanning time (excluding breaks > 30 seconds)
     let activeScanningTime = 0;
     let lastScanTime = new Date(allEvents[0].scan_events.scanTime).getTime();
-    
+
     for (let i = 1; i < allEvents.length; i++) {
       const currentScanTime = new Date(allEvents[i].scan_events.scanTime).getTime();
       const timeDiff = currentScanTime - lastScanTime;
-      
+
       // Only count time gaps <= 30 seconds as active scanning
       if (timeDiff <= 30000) {
         activeScanningTime += timeDiff;
@@ -1330,7 +1330,7 @@ export class DatabaseStorage implements IStorage {
     // Combine speed and accuracy for final score
     const accuracyMultiplier = accuracy / 100;
     let score = speedScore * accuracyMultiplier;
-    
+
     // Apply penalties for undos
     score = Math.max(1, score - (undoEvents.length * 0.05));
     score = Math.min(10, Math.round(score * 10) / 10);
@@ -1502,7 +1502,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserPreferences(userId: string, updates: Partial<UserPreferences>): Promise<UserPreferences | undefined> {
     console.log('[Storage] Updating user preferences for:', userId, 'with:', updates);
-    
+
     const [result] = await this.db
       .update(userPreferences)
       .set({ 
@@ -1736,7 +1736,7 @@ export class DatabaseStorage implements IStorage {
 
     // Apply worker allocation pattern to find next box
     let targetBox: number;
-    
+
     switch (workerPattern) {
       case 'ascending':
         // Worker with ascending pattern: Always pick the lowest numbered available box
@@ -1903,7 +1903,7 @@ export class DatabaseStorage implements IStorage {
       const jobCount = await this.db.select().from(jobs);
 
       // Delete in correct order due to foreign key constraints
-      
+
       // 1. Delete CheckCount results first (references check sessions and box requirements)
       await this.db.delete(checkResults);
 
@@ -2078,7 +2078,7 @@ export class DatabaseStorage implements IStorage {
       .select({ boxNumber: boxRequirements.boxNumber })
       .from(boxRequirements)
       .where(eq(boxRequirements.jobId, jobId));
-    
+
     const uniqueBoxes = new Set(boxesQuery.map((b: any) => b.boxNumber));
     const totalBoxes = uniqueBoxes.size;
 
@@ -2093,10 +2093,10 @@ export class DatabaseStorage implements IStorage {
     const totalSessions = sessions.length;
     const completedSessions = sessions.filter((s: any) => s.status === 'completed').length;
     const totalDiscrepancies = sessions.reduce((sum: number, s: any) => sum + (s.discrepanciesFound || 0), 0);
-    
+
     // Calculate verification rate (percentage of boxes verified)
     const verificationRate = totalBoxes > 0 ? (verifiedBoxes / totalBoxes) * 100 : 0;
-    
+
     // Calculate accuracy score (percentage of sessions with zero discrepancies)
     const accuracySessions = sessions.filter((s: any) => s.discrepanciesFound === 0).length;
     const accuracyScore = totalSessions > 0 ? (accuracySessions / totalSessions) * 100 : 0;
@@ -2106,11 +2106,11 @@ export class DatabaseStorage implements IStorage {
 
     // Get detailed discrepancy analysis
     const discrepancyReport = await this.getDiscrepancyReport(jobId);
-    
+
     // Analyze common issues from discrepancy notes
     const commonIssues: Array<{ type: string; count: number; percentage: number }> = [];
     const issueTypes = new Map<string, number>();
-    
+
     discrepancyReport.discrepancies.forEach((d: any) => {
       if (d.discrepancyNotes) {
         const notes = d.discrepancyNotes.toLowerCase();
@@ -2151,7 +2151,7 @@ export class DatabaseStorage implements IStorage {
     const workerMap = new Map<string, any>();
     sessions.forEach((session: any) => {
       if (!session.userId) return;
-      
+
       if (!workerMap.has(session.userId)) {
         workerMap.set(session.userId, {
           userId: session.userId,
@@ -2162,7 +2162,7 @@ export class DatabaseStorage implements IStorage {
           totalDiscrepancies: 0
         });
       }
-      
+
       const worker = workerMap.get(session.userId);
       worker.totalSessions++;
       worker.totalDiscrepancies += session.discrepanciesFound || 0;
@@ -2193,7 +2193,7 @@ export class DatabaseStorage implements IStorage {
     const dailyMap = new Map<string, any>();
     sessions.forEach((session: any) => {
       if (session.status !== 'completed') return;
-      
+
       const date = new Date(session.startTime).toISOString().split('T')[0];
       if (!dailyMap.has(date)) {
         dailyMap.set(date, {
@@ -2203,7 +2203,7 @@ export class DatabaseStorage implements IStorage {
           accurateSessions: 0
         });
       }
-      
+
       const day = dailyMap.get(date);
       day.sessionsCompleted++;
       day.discrepanciesFound += session.discrepanciesFound || 0;
@@ -2283,7 +2283,7 @@ export class DatabaseStorage implements IStorage {
       // - correctedQty is already calculated to be min(checkQty, requiredQty) from frontend
       // - This ensures only items up to required_qty are allocated to the box
       // - Excess items beyond required_qty are handled as extras separately
-      
+
       // Update box requirement with corrected quantity (capped at required_qty)
       await this.db
         .update(boxRequirements)
@@ -2301,7 +2301,7 @@ export class DatabaseStorage implements IStorage {
       const allocationNotes = correction.checkQty > (correction.requiredQty || 0) 
         ? `Original: ${correction.originalQty}, Checked: ${correction.checkQty}, Allocated to box: ${correction.correctedQty}, Excess: ${correction.checkQty - correction.correctedQty}`
         : `Original: ${correction.originalQty}, Checked: ${correction.checkQty}, Applied: ${correction.correctedQty}`;
-        
+
       await this.db
         .insert(checkResults)
         .values({
@@ -2483,11 +2483,11 @@ export class DatabaseStorage implements IStorage {
       const totalSessions = jobSummaries.reduce((sum, job) => sum + job.totalSessions, 0);
       const totalCompletedSessions = jobSummaries.reduce((sum, job) => sum + job.completedSessions, 0);
       const totalDiscrepancies = jobSummaries.reduce((sum, job) => sum + job.totalDiscrepancies, 0);
-      
+
       const overallVerificationRate = jobSummaries.length > 0 
         ? jobSummaries.reduce((sum, job) => sum + job.verificationRate, 0) / jobSummaries.length 
         : 0;
-      
+
       const overallAccuracyScore = jobSummaries.length > 0
         ? jobSummaries.reduce((sum, job) => sum + job.accuracyScore, 0) / jobSummaries.length
         : 0;
@@ -2598,7 +2598,7 @@ export class DatabaseStorage implements IStorage {
       // Delete ALL job-related data from live operational tables
       // Note: scan_events will cascade delete when scan_sessions are deleted
       // Note: check_events and check_results will cascade delete when check_sessions are deleted
-      
+
       // Delete check sessions and related data
       await this.db
         .delete(checkSessions)
@@ -2644,12 +2644,12 @@ export class DatabaseStorage implements IStorage {
       await this.db
         .delete(archiveWorkerStats)
         .where(eq(archiveWorkerStats.archiveId, id));
-      
+
       // Delete the archive record
       const result = await this.db
         .delete(jobArchives)
         .where(eq(jobArchives.id, id));
-      
+
       return result.rowCount > 0;
     } catch (error) {
       console.error('Error deleting job archive:', error);
@@ -2659,7 +2659,7 @@ export class DatabaseStorage implements IStorage {
 
   async createArchiveWorkerStats(stats: InsertArchiveWorkerStats[]): Promise<ArchiveWorkerStats[]> {
     if (stats.length === 0) return [];
-    
+
     const results = await this.db
       .insert(archiveWorkerStats)
       .values(stats)
@@ -2682,7 +2682,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(jobs)
         .where(eq(jobs.id, jobId));
-      
+
       if (!job) {
         throw new Error('Job not found');
       }
@@ -2701,7 +2701,7 @@ export class DatabaseStorage implements IStorage {
       // Calculate CheckCount statistics
       const checkSessions = await this.getCheckSessionsByJobId(jobId);
       const completedSessions = checkSessions.filter(session => session.status === 'completed');
-      
+
       // Get extras from scan events (items marked as extra)
       const extraItems = await this.db
         .select()
@@ -2749,11 +2749,11 @@ export class DatabaseStorage implements IStorage {
         .where(eq(scanSessions.jobId, jobId));
 
       const workerStatsRecords: InsertArchiveWorkerStats[] = [];
-      
+
       for (const sessionRecord of jobScanSessions) {
         const session = sessionRecord.scan_sessions;
         const worker = sessionRecord.users;
-        
+
         if (!worker) continue;
 
         // Find CheckCount sessions for this worker
@@ -2806,16 +2806,16 @@ export class DatabaseStorage implements IStorage {
       }
 
       const snapshot = archive.jobDataSnapshot as any;
-      
+
       // Clean up any existing related data to prevent conflicts
       await this.db
         .delete(jobAssignments)
         .where(eq(jobAssignments.jobId, archive.originalJobId));
-      
+
       await this.db
         .delete(boxRequirements)
         .where(eq(boxRequirements.jobId, archive.originalJobId));
-      
+
       // Check if job already exists (prevent duplicate key error)
       const existingJob = await this.getJobById(archive.originalJobId);
       if (existingJob) {
@@ -2833,7 +2833,7 @@ export class DatabaseStorage implements IStorage {
           completedAt: snapshot.job.completedAt ? new Date(snapshot.job.completedAt) : null,
           isArchived: false // Ensure it's marked as not archived
         };
-        
+
         const [restoredJob] = await this.db
           .insert(jobs)
           .values(jobData)
@@ -2872,7 +2872,7 @@ export class DatabaseStorage implements IStorage {
 
       // Delete ALL job-related data from live operational tables
       // This removes all session data, extra items, check data, etc.
-      
+
       // Delete check sessions and related data (cascade deletes check_events and check_results)
       await this.db
         .delete(checkSessions)
@@ -2931,7 +2931,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Box Empty/Transfer Implementation
-  
+
   // Core reallocation algorithm for both Empty and Transfer actions
   async reallocateBoxToNextCustomer(jobId: string, boxNumber: number): Promise<{success: boolean, customerName?: string, message?: string}> {
     try {
@@ -3003,7 +3003,7 @@ export class DatabaseStorage implements IStorage {
 
       // Get customer name before emptying
       const customerName = boxItems[0]?.customerName || 'Unknown';
-      
+
       // Create box history record
       const [history] = await this.db
         .insert(boxHistory)
@@ -3035,7 +3035,7 @@ export class DatabaseStorage implements IStorage {
 
       // Seamlessly reallocate the box to next unallocated customer
       const reallocationResult = await this.reallocateBoxToNextCustomer(jobId, boxNumber);
-      
+
       let message: string;
       if (reallocationResult.success) {
         message = `Box ${boxNumber}: Customer ${customerName} emptied | Customer ${reallocationResult.customerName} assigned`;
@@ -3068,7 +3068,7 @@ export class DatabaseStorage implements IStorage {
 
       // Get customer name before transfer
       const customerName = boxItems[0]?.customerName || 'Unknown';
-      
+
       // Create box history record
       const [history] = await this.db
         .insert(boxHistory)
@@ -3103,7 +3103,7 @@ export class DatabaseStorage implements IStorage {
 
       // Seamlessly reallocate the box to next unallocated customer
       const reallocationResult = await this.reallocateBoxToNextCustomer(jobId, boxNumber);
-      
+
       let message: string;
       if (reallocationResult.success) {
         message = `Box ${boxNumber}: Customer ${customerName} → Group ${targetGroup} | Customer ${reallocationResult.customerName} assigned`;
@@ -3145,82 +3145,109 @@ export class DatabaseStorage implements IStorage {
     return history;
   }
 
-  // Put Aside Implementation
-  async createPutAsideItem(item: InsertPutAsideItem): Promise<PutAsideItem> {
-    const [putAsideItem] = await this.db
-      .insert(putAsideItems)
-      .values(item)
+  // Put Aside Implementation (now using scan_events table)
+  async createPutAsideItem(jobId: string, barCode: string, productName: string, sessionId: string): Promise<ScanEvent> {
+    // Create scan event with eventType='put_aside', customerName=null, boxNumber=null
+    const putAsideEvent = {
+      sessionId,
+      barCode,
+      productName,
+      customerName: null, // Put Aside items have no customer initially
+      boxNumber: null, // Put Aside items have no box initially
+      eventType: 'put_aside' as const,
+      isExtraItem: false,
+      jobId
+    };
+
+    const [event] = await this.db
+      .insert(scanEvents)
+      .values(putAsideEvent)
       .returning();
-    return putAsideItem;
+
+    return event;
   }
 
-  async getPutAsideItems(jobId: string): Promise<PutAsideItem[]> {
-    const items = await this.db
-      .select()
-      .from(putAsideItems)
-      .where(eq(putAsideItems.jobId, jobId))
-      .orderBy(desc(putAsideItems.putAsideAt));
-    return items;
-  }
-
-  async getPutAsideItemsByStatus(jobId: string, status: string): Promise<PutAsideItem[]> {
-    const items = await this.db
-      .select()
-      .from(putAsideItems)
-      .where(and(
-        eq(putAsideItems.jobId, jobId),
-        eq(putAsideItems.status, status)
-      ))
-      .orderBy(desc(putAsideItems.putAsideAt));
-    return items;
-  }
-
-  async getAllPutAsideItems(status?: string): Promise<PutAsideItem[]> {
-    let query = this.db
+  async getPutAsideItemsForJob(jobId: string): Promise<any[]> {
+    // Get Put Aside items (scan events with eventType='put_aside' and allocatedAt=null)
+    const putAsideEvents = await this.db
       .select({
-        id: putAsideItems.id,
-        jobId: putAsideItems.jobId,
-        barCode: putAsideItems.barCode,
-        productName: putAsideItems.productName,
-        customerName: putAsideItems.customerName,
-        originalBoxNumber: putAsideItems.originalBoxNumber,
-        quantity: putAsideItems.quantity,
-        status: putAsideItems.status,
-        putAsideBy: putAsideItems.putAsideBy,
-        putAsideAt: putAsideItems.putAsideAt,
-        reallocatedBy: putAsideItems.reallocatedBy,
-        reallocatedAt: putAsideItems.reallocatedAt,
-        reallocatedToBox: putAsideItems.reallocatedToBox,
-        sourceEventId: putAsideItems.sourceEventId,
-        // Join with jobs for job name
-        jobName: jobs.name,
-        // Join with users for worker name
-        putAsideWorkerName: users.name
+        id: scanEvents.id,
+        barCode: scanEvents.barCode,
+        productName: scanEvents.productName,
+        scanTime: scanEvents.scanTime,
+        allocatedToBox: scanEvents.allocatedToBox,
+        allocatedAt: scanEvents.allocatedAt
       })
-      .from(putAsideItems)
-      .leftJoin(jobs, eq(putAsideItems.jobId, jobs.id))
-      .leftJoin(users, eq(putAsideItems.putAsideBy, users.id));
+      .from(scanEvents)
+      .where(and(
+        eq(scanEvents.jobId, jobId),
+        eq(scanEvents.eventType, 'put_aside'),
+        isNull(scanEvents.allocatedAt) // Only unallocated items
+      ))
+      .orderBy(desc(scanEvents.scanTime));
 
-    if (status) {
-      query = query.where(eq(putAsideItems.status, status));
-    }
+    // Group by barcode and combine quantities
+    const groupedItems = putAsideEvents.reduce((acc: any[], item: any) => {
+      const existing = acc.find((group: any) => group.barCode === item.barCode);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        acc.push({
+          barCode: item.barCode,
+          productName: item.productName,
+          qty: 1
+        });
+      }
+      return acc;
+    }, []);
 
-    const items = await query.orderBy(desc(putAsideItems.putAsideAt));
-    return items;
+    return groupedItems;
   }
 
-  async reallocatePutAsideItem(itemId: string, targetBoxNumber: number, reallocatedBy: string): Promise<PutAsideItem | undefined> {
-    const [item] = await this.db
-      .update(putAsideItems)
+  async markPutAsideAllocated(putAsideEventId: string, allocatedToBox: number): Promise<ScanEvent | undefined> {
+    // Mark Put Aside scan event as allocated
+    const [updatedEvent] = await this.db
+      .update(scanEvents)
       .set({
-        status: 'reallocated',
-        reallocatedToBox: targetBoxNumber,
-        reallocatedAt: new Date(),
-        reallocatedBy
+        allocatedToBox,
+        allocatedAt: new Date()
       })
-      .where(eq(putAsideItems.id, itemId))
+      .where(eq(scanEvents.id, putAsideEventId))
       .returning();
-    return item || undefined;
+
+    return updatedEvent;
+  }
+
+  async checkUnallocatedCustomerRequirements(jobId: string, barCode: string): Promise<boolean> {
+    // Check if any unallocated customers (boxNumber=NULL) require this barcode
+    const normalizedBarCode = normalizeBarcodeFormat(barCode);
+
+    const requirement = await this.db
+      .select()
+      .from(boxRequirements)
+      .where(and(
+        eq(boxRequirements.jobId, jobId),
+        sql`(${boxRequirements.barCode} = ${barCode} OR ${boxRequirements.barCode} = ${normalizedBarCode})`,
+        isNull(boxRequirements.boxNumber), // Unallocated customers
+        sql`${boxRequirements.scannedQty} < ${boxRequirements.requiredQty}` // Still need items
+      ))
+      .limit(1);
+
+    return requirement.length > 0;
+  }
+
+  async getPutAsideCount(jobId: string): Promise<number> {
+    // Count unallocated Put Aside items for a job
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(scanEvents)
+      .where(and(
+        eq(scanEvents.jobId, jobId),
+        eq(scanEvents.eventType, 'put_aside'),
+        isNull(scanEvents.allocatedAt) // Only unallocated items
+      ));
+
+    return result[0]?.count || 0;
   }
 
   // Group Management Implementation
@@ -3243,7 +3270,7 @@ export class DatabaseStorage implements IStorage {
         eq(boxRequirements.jobId, jobId),
         sql`${boxRequirements.groupName} IS NOT NULL`
       ));
-    
+
     return result.map((r: any) => r.groupName).filter((name: any): name is string => name !== null);
   }
 
@@ -3252,7 +3279,7 @@ export class DatabaseStorage implements IStorage {
       .update(boxRequirements)
       .set({ groupName })
       .where(and(
-        eq(boxRequirements.jobId, jobId),
+        eq(jobRequirements.jobId, jobId),
         eq(boxRequirements.boxNumber, boxNumber)
       ));
   }
@@ -3411,7 +3438,7 @@ export class DatabaseStorage implements IStorage {
   async checkUnallocatedCustomerRequirements(jobId: string, barCode: string): Promise<boolean> {
     // Check if any unallocated customers (boxNumber=NULL) require this barcode
     const normalizedBarCode = normalizeBarcodeFormat(barCode);
-    
+
     const requirement = await this.db
       .select()
       .from(boxRequirements)
@@ -3436,7 +3463,7 @@ export class DatabaseStorage implements IStorage {
         eq(scanEvents.eventType, 'put_aside'),
         isNull(scanEvents.allocatedAt) // Only unallocated items
       ));
-    
+
     return result[0]?.count || 0;
   }
 }

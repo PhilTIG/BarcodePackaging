@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, decimal, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -273,26 +273,8 @@ export const boxHistory = pgTable("box_history", {
   boxSnapshot: jsonb("box_snapshot"), // Complete box requirements snapshot
 });
 
-export const putAsideItems = pgTable("put_aside_items", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
-  barCode: text("bar_code").notNull(),
-  productName: text("product_name").notNull(),
-  customerName: text("customer_name").notNull(),
-  originalBoxNumber: integer("original_box_number").notNull(),
-  quantity: integer("quantity").notNull().default(1),
-  putAsideBy: varchar("put_aside_by").notNull().references(() => users.id),
-  putAsideAt: timestamp("put_aside_at").default(sql`now()`),
-
-  // Status tracking
-  status: text("status").notNull().default('available'), // 'available', 'reallocated', 'archived'
-  reallocatedToBox: integer("reallocated_to_box"),
-  reallocatedAt: timestamp("reallocated_at"),
-  reallocatedBy: varchar("reallocated_by").references(() => users.id),
-
-  // Reference to source scan event if applicable
-  sourceEventId: varchar("source_event_id").references(() => scanEvents.id),
-});
+// Put Aside items are now handled through scanEvents table with eventType='put_aside'
+// The putAsideItems table has been removed as it was unused in favor of the scanEvents approach
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -307,8 +289,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   archivedJobs: many(jobArchives),
   checkSessions: many(checkSessions), // NEW
   boxHistoryPerformed: many(boxHistory), // NEW
-  putAsideItemsPerformed: many(putAsideItems, { relationName: "putAsideBy" }), // NEW
-  putAsideItemsReallocated: many(putAsideItems, { relationName: "reallocatedBy" }), // NEW
 }));
 
 export const jobTypesRelations = relations(jobTypes, ({ one, many }) => ({
@@ -365,7 +345,6 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
   workerBoxAssignments: many(workerBoxAssignments),
   checkSessions: many(checkSessions), // NEW
   boxHistory: many(boxHistory), // NEW
-  putAsideItems: many(putAsideItems), // NEW
 }));
 
 export const boxRequirementsRelations = relations(boxRequirements, ({ one, many }) => ({
@@ -489,26 +468,7 @@ export const boxHistoryRelations = relations(boxHistory, ({ one }) => ({
   }),
 }));
 
-export const putAsideItemsRelations = relations(putAsideItems, ({ one }) => ({
-  job: one(jobs, {
-    fields: [putAsideItems.jobId],
-    references: [jobs.id],
-  }),
-  putAsideBy: one(users, {
-    fields: [putAsideItems.putAsideBy],
-    references: [users.id],
-    relationName: "putAsideBy",
-  }),
-  reallocatedBy: one(users, {
-    fields: [putAsideItems.reallocatedBy],
-    references: [users.id],
-    relationName: "reallocatedBy",
-  }),
-  sourceEvent: one(scanEvents, {
-    fields: [putAsideItems.sourceEventId],
-    references: [scanEvents.id],
-  }),
-}));
+
 
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -598,12 +558,6 @@ export const insertBoxHistorySchema = createInsertSchema(boxHistory).omit({
   timestamp: true,
 });
 
-export const insertPutAsideItemSchema = createInsertSchema(putAsideItems).omit({
-  id: true,
-  putAsideAt: true,
-  reallocatedAt: true,
-});
-
 export type InsertJobArchive = z.infer<typeof insertJobArchiveSchema>;
 export type JobArchive = typeof jobArchives.$inferSelect;
 export type InsertArchiveWorkerStats = z.infer<typeof insertArchiveWorkerStatsSchema>;
@@ -612,8 +566,6 @@ export type ArchiveWorkerStats = typeof archiveWorkerStats.$inferSelect;
 // Box Empty/Transfer Types
 export type InsertBoxHistory = z.infer<typeof insertBoxHistorySchema>;
 export type BoxHistory = typeof boxHistory.$inferSelect;
-export type InsertPutAsideItem = z.infer<typeof insertPutAsideItemSchema>;
-export type PutAsideItem = typeof putAsideItems.$inferSelect;
 
 // User Preferences Schema
 export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
@@ -737,9 +689,7 @@ export type InsertCheckResult = z.infer<typeof insertCheckResultSchema>;
 export type BoxRequirement = typeof boxRequirements.$inferSelect;
 export type InsertBoxRequirement = z.infer<typeof insertBoxRequirementSchema>;
 
-// Missing type exports - Phase 1 Task 1.1
-export type BoxHistory = typeof boxHistory.$inferSelect;
-export type PutAsideItem = typeof putAsideItems.$inferSelect;
+
 
 export type Login = z.infer<typeof loginSchema>;
 export type CsvRow = z.infer<typeof csvRowSchema>;

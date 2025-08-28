@@ -1,4 +1,3 @@
-
 # Barcode System Optimization Plan
 
 ## Overview
@@ -139,7 +138,7 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
 
 ### Tasks:
 
-#### **Step 1: Eliminate Polling Mechanisms (HIGH PRIORITY)**
+#### **Step 1: Eliminate Polling Mechanisms (HIGH PRIORITY)** ✅ **COMPLETED**
 - [x] **Task 4.1.1**: Remove job progress polling intervals **COMPLETED**
   - Target endpoints: `/api/jobs/:jobId/progress` (currently polling every 10-15 seconds)
   - Replace with WebSocket-only progress updates
@@ -147,33 +146,38 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
   - **COMPLETED**: Removed polling from Manager dashboard, Supervisor view, Put aside manager
   - Files: Manager dashboard components, progress tracking hooks
 
-- [ ] **Task 4.1.2**: Remove check sessions polling
+- [x] **Task 4.1.2**: Remove check sessions polling **COMPLETED**
   - Target endpoint: `/api/check-sessions` (currently polling every 3-4 seconds)
   - Implement WebSocket-based session management
+  - **COMPLETED**: Removed polling intervals and added WebSocket-based session conflict checking
   - Files: Session management components, authentication hooks
 
-- [ ] **Task 4.1.3**: Remove put aside count polling
+- [x] **Task 4.1.3**: Remove put aside count polling **COMPLETED**
   - Target endpoints: `/api/jobs/:jobId/put-aside/count` (currently polling every 10 seconds)
   - Replace with WebSocket put aside count updates
+  - **COMPLETED**: Removed 10-second polling interval from put aside manager
   - **⚠️ PUT ASIDE REMINDER**: Ensure WebSocket messages use `scanEvents` data only
   - Files: Put aside count components, WebSocket handlers
 
-- [ ] **Task 4.1.4**: Remove jobs list polling
+- [x] **Task 4.1.4**: Remove jobs list polling **COMPLETED**
   - Target endpoint: `/api/jobs` (currently polling every 10-15 seconds)
   - Implement WebSocket job list updates
+  - **COMPLETED**: Removed 15-second polling interval from manager dashboard
   - Files: Job list components, manager dashboard
 
 #### **Step 2: Remove Client-Side Query Invalidations (HIGH PRIORITY)**
-- [ ] **Task 4.2.1**: Identify mutation-triggered invalidations
+- [x] **Task 4.2.1**: Identify mutation-triggered invalidations **COMPLETED**
   - Search for React Query `invalidateQueries` calls in scan mutations
   - Document which mutations trigger broad invalidations
+  - **COMPLETED**: Located scan mutation invalidations in scan processing
   - Files: Client mutation hooks, `client/src/lib/queryClient.ts`
 
-- [ ] **Task 4.2.2**: Replace invalidations with WebSocket updates
+- [x] **Task 4.2.2**: Replace invalidations with WebSocket updates **COMPLETED**
   - Remove `invalidateQueries` calls that conflict with WebSocket updates
   - Ensure WebSocket messages provide all necessary data for UI updates
-  - **⚠️ PUT ASIDE REMINDER**: Verify Put Aside mutations use WebSocket-only updates
-  - Files: Scan mutation hooks, WebSocket message handlers
+  - **COMPLETED**: Removed invalidateQueries from scan, undo, and box empty mutations
+  - **⚠️ PUT ASIDE REMINDER**: Verified Put Aside mutations use WebSocket-only updates
+  - Files: worker-scanner.tsx, manager-dashboard.tsx, supervisor-view.tsx
 
 - [ ] **Task 4.2.3**: Fix double data fetching
   - Prevent both mutation response AND WebSocket events from triggering same data fetches

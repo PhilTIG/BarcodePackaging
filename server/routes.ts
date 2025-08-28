@@ -2,9 +2,9 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { 
-  loginSchema, 
-  csvRowSchema, 
+import {
+  loginSchema,
+  csvRowSchema,
   insertJobSchema,
   insertScanEventSchema,
   insertJobAssignmentSchema,
@@ -70,22 +70,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (data.type === 'authenticate') {
           const authData = data as WSAuthenticateMessage;
-          connectedClients.set(clientId, { 
-            ws, 
+          connectedClients.set(clientId, {
+            ws,
             userId: authData.data.userId,
-            jobId: authData.data.jobId 
+            jobId: authData.data.jobId
           });
           console.log(`[WebSocket Server] Client ${clientId} authenticated as user ${authData.data.userId}${authData.data.jobId ? ` for job ${authData.data.jobId}` : ''}`);
 
           // Send authentication confirmation
           ws.send(JSON.stringify({
             type: 'authenticated',
-            data: { 
+            data: {
               clientId,
               userId: authData.data.userId,
-              jobId: authData.data.jobId 
+              jobId: authData.data.jobId
             }
           }));
+        }
+
+        // Handle Put Aside specific WebSocket events
+        if (data.type === 'put_aside_event') {
+          const putAsideData = data as WSPutAsideMessage;
+          console.log(`[WebSocket Server] Received PutAside event:`, putAsideData);
+
+          // Trigger a re-fetch or update for Put Aside counts/items
+          // This might involve invalidating a cache or directly querying the DB
+          // For now, we'll just log and assume downstream handlers will react
+          // A more robust solution might involve directly broadcasting the payload
+          // or having a dedicated handler for put_aside_event
         }
 
         // Note: scan_event broadcasting is handled by the API route, no need to re-broadcast here
@@ -106,7 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Send welcome message
     ws.send(JSON.stringify({
       type: 'connected',
-      data: { 
+      data: {
         clientId,
         message: 'WebSocket connection established successfully'
       }
@@ -188,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Return user ID as token (in production use proper JWT)
-      res.json({ 
+      res.json({
         token: user.id,
         user: {
           id: user.id,
@@ -212,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pin: hashedPin
       });
 
-      res.json({ 
+      res.json({
         user: {
           id: user.id,
           staffId: user.staffId,
@@ -303,7 +315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (csvData.length === 0) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: 'CSV file is empty or contains no valid data',
           details: 'Expected columns: BarCode, Product Name, Qty, CustomName, Group (optional)'
         });
@@ -312,7 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate job type and group field requirements
       const jobTypeId = req.body.jobTypeId;
       if (!jobTypeId) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: 'Job type is required',
           details: 'Please select a job type for this job'
         });
@@ -321,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if job type exists and get its requirements
       const jobType = await storage.getJobTypeById(jobTypeId);
       if (!jobType) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: 'Invalid job type selected',
           details: 'The selected job type does not exist'
         });
@@ -331,7 +343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (jobType.requireGroupField) {
         const hasGroupField = csvData.every(row => row.Group !== undefined && row.Group !== null);
         if (!hasGroupField) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             message: `CSV validation failed: Group field is required for job type "${jobType.name}"`,
             details: 'This job type requires all products to have a Group value. Please ensure your CSV includes a Group column with values for all rows.'
           });
@@ -422,7 +434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If any errors found, reject the entire CSV upload
       if (allErrors.length > 0) {
-        const message = allErrors.length === 1 
+        const message = allErrors.length === 1
           ? (groupConsistencyErrors.length > 0 ? 'Customer / Group mismatch - Check your group assignments are consistent' : 'Barcode / Product mismatch - Check your product names are consistent')
           : 'Multiple validation errors found';
 
@@ -516,17 +528,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.createBoxRequirements(boxRequirements);
 
-      res.status(201).json({ 
-        job, 
+      res.status(201).json({
+        job,
         products: products,
         productsCount: jobData.totalProducts, // Use total quantity sum, not CSV row count
         customersCount: jobData.totalCustomers,
         warning: warningMessage, // BOX LIMIT WARNING: Send warning if limit < 80% of customers
-        message: 'CSV uploaded and job created successfully' 
+        message: 'CSV uploaded and job created successfully'
       });
     } catch (error: any) {
       console.error('Job creation error:', error);
-      res.status(400).json({ 
+      res.status(400).json({
         message: error.message || 'Failed to create job from CSV',
         details: error.message?.includes('validation') ? 'Please check your CSV format. Expected columns: BarCode, Product Name, Qty, CustomName, Group (optional)' : undefined
       });
@@ -583,7 +595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`[Job Assignment] Worker ${userId} assigned to job ${jobId} with ${allocationPattern || 'ascending'} pattern, workerIndex: ${correctWorkerIndex}`);
 
-      res.status(201).json({ 
+      res.status(201).json({
         assignment: {
           ...assignment,
           allocationPattern: allocationPattern || 'ascending'
@@ -592,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Job assignment error:', error);
-      res.status(400).json({ 
+      res.status(400).json({
         message: error.message || 'Failed to assign worker to job'
       });
     }
@@ -774,7 +786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignments.forEach((assignment) => {
           broadcastToUser(assignment.userId, {
             type: 'job_locked_session_terminated',
-            data: { 
+            data: {
               jobId,
               jobName: job.name,
               message: 'Job has been locked by a manager. Your scanning session has been terminated.',
@@ -786,8 +798,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Broadcast job locked notification to all supervisors and managers
         broadcastToJob(jobId, {
           type: 'job_locked',
-          data: { 
-            jobId, 
+          data: {
+            jobId,
             jobName: job.name,
             isActive: false,
             message: 'Job has been locked and is no longer accessible to workers and supervisors'
@@ -802,8 +814,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         broadcastToJob(jobId, {
           type: 'job_unlocked',
-          data: { 
-            jobId, 
+          data: {
+            jobId,
             jobName: job.name,
             isActive: true,
             message: 'Job has been unlocked and is now accessible'
@@ -820,7 +832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.json({ 
+      res.json({
         job,
         action: isLocking ? 'locked' : isUnlocking ? 'unlocked' : (isActive ? 'scanning_activated' : 'scanning_paused')
       });
@@ -854,7 +866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error: any) {
       console.error('Error deleting all job data:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: error.message || 'Failed to delete all job data'
       });
     }
@@ -874,8 +886,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if job has any scan events (0% complete check)
       const hasScanEvents = await storage.jobHasScanEvents(jobId);
       if (hasScanEvents) {
-        return res.status(400).json({ 
-          message: 'Cannot remove job with scan progress. Only jobs with 0% completion can be removed.' 
+        return res.status(400).json({
+          message: 'Cannot remove job with scan progress. Only jobs with 0% completion can be removed.'
         });
       }
 
@@ -894,7 +906,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: 'Job removed successfully', jobId });
     } catch (error: any) {
       console.error('Job removal error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: error.message || 'Failed to remove job'
       });
     }
@@ -953,14 +965,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Assignment not found or already inactive' });
       }
 
-      res.json({ 
+      res.json({
         message: 'Worker unassigned from job successfully',
         jobId,
-        userId 
+        userId
       });
     } catch (error: any) {
       console.error('Job unassignment error:', error);
-      res.status(400).json({ 
+      res.status(400).json({
         message: error.message || 'Failed to unassign worker from job'
       });
     }
@@ -1007,7 +1019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ assignments: validAssignments });
     } catch (error) {
       console.error('Error in /api/users/me/assignments:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'Failed to fetch user assignments',
         error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined
       });
@@ -1063,7 +1075,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workerStaffId: req.user!.staffId
       };
 
-      const scanEvent = await storage.createScanEvent(eventData);
+      // Check for Put Aside items for this barcode and job
+      const putAsideItems = await storage.getPutAsideItemsForBarcode(jobId, eventData.barCode);
+      let insertEvent: ScanEvent = eventData as ScanEvent; // Explicitly type as ScanEvent
+
+      if (putAsideItems.length > 0) {
+        // CONSUME PUT ASIDE ITEM: Mark the first matching Put Aside item as allocated
+        const putAsideItem = putAsideItems[0];
+        await storage.consumePutAsideItem(putAsideItem.id, eventData.boxNumber); // Use dedicated storage method
+
+        console.log(`[Put Aside Priority] Consumed Put Aside item for barcode ${eventData.barCode} - allocated to box ${eventData.boxNumber}`);
+
+        // Mark that this scan event consumed a Put Aside item for WebSocket broadcasting
+        (insertEvent as any).consumedPutAside = true;
+      }
+
+      const scanEvent = await storage.createScanEvent(insertEvent);
 
       // Update session statistics
       await storage.updateScanSessionStats(sessionId);
@@ -1081,7 +1108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
 
       // Transform box requirements to product format for UI compatibility
-      const updatedProducts = [];
+      const updatedProducts: any[] = []; // Explicitly type
       const productMap = new Map();
 
       for (const req of updatedBoxRequirements) {
@@ -1130,7 +1157,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: req.user!.id,
             userName: req.user!.name,
             workerColor: workerAssignment?.assignedColor || '#3B82F6',
-            workerStaffId: req.user!.staffId
+            workerStaffId: req.user!.staffId,
+            // Include consumedPutAside flag for WebSocket
+            consumedPutAside: (insertEvent as any).consumedPutAside || false
           },
           products: transformedProducts,
           performance: workerPerformance,
@@ -1176,7 +1205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         originalEventType: event.eventType === 'undo' ? 'unknown' : event.eventType // Store original type before undo
       }));
 
-      res.json({ 
+      res.json({
         undoneEvents: undoneEventsWithTypes,
         summary: {
           totalUndone: undoneEvents.length,
@@ -1349,7 +1378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Check session not found' });
       }
 
-      // Create check results for ALL discrepancies (whether applied or rejected)  
+      // Create check results for ALL discrepancies (whether applied or rejected)
       if (corrections && corrections.length > 0) {
         if (applyCorrections) {
           // Apply corrections and update box requirements
@@ -1497,8 +1526,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User preferences update for checkBoxEnabled
   app.patch('/api/users/:id/preferences', requireAuth, requireRole(['manager']), async (req, res) => {
     try {
-      const { checkBoxEnabled } = req.body;
-      const preferences = await storage.updateUserPreferences(req.params.id, { checkBoxEnabled });
+      const { checkBoxEnabled, canEmptyAndTransfer } = req.body; // Added canEmptyAndTransfer
+      const updates: any = {};
+
+      if (checkBoxEnabled !== undefined) updates.checkBoxEnabled = checkBoxEnabled;
+      if (canEmptyAndTransfer !== undefined) updates.canEmptyAndTransfer = canEmptyAndTransfer;
+
+      const preferences = await storage.updateUserPreferences(req.params.id, updates);
 
       if (!preferences) {
         return res.status(404).json({ message: 'User preferences not found' });
@@ -1588,6 +1622,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User preferences update for checkBoxEnabled
+  app.patch('/api/users/:id/preferences', requireAuth, requireRole(['manager']), async (req, res) => {
+    try {
+      const { checkBoxEnabled, canEmptyAndTransfer } = req.body;
+      const updates: any = {};
+
+      if (checkBoxEnabled !== undefined) updates.checkBoxEnabled = checkBoxEnabled;
+      if (canEmptyAndTransfer !== undefined) updates.canEmptyAndTransfer = canEmptyAndTransfer;
+
+      const preferences = await storage.updateUserPreferences(req.params.id, updates);
+
+      if (!preferences) {
+        return res.status(404).json({ message: 'User preferences not found' });
+      }
+
+      res.json({ preferences });
+    } catch (error) {
+      console.error('Failed to update user preferences:', error);
+      res.status(500).json({ message: 'Failed to update user preferences' });
+    }
+  });
+
   // User preferences routes - EMERGENCY BLOCK to stop infinite requests
   // User Preferences endpoints
   app.get('/api/users/me/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -1616,6 +1672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           enableAutoUndo: false,
           undoTimeLimit: 30,
           batchScanMode: false,
+          canEmptyAndTransfer: false // Default value for the new preference
         };
 
         const newPreferences = await storage.createUserPreferences(defaultPrefs);
@@ -1677,10 +1734,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
-
-
-
   // REMOVED: Duplicate /api/users endpoint - consolidated with the one above
 
   app.post('/api/users', requireAuth, requireRole(['manager']), async (req: AuthenticatedRequest, res) => {
@@ -1712,7 +1765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const user = await storage.createUser(userData);
-      res.json({ 
+      res.json({
         user: {
           id: user.id,
           staffId: user.staffId,
@@ -1768,7 +1821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateUserPreferences(userId, { checkBoxEnabled });
       }
 
-      res.json({ 
+      res.json({
         user: {
           id: user.id,
           staffId: user.staffId,
@@ -1935,7 +1988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
 
       // Transform box requirements to product format for UI compatibility
-      const updatedProducts = [];
+      const updatedProducts: any[] = []; // Explicitly type
       const productMap = new Map();
 
       for (const req of updatedBoxRequirements) {
@@ -1974,8 +2027,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Broadcast real-time update with complete data (like scan_update)
       broadcastToJob(jobId, {
         type: 'box_emptied',
-        data: { 
-          boxNumber: boxNum, 
+        data: {
+          boxNumber: boxNum,
           performedBy: req.user!.name,
           timestamp: new Date().toISOString(),
           jobId,
@@ -1983,15 +2036,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: emptyResult.message,
         history: emptyResult.history,
         reallocation: emptyResult.reallocation
       });
     } catch (error: any) {
       console.error('Box empty error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: error.message || 'Failed to empty box'
       });
     }
@@ -2008,7 +2061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!canEmptyAndTransfer(req.user!, userPreferences)) {
         console.log(`[Transfer Permission Debug] Permission denied for user ${req.user!.id} with role ${req.user!.role}`);
-        return res.status(403).json({ 
+        return res.status(403).json({
           message: 'Insufficient permissions to transfer boxes',
           debug: {
             userId: req.user!.id,
@@ -2053,7 +2106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
 
       // Transform box requirements to product format for UI compatibility
-      const updatedProducts = [];
+      const updatedProducts: any[] = []; // Explicitly type
       const productMap = new Map();
 
       for (const req of updatedBoxRequirements) {
@@ -2092,8 +2145,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Broadcast real-time update with complete data (like scan_update)
       broadcastToJob(jobId, {
         type: 'box_transferred',
-        data: { 
-          boxNumber: boxNum, 
+        data: {
+          boxNumber: boxNum,
           targetGroup: customerGroup,
           performedBy: req.user!.name,
           timestamp: new Date().toISOString(),
@@ -2102,15 +2155,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: transferResult.message,
         history: transferResult.history,
         reallocation: transferResult.reallocation
       });
     } catch (error: any) {
       console.error('Box transfer error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: error.message || 'Failed to transfer box'
       });
     }
@@ -2136,14 +2189,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get box history
       const history = await storage.getBoxHistoryByBoxNumber(jobId, boxNum);
 
-      res.json({ 
+      res.json({
         success: true,
         boxNumber: boxNum,
-        history 
+        history
       });
     } catch (error: any) {
       console.error('Box history fetch error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: error.message || 'Failed to fetch box history'
       });
     }
@@ -2208,7 +2261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const workerStats = await storage.getArchiveWorkerStatsByArchiveId(archive.id);
 
-      res.json({ 
+      res.json({
         archive: {
           ...archive,
           workerStats
@@ -2234,13 +2287,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create archive with comprehensive data
       const archive = await storage.archiveJob(jobId, req.user!.id);
 
-      res.status(201).json({ 
+      res.status(201).json({
         archive,
         message: 'Job archived successfully'
       });
     } catch (error: any) {
       console.error('Failed to archive job:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: error.message || 'Failed to archive job'
       });
     }
@@ -2260,7 +2313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: 'Job unarchived successfully' });
     } catch (error: any) {
       console.error('Failed to unarchive job:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: error.message || 'Failed to unarchive job'
       });
     }
@@ -2305,8 +2358,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============== DUPLICATE ENDPOINTS REMOVED ==============
   // Box Empty/Transfer endpoints are defined above with automatic reallocation
 
-
-
   // Get box history for a specific box
   app.get('/api/jobs/:jobId/boxes/:boxNumber/history', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
     try {
@@ -2321,7 +2372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============== PUT ASIDE API ENDPOINTS (NEW scan_events approach) ==============
 
-  // Get put aside items for a job 
+  // Get put aside items for a job
   app.get('/api/jobs/:jobId/put-aside', requireAuth, requireRole(['manager', 'supervisor']), async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId } = req.params;
@@ -2462,7 +2513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         TotalScanned: (items as any[]).reduce((sum, item) => sum + item.ScannedQty, 0)
       }));
 
-      res.json({ 
+      res.json({
         groupName,
         exportData,
         summary: {

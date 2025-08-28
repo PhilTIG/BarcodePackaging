@@ -99,11 +99,11 @@ export function PutAsideManagerPage() {
         title: "Item Reallocated",
         description: "The put aside item has been successfully reallocated."
       });
-      
+
       // Refresh data
       refetch();
       queryClient.invalidateQueries({ queryKey: ['/api/jobs'] });
-      
+
       // Close dialog
       setShowReallocationDialog(false);
       setSelectedItem(null);
@@ -234,7 +234,7 @@ export function PutAsideManagerPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -308,7 +308,7 @@ export function PutAsideManagerPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
-              
+
               {/* Job Filter */}
               <div className="flex-1">
                 <label className="text-sm font-medium mb-2 block">Job Filter</label>
@@ -410,7 +410,7 @@ export function PutAsideManagerPage() {
                   >
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between">
-                        
+
                         {/* Item Details */}
                         <div className="flex-1 space-y-3">
                           <div className="flex items-start gap-3">
@@ -430,17 +430,17 @@ export function PutAsideManagerPage() {
                               <span className="font-medium text-gray-700 dark:text-gray-300">Customer:</span>
                               <p className="text-gray-600 dark:text-gray-400">{item.customerName}</p>
                             </div>
-                            
+
                             <div>
                               <span className="font-medium text-gray-700 dark:text-gray-300">Original Box:</span>
                               <p className="text-gray-600 dark:text-gray-400">{item.originalBoxNumber}</p>
                             </div>
-                            
+
                             <div>
                               <span className="font-medium text-gray-700 dark:text-gray-300">Quantity:</span>
                               <p className="text-gray-600 dark:text-gray-400">{item.quantity}</p>
                             </div>
-                            
+
                             <div>
                               <span className="font-medium text-gray-700 dark:text-gray-300">Job:</span>
                               <p className="text-gray-600 dark:text-gray-400">{item.jobName || item.jobId}</p>
@@ -473,7 +473,7 @@ export function PutAsideManagerPage() {
                         {/* Actions */}
                         <div className="flex items-center gap-2">
                           {getStatusBadge(item.status)}
-                          
+
                           {item.status === 'pending' && (
                             <Button
                               onClick={() => handleReallocation(item)}
