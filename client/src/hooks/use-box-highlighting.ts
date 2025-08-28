@@ -1,196 +1,101 @@
-/**
- * POC-Style Box Highlighting Hook
- * Manages single box highlighting with worker color coordination
- */
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-export interface BoxHighlighting {
+interface BoxHighlighting {
   lastScannedBoxNumber: number | null;
-  workerColors: Map<number, string>; // boxNumber -> worker color (50% transparent)
-  activeWorkerBoxes: Map<string, number>; // workerId -> current active box number
-  workerStaffIds: Map<number, string>; // boxNumber -> worker staffId for display
+  workerColors: Record<number, string>;
+  activeWorkerBoxes: Record<string, number>;
+  workerStaffIds: Record<number, string>;
 }
 
-interface UseBoxHighlightingOptions {
-  autoResetDelay?: number; // Not used anymore - worker colors persist until replaced
-  workerMode?: boolean; // If true, only shows highlighting for the last scanned box
-}
-
-export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
-  const { workerMode = false } = options;
-  
+export function useBoxHighlighting(currentUser?: { role: string; id: string }) {
   const [highlighting, setHighlighting] = useState<BoxHighlighting>({
     lastScannedBoxNumber: null,
-    workerColors: new Map(),
-    activeWorkerBoxes: new Map(),
-    workerStaffIds: new Map(),
+    workerColors: {},
+    activeWorkerBoxes: {},
+    workerStaffIds: {}
   });
 
-  // Update box highlighting when a scan occurs
-  const updateBoxHighlighting = useCallback((
+  const updateHighlighting = useCallback((
     boxNumber: number,
-    workerId?: string,
+    workerId: string,
     workerColor?: string,
     workerStaffId?: string
   ) => {
-    setHighlighting(prev => {
-      const newActiveWorkerBoxes = new Map(prev.activeWorkerBoxes);
-      const newWorkerColors = new Map();
-      const newWorkerStaffIds = new Map();
+    if (!currentUser) return;
 
-      if (workerMode) {
-        // Worker Mode: Only highlight the current scan, clear all others
-        if (workerColor) {
-          newWorkerColors.set(boxNumber, workerColor);
-        }
-        if (workerStaffId) {
-          newWorkerStaffIds.set(boxNumber, workerStaffId);
-        }
-      } else {
-        // Manager/Supervisor Mode: Keep all worker highlighting, replace only for same worker
-        newWorkerColors.clear();
-        newWorkerStaffIds.clear();
-        
-        // Copy existing data
-        prev.workerColors.forEach((color, box) => newWorkerColors.set(box, color));
-        prev.workerStaffIds.forEach((staffId, box) => newWorkerStaffIds.set(box, staffId));
-
-        // If this worker was previously highlighting another box, remove that highlighting
-        if (workerId) {
-          const previousBox = prev.activeWorkerBoxes.get(workerId);
-          if (previousBox && previousBox !== boxNumber) {
-            // Clear previous box's worker highlighting (keep other data)
-            newWorkerColors.delete(previousBox);
-            newWorkerStaffIds.delete(previousBox);
-          }
-          
-          // Set current box as this worker's active box
-          newActiveWorkerBoxes.set(workerId, boxNumber);
-        }
-
-        // Store worker color and staffId for this box
-        if (workerColor) {
-          newWorkerColors.set(boxNumber, workerColor);
-        }
-        if (workerStaffId) {
-          newWorkerStaffIds.set(boxNumber, workerStaffId);
-        }
-      }
-
-      const newHighlighting = {
-        lastScannedBoxNumber: boxNumber,
-        workerColors: newWorkerColors,
-        activeWorkerBoxes: newActiveWorkerBoxes,
-        workerStaffIds: newWorkerStaffIds,
-      };
-      
-      console.log(`[useBoxHighlighting] Updated highlighting for box ${boxNumber} (${workerMode ? 'Worker' : 'Manager'} mode):`, {
-        workerId, 
-        workerColor, 
-        workerStaffId,
-        highlighting: newHighlighting
-      });
-      
-      return newHighlighting;
+    const mode = currentUser.role === 'worker' ? 'Worker' : 'Manager';
+    
+    console.log(`[useBoxHighlighting] Updated highlighting for box ${boxNumber} (${mode} mode):`, {
+      workerId,
+      workerColor,
+      workerStaffId,
+      highlighting
     });
-  }, [workerMode]);
 
-  // Clear all highlighting
-  const clearHighlighting = useCallback(() => {
+    setHighlighting(prev => ({
+      ...prev,
+      lastScannedBoxNumber: boxNumber,
+      workerColors: workerColor ? {
+        ...prev.workerColors,
+        [boxNumber]: workerColor
+      } : prev.workerColors,
+      activeWorkerBoxes: {
+        ...prev.activeWorkerBoxes,
+        [workerId]: boxNumber
+      },
+      workerStaffIds: workerStaffId ? {
+        ...prev.workerStaffIds,
+        [boxNumber]: workerStaffId
+      } : prev.workerStaffIds
+    }));
+  }, [currentUser]);
+
+  const clearHighlighting = useCallback((boxNumber: number) => {
+    setHighlighting(prev => ({
+      ...prev,
+      lastScannedBoxNumber: prev.lastScannedBoxNumber === boxNumber ? null : prev.lastScannedBoxNumber,
+      workerColors: {
+        ...prev.workerColors,
+        [boxNumber]: undefined
+      },
+      workerStaffIds: {
+        ...prev.workerStaffIds,
+        [boxNumber]: undefined
+      }
+    }));
+  }, []);
+
+  const clearAllHighlighting = useCallback(() => {
     setHighlighting({
       lastScannedBoxNumber: null,
-      workerColors: new Map(),
-      activeWorkerBoxes: new Map(),
-      workerStaffIds: new Map(),
+      workerColors: {},
+      activeWorkerBoxes: {},
+      workerStaffIds: {}
     });
   }, []);
 
-  // Get box highlight style based on priority system
-  const getBoxHighlight = useCallback((
-    boxNumber: number,
-    isComplete: boolean,
-    customerName?: string
-  ): {
-    backgroundColor: string;
-    borderColor: string;
-    textColor: string;
-    badgeColor: string;
-    workerStaffId?: string;
-  } => {
-    const workerColor = highlighting.workerColors.get(boxNumber);
-    const workerStaffId = highlighting.workerStaffIds.get(boxNumber);
-    
-    // Priority: Worker Color (50% transparent) > Empty Box > Complete > Default
-    // Worker color IS the "just scanned" state now
-    if (workerColor) {
-      // Convert hex color to CSS with 50% transparency
-      const rgbColor = hexToRgb(workerColor);
-      if (rgbColor) {
-        return {
-          backgroundColor: `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.5)`, // 50% transparency
-          borderColor: `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.8)`, // 80% for border
-          textColor: 'text-gray-800', // Darker text for readability
-          badgeColor: workerColor, // Use exact hex for badge
-          workerStaffId,
-        };
-      }
-    }
-    
-    // Empty box styling (grey background with black circle)
-    if (customerName === 'Empty' || customerName === 'Unassigned' || !customerName) {
-      return {
-        backgroundColor: 'bg-gray-300', // Grey background for empty boxes
-        borderColor: 'border-gray-400',
-        textColor: 'text-gray-700',
-        badgeColor: '#000000', // Black circle for empty box numbers
-      };
-    }
-    
-    if (isComplete) {
-      return {
-        backgroundColor: 'bg-red-50',
-        borderColor: 'border-red-300',
-        textColor: 'text-red-700',
-        badgeColor: 'bg-red-400',
-      };
-    }
-    
-    // Default grey for normal boxes
-    return {
-      backgroundColor: 'bg-gray-50',
-      borderColor: 'border-gray-200',
-      textColor: 'text-gray-500',
-      badgeColor: 'bg-gray-400',
-    };
-  }, [highlighting]);
+  // Auto-clear highlighting after 3 seconds for manager/supervisor views
+  useEffect(() => {
+    if (!currentUser || currentUser.role === 'worker') return;
+    if (!highlighting.lastScannedBoxNumber) return;
+
+    const timer = setTimeout(() => {
+      setHighlighting(prev => ({
+        ...prev,
+        lastScannedBoxNumber: null,
+        workerColors: {},
+        workerStaffIds: {}
+      }));
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [highlighting.lastScannedBoxNumber, currentUser?.role]);
 
   return {
     highlighting,
-    updateBoxHighlighting,
+    updateHighlighting,
     clearHighlighting,
-    getBoxHighlight,
+    clearAllHighlighting
   };
-}
-
-// Helper function to convert hex colors to RGB for transparency
-function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
-}
-
-// Helper function to convert hex colors to Tailwind color classes (kept for fallback)
-function hexToTailwindColor(hexColor: string): string {
-  const colorMap: { [key: string]: string } = {
-    '#3b82f6': 'blue',    // Worker 1 - blue
-    '#ef4444': 'red',     // Worker 2 - red  
-    '#10b981': 'emerald', // Worker 3 - green
-    '#f59e0b': 'amber',   // Worker 4 - yellow
-  };
-  
-  return colorMap[hexColor?.toLowerCase()] || 'gray';
 }
