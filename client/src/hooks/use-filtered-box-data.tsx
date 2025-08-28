@@ -32,13 +32,19 @@ interface FilteredBoxData {
 
 export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [], filterByGroups: string[] = []) {
   // Fetch box requirements data
-  const { data: boxRequirementsResponse, isLoading, error } = useQuery({
+  const { data: boxRequirementsResponse, isLoading: boxRequirementsLoading, error: boxRequirementsError } = useQuery({
     queryKey: [`/api/jobs/${jobId}/box-requirements`],
     enabled: !!jobId,
   });
 
+  // Fetch job data to get totalCustomers and boxLimit for complete range generation
+  const { data: jobResponse, isLoading: jobLoading, error: jobError } = useQuery({
+    queryKey: [`/api/jobs/${jobId}`],
+    enabled: !!jobId,
+  });
+
   const processedData = useMemo(() => {
-    if (!boxRequirementsResponse) {
+    if (!boxRequirementsResponse || !jobResponse) {
       return { boxData: [], availableProducts: [], availableGroups: [], isLoading: true };
     }
 
@@ -46,9 +52,11 @@ export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [
       boxRequirements: BoxRequirement[], 
       workers: Record<string, { id: string, name: string, staffId: string }> 
     };
+    const jobData = jobResponse as { job: { totalCustomers: number, boxLimit?: number } };
 
     const boxRequirements = boxRequirementsData.boxRequirements || [];
     const workersData = boxRequirementsData.workers || {};
+    const { totalCustomers, boxLimit } = jobData.job;
 
     // Get all unique product names for filtering, sorted alphabetically
     const productNamesSet = new Set(boxRequirements.map(req => req.productName));
@@ -58,50 +66,74 @@ export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [
     const groupNamesSet = new Set(boxRequirements.map(req => req.groupName).filter(Boolean));
     const availableGroups = Array.from(groupNamesSet).sort() as string[];
 
-    // Process box data
+    // ORIGINAL APPROACH: Generate complete box range from 1 to N
+    // where N = min(boxLimit || totalCustomers, totalCustomers)
+    const maxBoxes = boxLimit ? Math.min(boxLimit, totalCustomers) : totalCustomers;
     const boxes: { [key: number]: FilteredBoxData } = {};
     const isFiltering = filterByProducts.length > 0 || filterByGroups.length > 0;
 
+    // First, create all boxes from 1 to maxBoxes with "Empty" as default
+    for (let boxNumber = 1; boxNumber <= maxBoxes; boxNumber++) {
+      boxes[boxNumber] = {
+        boxNumber,
+        customerName: "Empty",
+        totalQty: 0,
+        scannedQty: 0,
+        isComplete: false,
+        groupName: undefined,
+        assignedWorker: undefined,
+        lastWorkerColor: undefined,
+        lastWorkerStaffId: undefined,
+        filteredTotalQty: 0,
+        filteredScannedQty: 0,
+      };
+    }
+
+    // Now populate existing box data from database (overwrite "Empty" boxes with actual data)
     boxRequirements.forEach(requirement => {
-      if (!boxes[requirement.boxNumber]) {
-        boxes[requirement.boxNumber] = {
-          boxNumber: requirement.boxNumber,
-          customerName: requirement.customerName,
-          totalQty: 0,
-          scannedQty: 0,
-          isComplete: true,
-          groupName: requirement.groupName,
-          assignedWorker: requirement.lastWorkerUserId ? workersData[requirement.lastWorkerUserId]?.name : undefined,
-          lastWorkerColor: requirement.lastWorkerColor,
-          lastWorkerStaffId: requirement.lastWorkerUserId ? workersData[requirement.lastWorkerUserId]?.staffId : undefined,
-          filteredTotalQty: 0,
-          filteredScannedQty: 0,
-        };
-      }
+      // Only process if box exists in our range
+      if (boxes[requirement.boxNumber]) {
+        // If this is the first requirement for this box, initialize it with real data
+        if (boxes[requirement.boxNumber].customerName === "Empty") {
+          boxes[requirement.boxNumber] = {
+            boxNumber: requirement.boxNumber,
+            customerName: requirement.customerName,
+            totalQty: 0,
+            scannedQty: 0,
+            isComplete: true,
+            groupName: requirement.groupName,
+            assignedWorker: requirement.lastWorkerUserId ? workersData[requirement.lastWorkerUserId]?.name : undefined,
+            lastWorkerColor: requirement.lastWorkerColor,
+            lastWorkerStaffId: requirement.lastWorkerUserId ? workersData[requirement.lastWorkerUserId]?.staffId : undefined,
+            filteredTotalQty: 0,
+            filteredScannedQty: 0,
+          };
+        }
 
-      // Always calculate full totals
-      boxes[requirement.boxNumber].totalQty += requirement.requiredQty;
-      boxes[requirement.boxNumber].scannedQty += requirement.scannedQty;
+        // Always calculate full totals
+        boxes[requirement.boxNumber].totalQty += requirement.requiredQty;
+        boxes[requirement.boxNumber].scannedQty += requirement.scannedQty;
 
-      // Update completion status - all items must be complete for box to be complete
-      boxes[requirement.boxNumber].isComplete = boxes[requirement.boxNumber].isComplete && requirement.isComplete;
+        // Update completion status - all items must be complete for box to be complete
+        boxes[requirement.boxNumber].isComplete = boxes[requirement.boxNumber].isComplete && requirement.isComplete;
 
-      // Calculate filtered quantities if filtering is active
-      const matchesProductFilter = filterByProducts.length === 0 || filterByProducts.includes(requirement.productName);
-      const matchesGroupFilter = filterByGroups.length === 0 || (requirement.groupName && filterByGroups.includes(requirement.groupName));
-      
-      if (isFiltering && matchesProductFilter && matchesGroupFilter) {
-        boxes[requirement.boxNumber].filteredTotalQty! += requirement.requiredQty;
-        boxes[requirement.boxNumber].filteredScannedQty! += requirement.scannedQty;
-      }
+        // Calculate filtered quantities if filtering is active
+        const matchesProductFilter = filterByProducts.length === 0 || filterByProducts.includes(requirement.productName);
+        const matchesGroupFilter = filterByGroups.length === 0 || (requirement.groupName && filterByGroups.includes(requirement.groupName));
+        
+        if (isFiltering && matchesProductFilter && matchesGroupFilter) {
+          boxes[requirement.boxNumber].filteredTotalQty! += requirement.requiredQty;
+          boxes[requirement.boxNumber].filteredScannedQty! += requirement.scannedQty;
+        }
 
-      // Update worker tracking (use most recent worker info)
-      if (requirement.lastWorkerColor) {
-        boxes[requirement.boxNumber].lastWorkerColor = requirement.lastWorkerColor;
-      }
-      if (requirement.lastWorkerUserId && workersData[requirement.lastWorkerUserId]) {
-        boxes[requirement.boxNumber].assignedWorker = workersData[requirement.lastWorkerUserId].name;
-        boxes[requirement.boxNumber].lastWorkerStaffId = workersData[requirement.lastWorkerUserId].staffId;
+        // Update worker tracking (use most recent worker info)
+        if (requirement.lastWorkerColor) {
+          boxes[requirement.boxNumber].lastWorkerColor = requirement.lastWorkerColor;
+        }
+        if (requirement.lastWorkerUserId && workersData[requirement.lastWorkerUserId]) {
+          boxes[requirement.boxNumber].assignedWorker = workersData[requirement.lastWorkerUserId].name;
+          boxes[requirement.boxNumber].lastWorkerStaffId = workersData[requirement.lastWorkerUserId].staffId;
+        }
       }
     });
 
@@ -121,11 +153,11 @@ export function useFilteredBoxData(jobId: string, filterByProducts: string[] = [
       availableGroups,
       isLoading: false,
     };
-  }, [boxRequirementsResponse, filterByProducts, filterByGroups]);
+  }, [boxRequirementsResponse, jobResponse, filterByProducts, filterByGroups]);
 
   return {
     ...processedData,
-    isLoading: isLoading || processedData.isLoading,
-    error,
+    isLoading: boxRequirementsLoading || jobLoading || processedData.isLoading,
+    error: boxRequirementsError || jobError,
   };
 }
