@@ -63,24 +63,24 @@ export default function WorkerScanner() {
 
   // Auto-redirect logic in useEffect to prevent render-time state updates
   useEffect(() => {
-    // Accessing userSession here assuming it's available in the scope or passed as a prop
-    // For demonstration, let's assume userSession is globally available or from context
-    const userSession = (window as any).userSession; // Replace with actual context if needed
-
-    if (!jobId) {
-      // Auto-assign to most recently active job if no jobId in URL
-      if (userSession?.currentJobId) {
-        setLocation(`/scanner/${userSession.currentJobId}`);
-        return;
-      }
-    } else if (userSession?.currentJobId && jobId !== userSession.currentJobId) {
-      // Show redirect prompt if user is on a different job
-      if (confirm(`You are currently assigned to a different job. Would you like to switch to your assigned job?`)) {
-        setLocation(`/scanner/${userSession.currentJobId}`);
-        return;
+    // Only redirect if we have assignments data and no jobId in URL
+    if (!jobId && assignmentsData?.assignments && assignmentsData.assignments.length > 0) {
+      const assignments = assignmentsData.assignments;
+      
+      if (assignments.length === 1) {
+        // Only one assignment - auto-redirect to that job
+        const assignment = assignments[0];
+        if (assignment.job && assignment.job.id) {
+          console.log(`[WorkerScanner] Auto-redirecting to job: ${assignment.job.id}`);
+          setLocation(`/scanner/${assignment.job.id}`);
+          return;
+        }
+      } else if (assignments.length > 1) {
+        // Multiple assignments - will show job selector below
+        setShowJobSelector(true);
       }
     }
-  }, [jobId, setLocation]); // Added setLocation to dependencies
+  }, [jobId, assignmentsData, setLocation]);
 
 
   const [scanError, setScanError] = useState<string | null>(null);
@@ -186,16 +186,26 @@ export default function WorkerScanner() {
     if (!user || user.role !== "worker" || !assignmentsData || jobId) return;
 
     const assignments = (assignmentsData as any)?.assignments || [];
+    console.log('[WorkerScanner] Processing assignments:', { assignments, jobId, user: user.staffId });
 
     if (assignments.length === 0) {
       // No assignments - stay on scanner page and show no assignments message
       setShowJobSelector(false);
+      console.log('[WorkerScanner] No assignments found for worker');
       return;
     } else if (assignments.length === 1) {
       // Only one assignment - auto-redirect to that job
-      setLocation(`/scanner/${assignments[0].jobId}`);
+      const assignment = assignments[0];
+      if (assignment.job && assignment.job.id) {
+        console.log(`[WorkerScanner] Single assignment found, redirecting to job: ${assignment.job.id}`);
+        setLocation(`/scanner/${assignment.job.id}`);
+      } else {
+        console.error('[WorkerScanner] Assignment found but job is null:', assignment);
+        setShowJobSelector(false);
+      }
     } else {
       // Multiple assignments - show job selector
+      console.log(`[WorkerScanner] Multiple assignments found (${assignments.length}), showing job selector`);
       setShowJobSelector(true);
     }
   }, [user, assignmentsData, jobId, setLocation]);
@@ -639,20 +649,44 @@ export default function WorkerScanner() {
       <div className="container mx-auto p-4">
         <Card>
           <CardContent className="p-6">
-            <div className="text-center">Loading job...</div>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading job...</p>
+            </div>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (jobError || !job) {
+  if (jobError || (!job && jobId)) {
+    console.error('[WorkerScanner] Job loading error:', { jobError, job, jobId, assignmentsData });
+    
     return (
       <div className="container mx-auto p-4">
         <Card>
           <CardContent className="p-6">
-            <div className="text-center text-red-500">
-              {jobError ? 'Error loading job' : 'Job not found'}
+            <div className="text-center">
+              <div className="text-red-500 mb-4">
+                {jobError ? 'Error loading job' : 'Job not found'}
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                {jobError 
+                  ? 'There was an error loading the job details. Please try again.' 
+                  : 'The requested job could not be found or you may not have access to it.'
+                }
+              </p>
+              <div className="space-y-2">
+                <Button onClick={() => setLocation('/scanner')} variant="outline">
+                  View My Jobs
+                </Button>
+                <Button onClick={() => {
+                  logout();
+                  setLocation("/login");
+                }} variant="ghost">
+                  Back to Login
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -719,6 +753,8 @@ export default function WorkerScanner() {
     }
 
     if (assignments.length > 1 || showJobSelector) {
+      console.log('[WorkerScanner] Showing job selector with assignments:', assignments);
+      
       return (
         <div className="min-h-screen bg-gray-50">
           <header className="bg-white shadow-sm border-b border-gray-200">
@@ -730,7 +766,7 @@ export default function WorkerScanner() {
                   </div>
                   <div>
                     <h1 className="text-xl font-bold text-gray-900">Select Job</h1>
-                    <p className="text-sm text-gray-600">Choose a job to work on</p>
+                    <p className="text-sm text-gray-600">Choose a job to work on ({assignments.length} available)</p>
                   </div>
                 </div>
                 <Button
@@ -752,6 +788,21 @@ export default function WorkerScanner() {
               <div className="grid gap-4">
                 {assignments.map((assignment: any) => {
                   const job = assignment.job;
+                  console.log('[WorkerScanner] Rendering assignment:', { assignmentId: assignment.id, job });
+                  
+                  if (!job) {
+                    return (
+                      <Card key={assignment.id} className="bg-red-50 border-red-200">
+                        <CardContent className="p-6">
+                          <div className="text-red-600">
+                            <h3 className="font-semibold">Job Error</h3>
+                            <p className="text-sm">Job details could not be loaded for assignment {assignment.id}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+                  
                   const completionPercentage = job ? Math.round((job.completedItems / job.totalProducts) * 100) : 0;
 
                   return (
@@ -759,7 +810,10 @@ export default function WorkerScanner() {
                       <CardContent className="p-6">
                         <div
                           className="flex items-center justify-between"
-                          onClick={() => setLocation(`/scanner/${assignment.jobId}`)}
+                          onClick={() => {
+                            console.log(`[WorkerScanner] Navigating to job: ${assignment.jobId}`);
+                            setLocation(`/scanner/${assignment.jobId}`);
+                          }}
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
