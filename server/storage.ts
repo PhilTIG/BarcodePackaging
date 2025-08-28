@@ -568,9 +568,6 @@ export class DatabaseStorage implements IStorage {
       const totalItems = totalItemsStats.totalItems || 0;
       const scannedItems = scannedItemsStats.scannedItems || 0;
 
-      const totalItems = progressStats.totalItems || 0;
-      const scannedItems = progressStats.scannedItems || 0;
-
       // Get box data efficiently with aggregation query
       // DISPLAY: Only show allocated boxes (boxNumber NOT NULL) for UI grid
       const boxData = await this.db
