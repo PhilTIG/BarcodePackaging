@@ -146,9 +146,10 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
   - **COMPLETED**: Removed polling from Manager dashboard, Supervisor view, Put aside manager
   - Files: Manager dashboard components, progress tracking hooks
 
-- [ ] **Task 4.1.2**: Remove check sessions polling
+- [x] **Task 4.1.2**: Remove check sessions polling **COMPLETED**
   - Target endpoint: `/api/check-sessions` (currently polling every 3-4 seconds)
   - Implement WebSocket-based session management
+  - **COMPLETED**: Removed polling intervals and added WebSocket-based session conflict checking
   - Files: Session management components, authentication hooks
 
 - [ ] **Task 4.1.3**: Remove put aside count polling
