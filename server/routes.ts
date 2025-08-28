@@ -1071,40 +1071,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('[Scan Event Debug] Created scan event:', scanEvent);
 
-      // PERFORMANCE FIX: Return response immediately, do heavy work async
-      res.json({ scanEvent });
+      // Update session statistics
+      await storage.updateScanSessionStats(sessionId);
 
-      // ASYNC: Do heavy operations after response is sent
-      setImmediate(async () => {
-        try {
-          // Update session statistics
-          await storage.updateScanSessionStats(sessionId);
+      // Auto-update job status based on scan progress
+      await storage.updateJobStatusBasedOnProgress(jobId);
 
-          // Auto-update job status based on scan progress
-          await storage.updateJobStatusBasedOnProgress(jobId);
-        } catch (error) {
-          console.error('[Scan Event] Async processing error:', error);
-        }
-      });
-
-      // Get worker's assigned color from job assignments (keep for WebSocket)
+      // Get worker's assigned color from job assignments
       const workerAssignment = await storage.checkExistingAssignment(jobId, req.user!.id);
 
-      // PERFORMANCE FIX: Send minimal WebSocket data, remove expensive aggregations
+      // PHASE 1 OPTIMIZATION: Get complete updated data for WebSocket broadcast
+      // This eliminates the need for clients to make additional API calls
 
-      // PERFORMANCE FIX: Send lightweight WebSocket broadcast with minimal data
+      // Get updated box requirements (replaces products query)
+      const updatedBoxRequirements = await storage.getBoxRequirementsByJobId(jobId);
+
+      // Transform box requirements to product format for UI compatibility
+      const transformedProducts = [];
+      const productMap = new Map();
+
+      // Collect unique product entries and aggregate quantities
+      for (const req of updatedBoxRequirements) {
+        const key = `${req.customerName}-${req.boxNumber}-${req.barCode}`; // Include barcode for product uniqueness
+        if (!productMap.has(key)) {
+          const worker = req.lastWorkerUserId ? await storage.getUserById(req.lastWorkerUserId) : null;
+          productMap.set(key, {
+            id: `${req.customerName}-${req.boxNumber}-${req.barCode}`, // Unique ID for the product within the box
+            customerName: req.customerName,
+            productName: req.productName,
+            barcode: req.barCode,
+            qty: 0, // Total required quantity for this product in this box
+            scannedQty: 0, // Total scanned quantity for this product in this box
+            boxNumber: req.boxNumber,
+            isComplete: true, // Assume complete unless a requirement is not
+            lastWorkerUserId: req.lastWorkerUserId,
+            lastWorkerColor: req.lastWorkerColor,
+            lastWorkerStaffId: worker?.staffId
+          });
+        }
+      }
+
+      // Aggregate scanned quantities and check completion status
+      for (const req of updatedBoxRequirements) {
+        const key = `${req.customerName}-${req.boxNumber}-${req.barCode}`;
+        const productEntry = productMap.get(key);
+
+        productEntry.qty += req.requiredQty;
+        productEntry.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
+        productEntry.isComplete = productEntry.isComplete && req.isComplete;
+
+        // Update worker info if this requirement has more recent worker data
+        if (req.lastWorkerUserId) {
+          productEntry.lastWorkerUserId = req.lastWorkerUserId;
+          productEntry.lastWorkerColor = req.lastWorkerColor;
+          productEntry.lastWorkerStaffId = (await storage.getUserById(req.lastWorkerUserId))?.staffId;
+        }
+      }
+
+      const finalProducts = Array.from(productMap.values());
+
+      // Get worker performance data
+      const workerPerformance = await storage.getJobWorkerPerformance(jobId, req.user!.id);
+
+      // Find the specific requirement that was just updated - handle case where boxRequirementId might be undefined
+      let updatedRequirement = null;
+      if (scanEvent.boxRequirementId) {
+        updatedRequirement = updatedBoxRequirements.find(req => req.id === scanEvent.boxRequirementId);
+      }
+      
+      // If we don't have a specific requirement, find by box number and barcode as fallback
+      if (!updatedRequirement && scanEvent.boxNumber && scanEvent.barCode) {
+        updatedRequirement = updatedBoxRequirements.find(req => 
+          req.boxNumber === scanEvent.boxNumber && req.barCode === scanEvent.barCode
+        );
+      }
+
+      const box = updatedBoxRequirements.reduce((acc, curr) => {
+        if (curr.boxNumber === scanEvent.boxNumber) {
+          if (!acc.number) acc.number = curr.boxNumber;
+          if (!acc.customerName) acc.customerName = curr.customerName;
+          // acc.products = [...(acc.products || []), curr]; // Not sending full products anymore
+          acc.isComplete = acc.isComplete && curr.isComplete;
+          acc.totalItems = (acc.totalItems || 0) + curr.requiredQty;
+          acc.scannedItems = (acc.scannedItems || 0) + (curr.scannedQty || 0);
+        }
+        return acc;
+      }, { number: undefined, customerName: undefined, products: [], isComplete: true, totalItems: 0, scannedItems: 0 });
+
+      box.completionPercentage = box.totalItems > 0 ? Math.round((box.scannedItems / box.totalItems) * 100) : 0;
+      const workerId = req.user!.id; // Use the authenticated user's ID
+
+
+      // Broadcast scan update to all clients for this job with delta updates
+      const broadcastData = {
+        jobId,
+        boxNumber: box.number,
+        customerName: box.customerName,
+        isComplete: box.isComplete,
+        totalItems: box.totalItems,
+        scannedItems: box.scannedItems,
+        completionPercentage: box.completionPercentage,
+        scannerId: workerId
+      };
+
+      // Only include changedProduct if we have a valid updated requirement
+      if (updatedRequirement) {
+        broadcastData.changedProduct = {
+          id: updatedRequirement.id,
+          productName: updatedRequirement.productName,
+          scannedQty: updatedRequirement.scannedQty,
+          targetQty: updatedRequirement.targetQty || updatedRequirement.requiredQty,
+          barcode: updatedRequirement.barCode
+        };
+      }
+
       broadcastToJob(jobId, {
         type: 'scan_update',
-        data: {
-          jobId,
-          boxNumber: scanEvent.boxNumber,
-          customerName: scanEvent.customerName,
-          productName: scanEvent.productName,
-          barcode: scanEvent.barCode,
-          scannerId: req.user!.id,
-          timestamp: scanEvent.scanTime
-        }
+        data: broadcastData
       });
+
+      res.json({ scanEvent });
     } catch (error) {
       console.error('Failed to record scan event:', error);
       res.status(500).json({ message: 'Failed to record scan event' });

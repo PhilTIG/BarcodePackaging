@@ -210,8 +210,11 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
           queryClient.setQueryData([`/api/jobs/${jobId}/progress`], message.data.progress);
         }
 
-        // PERFORMANCE FIX: Reduce invalidations - only invalidate when necessary
-        // Use direct data updates instead of invalidations for better performance
+        // Invalidate Manager Dashboard jobs list to update progress bars
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+
+        // CRITICAL FIX: Invalidate box-requirements to update Box Details Modal individual product progress bars
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         break;
 
       case "scan_event":
@@ -256,8 +259,20 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
           (window as any).handleUndoSuccess(message.data);
         }
 
-        // PERFORMANCE FIX: Minimal invalidations for undo events
+        // Invalidate query cache to update all monitoring interfaces
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // Manager Dashboard progress bars
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] }); // Supervisor View progress bars
+
+        // Invalidate worker performance data if we know which user performed the undo
+        if (message.data.userId) {
+          queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "worker-performance", message.data.userId] });
+        }
+
+        // Invalidate extra items query to update Extra Items modal
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "extra-items"] });
+
+        // CRITICAL FIX: Invalidate box-requirements to update Box Details Modal individual product progress bars
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         break;
 
