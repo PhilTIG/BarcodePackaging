@@ -37,18 +37,17 @@ export function CustomerProductDetailsModal({
   groupName
 }: CustomerProductDetailsModalProps) {
 
-  // Fetch customer product details from box requirements (same as Box Details Modal)
-  const { data: boxRequirementsResponse, isLoading } = useQuery({
-    queryKey: [`/api/jobs/${jobId}/box-requirements`],
+  // Fetch customer product details using the dedicated customer products endpoint
+  const { data: customerProductsResponse, isLoading } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/customers/${customerName}/products`],
     enabled: isOpen && !!customerName && !!jobId
   });
 
   if (!isOpen) return null;
 
-  // Filter box requirements for this specific customer (same logic as Box Details Modal)
-  const boxRequirementsData = boxRequirementsResponse as { boxRequirements: CustomerProduct[], workers: Record<string, { id: string, name: string, staffId: string }> } | undefined;
-  const allBoxRequirements: CustomerProduct[] = boxRequirementsData?.boxRequirements || [];
-  const customerProducts = allBoxRequirements.filter((req: CustomerProduct) => req.customerName === customerName);
+  // Use the dedicated customer products API response
+  const customerProductsData = customerProductsResponse as { products: CustomerProduct[] } | undefined;
+  const customerProducts = customerProductsData?.products || [];
 
   // Calculate overall completion percentage
   const totalRequiredQty = customerProducts.reduce((sum, product) => sum + product.requiredQty, 0);
