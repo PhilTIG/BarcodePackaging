@@ -61,28 +61,6 @@ export default function WorkerScanner() {
   const job = jobData?.job;
   const products = jobData?.products || [];
 
-  // Auto-redirect logic in useEffect to prevent render-time state updates
-  useEffect(() => {
-    // Only redirect if we have assignments data and no jobId in URL
-    if (!jobId && assignmentsData?.assignments && assignmentsData.assignments.length > 0) {
-      const assignments = assignmentsData.assignments;
-      
-      if (assignments.length === 1) {
-        // Only one assignment - auto-redirect to that job
-        const assignment = assignments[0];
-        if (assignment.job && assignment.job.id) {
-          console.log(`[WorkerScanner] Auto-redirecting to job: ${assignment.job.id}`);
-          setLocation(`/scanner/${assignment.job.id}`);
-          return;
-        }
-      } else if (assignments.length > 1) {
-        // Multiple assignments - will show job selector below
-        setShowJobSelector(true);
-      }
-    }
-  }, [jobId, assignmentsData, setLocation]);
-
-
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<{
     boxNumber: number | null;
@@ -113,6 +91,27 @@ export default function WorkerScanner() {
     retryDelay: 1000,
     // PHASE 1 OPTIMIZATION: No polling - WebSocket provides real-time updates
   });
+
+  // Auto-redirect logic in useEffect to prevent render-time state updates
+  useEffect(() => {
+    // Only redirect if we have assignments data and no jobId in URL
+    if (!jobId && assignmentsData?.assignments && assignmentsData.assignments.length > 0) {
+      const assignments = assignmentsData.assignments;
+      
+      if (assignments.length === 1) {
+        // Only one assignment - auto-redirect to that job
+        const assignment = assignments[0];
+        if (assignment.job && assignment.job.id) {
+          console.log(`[WorkerScanner] Auto-redirecting to job: ${assignment.job.id}`);
+          setLocation(`/scanner/${assignment.job.id}`);
+          return;
+        }
+      } else if (assignments.length > 1) {
+        // Multiple assignments - will show job selector below
+        setShowJobSelector(true);
+      }
+    }
+  }, [jobId, assignmentsData, setLocation]);
 
   // Fetch job details
   // The jobData is already fetched above, so this query might be redundant or need adjustment
