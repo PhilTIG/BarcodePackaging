@@ -155,7 +155,11 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
     const workerStaffId = highlighting.workerStaffIds[boxNumber] || lastWorkerUserId;
     
-    if (workerColor && products.some(p => p.scannedQty > 0)) {
+    // Filter products for this specific box to check if it has scanned items
+    const boxProducts = products.filter(p => p.boxNumber === boxNumber);
+    const hasScannedItems = boxProducts.some(p => p.scannedQty > 0);
+    
+    if (workerColor && hasScannedItems) {
       return {
         backgroundColor: '#f3f4f6', // Gray-100 (default)
         borderColor: '#d1d5db', // Gray-300 (default)
