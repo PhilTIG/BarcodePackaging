@@ -33,22 +33,27 @@ export function useBoxHighlighting(currentUser?: { role: string; id: string }) {
       highlighting
     });
 
-    setHighlighting(prev => ({
-      ...prev,
-      lastScannedBoxNumber: boxNumber,
-      workerColors: workerColor ? {
-        ...prev.workerColors,
-        [boxNumber]: workerColor
-      } : prev.workerColors,
-      activeWorkerBoxes: {
-        ...prev.activeWorkerBoxes,
-        [workerId]: boxNumber
-      },
-      workerStaffIds: workerStaffId ? {
-        ...prev.workerStaffIds,
-        [boxNumber]: workerStaffId
-      } : prev.workerStaffIds
-    }));
+    setHighlighting(prev => {
+      const newState = {
+        ...prev,
+        lastScannedBoxNumber: boxNumber,
+        workerColors: workerColor ? {
+          ...prev.workerColors,
+          [boxNumber]: workerColor
+        } : prev.workerColors,
+        activeWorkerBoxes: {
+          ...prev.activeWorkerBoxes,
+          [workerId]: boxNumber
+        },
+        workerStaffIds: workerStaffId ? {
+          ...prev.workerStaffIds,
+          [boxNumber]: workerStaffId
+        } : prev.workerStaffIds
+      };
+
+      console.log(`[useBoxHighlighting] New highlighting state:`, newState);
+      return newState;
+    });
   }, [currentUser]);
 
   const clearHighlighting = useCallback((boxNumber: number) => {
@@ -74,7 +79,8 @@ export function useBoxHighlighting(currentUser?: { role: string; id: string }) {
     });
   }, []);
 
-  // Auto-clear highlighting after 3 seconds for manager/supervisor views
+  // Auto-clear green highlighting after 3 seconds for manager/supervisor views
+  // Note: Worker colors should persist indefinitely - only the green "just scanned" highlight gets cleared
   useEffect(() => {
     if (!currentUser || currentUser.role === 'worker') return;
     if (!highlighting.lastScannedBoxNumber) return;
