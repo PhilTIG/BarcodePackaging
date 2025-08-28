@@ -109,6 +109,9 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
 
   // Helper function to determine box background color and styling
   const getBoxHighlight = useCallback((boxNumber: number, products: any[], isComplete: boolean, lastWorkerColor: string | null, lastWorkerUserId: string | null) => {
+    // Check if box is empty (no scanned items and no products assigned)
+    const isEmptyBox = !products.some(p => p.scannedQty > 0);
+
     // Priority 1: WORKER COLOR WITH 60% TRANSPARENCY - Just scanned (highest priority)
     if (highlighting.lastScannedBoxNumber === boxNumber) {
       const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
@@ -123,7 +126,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
           borderColor: workerColor,
           textColor: 'black',
           workerStaffId: highlighting.workerStaffIds[boxNumber],
-          numberCircleColor: workerColor // Keep circle color solid
+          numberCircleColor: isEmptyBox ? '#6b7280' : workerColor // Grey for empty, worker color for non-empty
         };
       }
       // Fallback if no worker color
@@ -131,7 +134,8 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         backgroundColor: 'rgba(34, 197, 94, 0.6)', // Green with 60% transparency
         borderColor: '#16a34a',
         textColor: 'black',
-        workerStaffId: highlighting.workerStaffIds[boxNumber]
+        workerStaffId: highlighting.workerStaffIds[boxNumber],
+        numberCircleColor: isEmptyBox ? '#6b7280' : undefined // Grey for empty boxes
       };
     }
 
@@ -161,7 +165,8 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     return {
       backgroundColor: '#f3f4f6', // Gray-100
       borderColor: '#d1d5db', // Gray-300
-      textColor: 'black'
+      textColor: 'black',
+      numberCircleColor: '#6b7280' // Grey circle for empty boxes
     };
   }, [highlighting]);
 
