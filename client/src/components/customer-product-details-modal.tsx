@@ -37,15 +37,18 @@ export function CustomerProductDetailsModal({
   groupName
 }: CustomerProductDetailsModalProps) {
 
-  // Fetch customer product details
-  const { data: productResponse, isLoading } = useQuery({
-    queryKey: [`/api/jobs/${jobId}/customers/${customerName}/products`],
+  // Fetch customer product details from box requirements (same as Box Details Modal)
+  const { data: boxRequirementsResponse, isLoading } = useQuery({
+    queryKey: [`/api/jobs/${jobId}/box-requirements`],
     enabled: isOpen && !!customerName && !!jobId
   });
 
   if (!isOpen) return null;
 
-  const customerProducts: CustomerProduct[] = (productResponse as any)?.products || [];
+  // Filter box requirements for this specific customer (same logic as Box Details Modal)
+  const boxRequirementsData = boxRequirementsResponse as { boxRequirements: CustomerProduct[], workers: Record<string, { id: string, name: string, staffId: string }> } | undefined;
+  const allBoxRequirements: CustomerProduct[] = boxRequirementsData?.boxRequirements || [];
+  const customerProducts = allBoxRequirements.filter((req: CustomerProduct) => req.customerName === customerName);
 
   // Calculate overall completion percentage
   const totalRequiredQty = customerProducts.reduce((sum, product) => sum + product.requiredQty, 0);
@@ -110,20 +113,7 @@ export function CustomerProductDetailsModal({
             </CardContent>
           </Card>
 
-          {/* Status Alert */}
-          <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950 dark:border-orange-800">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                  Unallocated Customer
-                </span>
-              </div>
-              <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
-                This customer is waiting for box assignment. Items will be automatically allocated when a box becomes available.
-              </p>
-            </CardContent>
-          </Card>
+          
 
           {/* Product Details */}
           <Card data-testid="customer-product-details-card">
@@ -142,43 +132,71 @@ export function CustomerProductDetailsModal({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {customerProducts.map((product, index) => {
-                    const productCompletion = product.requiredQty > 0 
-                      ? Math.round((product.scannedQty / product.requiredQty) * 100) 
-                      : 0;
-                    
-                    return (
-                      <div key={`${product.barCode}-${index}`} className="border rounded-lg p-4 space-y-3" data-testid={`customer-product-item-${index}`}>
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate flex-1" data-testid={`customer-product-name-${index}`}>
-                            {product.productName}
-                          </h4>
-                          <div className="flex items-center gap-2">
-                            {product.scannedQty >= product.requiredQty ? (
-                              <CheckCircle className="w-5 h-5 text-green-600" data-testid={`customer-product-status-complete-${index}`} />
-                            ) : (
-                              <XCircle className="w-5 h-5 text-red-500" data-testid={`customer-product-status-incomplete-${index}`} />
-                            )}
-                            <span className="text-sm font-bold" data-testid={`customer-product-quantity-${index}`}>
-                              {product.scannedQty}/{product.requiredQty}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Progress</span>
-                            <span>{productCompletion}%</span>
-                          </div>
-                          <Progress value={productCompletion} className="h-2" data-testid={`customer-product-progress-${index}`} />
-                        </div>
+                  {/* Group products by barCode and productName to aggregate quantities (same as Box Details Modal) */}
+                  {(() => {
+                    const productGroups = customerProducts.reduce((acc, req) => {
+                      const key = `${req.barCode}-${req.productName}`;
+                      if (!acc[key]) {
+                        acc[key] = {
+                          barCode: req.barCode,
+                          productName: req.productName,
+                          totalRequired: 0,
+                          totalScanned: 0,
+                          isComplete: true
+                        };
+                      }
+                      
+                      acc[key].totalRequired += req.requiredQty;
+                      acc[key].totalScanned += req.scannedQty;
+                      acc[key].isComplete = acc[key].isComplete && req.isComplete;
+                      
+                      return acc;
+                    }, {} as Record<string, {
+                      barCode: string;
+                      productName: string;
+                      totalRequired: number;
+                      totalScanned: number;
+                      isComplete: boolean;
+                    }>);
 
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          Barcode: {product.barCode}
+                    return Object.values(productGroups).map((product, index) => {
+                      const productCompletion = product.totalRequired > 0 
+                        ? Math.round((product.totalScanned / product.totalRequired) * 100) 
+                        : 0;
+                      
+                      return (
+                        <div key={`${product.barCode}-${index}`} className="border rounded-lg p-3 space-y-2" data-testid={`customer-product-item-${index}`}>
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-sm truncate flex-1" data-testid={`customer-product-name-${index}`}>
+                              {product.productName}
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              {product.totalScanned >= product.totalRequired ? (
+                                <CheckCircle className="w-4 h-4 text-green-600" data-testid={`customer-product-status-complete-${index}`} />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-red-500" data-testid={`customer-product-status-incomplete-${index}`} />
+                              )}
+                              <span className="text-sm font-bold" data-testid={`customer-product-quantity-${index}`}>
+                                {product.totalScanned}/{product.totalRequired}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span>Progress</span>
+                              <span>{productCompletion}%</span>
+                            </div>
+                            <Progress value={productCompletion} className="h-2" data-testid={`customer-product-progress-${index}`} />
+                          </div>
+
+                          <div className="text-xs text-muted-foreground">
+                            Barcode: {product.barCode}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </CardContent>
