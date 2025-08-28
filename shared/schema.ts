@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, decimal, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -273,26 +273,8 @@ export const boxHistory = pgTable("box_history", {
   boxSnapshot: jsonb("box_snapshot"), // Complete box requirements snapshot
 });
 
-export const putAsideItems = pgTable("put_aside_items", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: 'cascade' }),
-  barCode: text("bar_code").notNull(),
-  productName: text("product_name").notNull(),
-  customerName: text("customer_name").notNull(),
-  originalBoxNumber: integer("original_box_number").notNull(),
-  quantity: integer("quantity").notNull().default(1),
-  putAsideBy: varchar("put_aside_by").notNull().references(() => users.id),
-  putAsideAt: timestamp("put_aside_at").default(sql`now()`),
-
-  // Status tracking
-  status: text("status").notNull().default('available'), // 'available', 'reallocated', 'archived'
-  reallocatedToBox: integer("reallocated_to_box"),
-  reallocatedAt: timestamp("reallocated_at"),
-  reallocatedBy: varchar("reallocated_by").references(() => users.id),
-
-  // Reference to source scan event if applicable
-  sourceEventId: varchar("source_event_id").references(() => scanEvents.id),
-});
+// Put Aside items are now handled through scanEvents table with eventType='put_aside'
+// The putAsideItems table has been removed as it was unused in favor of the scanEvents approach
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
