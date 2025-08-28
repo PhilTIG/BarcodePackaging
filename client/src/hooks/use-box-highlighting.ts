@@ -51,7 +51,10 @@ export function useBoxHighlighting(currentUser?: { role: string; id: string }) {
         } : prev.workerStaffIds
       };
 
-      console.log(`[useBoxHighlighting] New highlighting state:`, newState);
+      console.log(`[useBoxHighlighting] New highlighting state - worker colors will persist:`, {
+        newWorkerColors: newState.workerColors,
+        newWorkerStaffIds: newState.workerStaffIds
+      });
       return newState;
     });
   }, [currentUser]);

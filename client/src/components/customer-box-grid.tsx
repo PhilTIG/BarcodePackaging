@@ -161,15 +161,6 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     const boxProducts = products.filter(p => p.boxNumber === boxNumber);
     const hasScannedItems = boxProducts.some(p => p.scannedQty > 0);
     
-    console.log(`[BoxHighlight] Box ${boxNumber} Priority 3 check:`, {
-      workerColor,
-      workerStaffId,
-      hasScannedItems,
-      highlightingWorkerColor: highlighting.workerColors[boxNumber],
-      databaseWorkerColor: lastWorkerColor,
-      boxProducts: boxProducts.length
-    });
-    
     if (workerColor && hasScannedItems) {
       return {
         backgroundColor: '#f3f4f6', // Gray-100 (default)
