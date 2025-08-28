@@ -77,7 +77,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     console.log(`[CustomerBoxGrid] WebSocket scan update: Box ${boxNumber}, Worker ${workerId}`, {
       workerColor,
       workerStaffId,
-      supervisorView: !!onBoxClick,
+      supervisorView,
       currentUser: user?.id
     });
 

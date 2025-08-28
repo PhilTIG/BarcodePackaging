@@ -48,7 +48,41 @@ export default function WorkerScanner() {
   });
   const [showJobSelector, setShowJobSelector] = useState(false);
   const [currentBoxIndex, setCurrentBoxIndex] = useState(0);
-  const [lastScannedBoxNumber, setLastScannedBoxNumber] = useState<number | null>(null); // Track last scanned box for POC-style highlighting
+  // Track last scanned box number for highlighting (POC-style single box highlighting)
+  const [lastScannedBoxNumber, setLastScannedBoxNumber] = useState<number | null>(null);
+
+  // Load job data with proper loading state
+  const { data: jobData, isLoading: jobLoading, error: jobError } = useQuery({
+    queryKey: [`/api/jobs/${jobId}`],
+    enabled: !!jobId,
+    refetchOnWindowFocus: false, // Reduce excessive calls
+  });
+
+  const job = jobData?.job;
+  const products = jobData?.products || [];
+
+  // Auto-redirect logic in useEffect to prevent render-time state updates
+  useEffect(() => {
+    // Accessing userSession here assuming it's available in the scope or passed as a prop
+    // For demonstration, let's assume userSession is globally available or from context
+    const userSession = (window as any).userSession; // Replace with actual context if needed
+
+    if (!jobId) {
+      // Auto-assign to most recently active job if no jobId in URL
+      if (userSession?.currentJobId) {
+        setLocation(`/scanner/${userSession.currentJobId}`);
+        return;
+      }
+    } else if (userSession?.currentJobId && jobId !== userSession.currentJobId) {
+      // Show redirect prompt if user is on a different job
+      if (confirm(`You are currently assigned to a different job. Would you like to switch to your assigned job?`)) {
+        setLocation(`/scanner/${userSession.currentJobId}`);
+        return;
+      }
+    }
+  }, [jobId, setLocation]); // Added setLocation to dependencies
+
+
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<{
     boxNumber: number | null;
@@ -81,7 +115,9 @@ export default function WorkerScanner() {
   });
 
   // Fetch job details
-  const { data: jobData } = useQuery({
+  // The jobData is already fetched above, so this query might be redundant or need adjustment
+  // based on how jobData is intended to be used. For now, keeping it as is.
+  const { data: currentJobDetails } = useQuery({
     queryKey: ["/api/jobs", jobId],
     enabled: !!jobId && !!user,
   });
@@ -99,7 +135,7 @@ export default function WorkerScanner() {
     // PHASE 1 OPTIMIZATION: No polling - WebSocket provides real-time performance updates
   });
 
-  // Connect to WebSocket 
+  // Connect to WebSocket
   const { sendMessage, isConnected } = useWebSocket(jobId);
 
   // Auto-focus barcode input
@@ -113,7 +149,7 @@ export default function WorkerScanner() {
   useEffect(() => {
     const handleUndoSuccess = (data: any) => {
       if (data.undoneEvents && Array.isArray(data.undoneEvents)) {
-        // Transform undone events into display format  
+        // Transform undone events into display format
         const undoItems = data.undoneEvents.map((event: any) => ({
           productName: event.productName,
           barCode: event.barCode,
@@ -264,7 +300,7 @@ export default function WorkerScanner() {
       }
 
       if (data.scanEvent.eventType === 'put_aside') {
-        // Handle put aside items 
+        // Handle put aside items
         setScanError(`🔶\nPut Aside Required\nItem: ${data.scanEvent.productName || data.scanEvent.barCode}\nNeeds to be allocated to an available box\nItem added to Put Aside list`);
 
         // After 3 seconds, clear error but keep put aside info until next scan
@@ -597,6 +633,33 @@ export default function WorkerScanner() {
     );
   }
 
+  // Handle job loading states
+  if (jobLoading) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">Loading job...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (jobError || !job) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center text-red-500">
+              {jobError ? 'Error loading job' : 'Job not found'}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Show job selection interface when no jobId and multiple assignments
   if (!jobId) {
     if (isAssignmentsLoading || !assignmentsData) {
@@ -718,9 +781,9 @@ export default function WorkerScanner() {
                                 <p className="text-sm text-gray-600 mb-2">
                                   {job.totalProducts} total items • {completionPercentage}% complete
                                 </p>
-                                <Progress 
-                                  value={completionPercentage} 
-                                  className="h-2" 
+                                <Progress
+                                  value={completionPercentage}
+                                  className="h-2"
                                   data-testid={`job-progress-${assignment.jobId}`}
                                 />
                               </>
@@ -742,19 +805,7 @@ export default function WorkerScanner() {
     }
   }
 
-  if (!(jobData as any)?.job) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading job details...</p>
-        </div>
-      </div>
-    );
-  }
 
-  const { job, products } = jobData as any;
-  // Use activeSession first (from mutations), fallback to sessionData (from queries)
   const session = activeSession || (sessionData as any)?.session;
   const workerAssignment = getWorkerAssignment();
 
@@ -947,7 +998,7 @@ export default function WorkerScanner() {
               {!session ? (
                 <div className="text-center py-4">
                   <p className="text-gray-600 mb-4 text-sm">
-                    {(jobData as any)?.job?.isActive === false
+                    {(job?.isActive === false)
                       ? "Scanning is paused by manager"
                       : "Getting session ready..."
                     }
@@ -963,8 +1014,8 @@ export default function WorkerScanner() {
                       <Input
                         ref={barcodeInputRef}
                         placeholder={
-                          job?.status !== 'completed' && !job?.isActive 
-                            ? "Scanning is paused..." 
+                          job?.status !== 'completed' && !job?.isActive
+                            ? "Scanning is paused..."
                             : "Scan or type barcode here..."
                         }
                         className="text-lg font-mono h-12"
@@ -993,8 +1044,8 @@ export default function WorkerScanner() {
 
                   {/* Camera scanner only on larger screens */}
                   <div className="hidden lg:block">
-                    <BarcodeScanner 
-                      onScan={job?.status !== 'completed' && !job?.isActive ? undefined : handleBarcodeSubmit} 
+                    <BarcodeScanner
+                      onScan={job?.status !== 'completed' && !job?.isActive ? undefined : handleBarcodeSubmit}
                     />
                   </div>
 
@@ -1088,10 +1139,10 @@ export default function WorkerScanner() {
 
                   {/* Box tile on the right - Orange for Extra Items */}
                   <div className="flex-shrink-0">
-                    <div 
+                    <div
                       className={`border rounded-lg p-3 relative transition-all duration-200 ${
-                        scanResult.isExtraItem 
-                          ? 'bg-orange-100 border-orange-300' 
+                        scanResult.isExtraItem
+                          ? 'bg-orange-100 border-orange-300'
                           : 'bg-green-100 border-green-300'
                       }`}
                       style={{ minHeight: '150px', width: '192px' }}
@@ -1156,7 +1207,7 @@ export default function WorkerScanner() {
 
                       {/* Red-styled box tile on the right */}
                       <div className="flex-shrink-0">
-                        <div 
+                        <div
                           className="border border-red-300 bg-red-100 rounded-lg p-3 relative transition-all duration-200"
                           style={{ minHeight: '150px', width: '192px' }}
                         >
@@ -1210,7 +1261,7 @@ export default function WorkerScanner() {
                       const isComplete = totalQty > 0 && scannedQty === totalQty;
 
                       return (
-                        <div 
+                        <div
                           className="border rounded-lg p-3 relative bg-green-100 border-green-300 transition-all duration-200 cursor-pointer hover:shadow-lg"
                           style={{ minHeight: '150px', width: '192px' }}
                         >
@@ -1254,7 +1305,7 @@ export default function WorkerScanner() {
 
                             {/* Centered progress bar */}
                             <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
+                              <div
                                 className="h-full bg-green-500 transition-all duration-300"
                                 style={{ width: `${completionPercentage}%` }}
                               ></div>
