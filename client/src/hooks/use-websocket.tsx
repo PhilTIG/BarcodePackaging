@@ -14,7 +14,6 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-  const [reconnectAttempts, setReconnectAttempts] = useState(0); // State to track reconnect attempts
 
   const connect = useCallback(() => {
     if (!user || wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -29,7 +28,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
 
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const host = window.location.host;
-
+        
         // Validate host exists and is not empty
         if (!host || host.trim() === '' || host.includes('undefined')) {
           console.error('[WebSocket] Invalid host detected:', host);
@@ -48,11 +47,11 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
           // Default case - use current host
           wsUrl = `${protocol}//${host}/ws`;
         }
-
+        
         console.log(`[WebSocket] Attempting connection to: ${wsUrl}`);
         console.log(`[WebSocket] Current location: ${window.location.href}`);
         console.log(`[WebSocket] Detected environment: ${host.includes('.replit.dev') ? 'Replit Production' : 'Other'}`);
-
+        
         // Basic URL validation
         try {
           new URL(wsUrl);
@@ -65,20 +64,13 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
 
       const wsUrl = getWebSocketUrl();
       console.log(`[WebSocket] Creating connection for user ${user.id}${jobId ? ` on job ${jobId}` : ''}`);
-
-      // Validate WebSocket URL before creating connection
-      if (!wsUrl || wsUrl.includes('undefined')) {
-        console.error('[WebSocket] Invalid WebSocket URL:', wsUrl);
-        return;
-      }
-
+      
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
         console.log(`[WebSocket] Connection established successfully`);
         setIsConnected(true);
-        setReconnectAttempts(0); // Reset reconnect attempts on successful connection
-
+        
         // Authenticate with the WebSocket server
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           const authMessage = {
@@ -106,22 +98,15 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
       wsRef.current.onclose = (event) => {
         console.log(`[WebSocket] Connection closed. Code: ${event.code}, Reason: ${event.reason}, Clean: ${event.wasClean}`);
         setIsConnected(false);
-
+        
         // Only attempt to reconnect if it wasn't a manual close (code 1000)
         if (event.code !== 1000 && user) {
-          const maxReconnectAttempts = 10; // Set a limit for reconnection attempts
-          if (reconnectAttempts < maxReconnectAttempts) {
-            // Exponential backoff for reconnection delay
-            const delay = Math.min(5000 * Math.pow(2, reconnectAttempts), 30000); // Start with 5s, double each time, max 30s
-            console.log(`[WebSocket] Scheduling reconnection attempt ${reconnectAttempts + 1} in ${delay}ms`);
-            reconnectTimeoutRef.current = setTimeout(() => {
-              setReconnectAttempts(prev => prev + 1); // Increment reconnect attempts
-              console.log(`[WebSocket] Attempting reconnection...`);
-              void connect();
-            }, delay);
-          } else {
-            console.error(`[WebSocket] Max reconnection attempts (${maxReconnectAttempts}) reached. Connection will not be re-established.`);
-          }
+          const delay = Math.min(3000 * Math.pow(1.5, 0), 30000); // Exponential backoff with max 30s
+          console.log(`[WebSocket] Scheduling reconnection in ${delay}ms`);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            console.log(`[WebSocket] Attempting reconnection...`);
+            void connect();
+          }, delay);
         }
       };
 
@@ -129,23 +114,21 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         console.error("[WebSocket] Connection error:", error);
         console.error("[WebSocket] Error details - ReadyState:", wsRef.current?.readyState, "URL:", wsRef.current?.url);
         setIsConnected(false);
-        // The onclose handler will typically trigger reconnection logic, so no direct reconnection here.
       };
     } catch (error) {
       console.error("[WebSocket] Failed to create connection:", error);
       console.error("[WebSocket] Error context - User:", user?.id, "JobId:", jobId, "Location:", window?.location?.href);
       setIsConnected(false);
-
+      
       // Retry connection after delay with exponential backoff
-      const retryDelay = Math.min(5000 * Math.pow(2, reconnectAttempts), 30000); // Same backoff as onclose
+      const retryDelay = 5000;
       console.log(`[WebSocket] Scheduling retry in ${retryDelay}ms due to connection creation failure`);
       reconnectTimeoutRef.current = setTimeout(() => {
-        setReconnectAttempts(prev => prev + 1); // Increment reconnect attempts
         console.log(`[WebSocket] Retrying connection after creation failure...`);
         void connect();
       }, retryDelay);
     }
-  }, [user, jobId, reconnectAttempts]); // Include reconnectAttempts in dependencies
+  }, [user, jobId]);
 
   const handleMessage = useCallback((message: WSMessage) => {
     switch (message.type) {
@@ -153,49 +136,16 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         // Server welcome message - acknowledge connection
         console.log("[WebSocket] Server connection confirmed:", message.data);
         break;
-
+        
       case "authenticated":
         // Authentication confirmation from server
         console.log("[WebSocket] Authentication confirmed:", message.data);
         break;
-
-      case 'scan_update':
-          queryClient.setQueryData(['job', message.data.jobId], (oldData: any) => {
-            if (!oldData) return oldData;
-
-            return {
-              ...oldData,
-              boxes: oldData.boxes.map((box: any) => {
-                if (box.number === message.data.boxNumber) {
-                  let updatedProducts = box.products;
-
-                  // Update only the changed product using delta data if available
-                  if (message.data.changedProduct) {
-                    updatedProducts = box.products.map((product: any) => {
-                      if (product.id === message.data.changedProduct.id) {
-                        return {
-                          ...product,
-                          ...message.data.changedProduct
-                        };
-                      }
-                      return product;
-                    });
-                  }
-
-                  return {
-                    ...box,
-                    products: updatedProducts,
-                    isComplete: message.data.isComplete,
-                    totalItems: message.data.totalItems,
-                    scannedItems: message.data.scannedItems,
-                    completionPercentage: message.data.completionPercentage
-                  };
-                }
-                return box;
-              })
-            };
-          });
-
+        
+      case "scan_update":
+        // PHASE 1 OPTIMIZATION: Direct data update without query invalidation
+        console.log("[WebSocket] Optimized scan update received:", message.data);
+        
         // Update job products data directly
         if (message.data.products) {
           queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
@@ -203,14 +153,14 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             products: message.data.products
           }));
         }
-
+        
         // Update worker performance data directly
         if (message.data.performance && (message.data as any).scanEvent && (message.data as any).scanEvent.userId) {
           queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", (message.data as any).scanEvent.userId], {
             performance: message.data.performance
           });
         }
-
+        
         // Trigger box highlighting update for real-time visual feedback
         if (onWorkerBoxUpdate && (message.data as any).scanEvent && (message.data as any).scanEvent.boxNumber && (message.data as any).scanEvent.userId) {
           const scanEvent = (message.data as any).scanEvent;
@@ -221,20 +171,23 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             scanEvent.workerStaffId || ''
           );
         }
-
+        
         // Update job progress if available
         if (message.data.progress) {
           queryClient.setQueryData([`/api/jobs/${jobId}/progress`], message.data.progress);
         }
-
-        // PERFORMANCE FIX: Reduce invalidations - only invalidate when necessary
-        // Use direct data updates instead of invalidations for better performance
+        
+        // Invalidate Manager Dashboard jobs list to update progress bars
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+        
+        // CRITICAL FIX: Invalidate box-requirements to update Box Details Modal individual product progress bars
+        queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         break;
-
+      
       case "scan_event":
         // Real-time scan event with direct data updates
         console.log("[WebSocket] Scan event received:", message.data);
-
+        
         // Update product data directly if provided
         if (message.data.products) {
           queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
@@ -242,14 +195,14 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             products: message.data.products
           }));
         }
-
+        
         // Update performance data directly if provided
         if (message.data.performance && message.data.userId) {
           queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", message.data.userId], {
             performance: message.data.performance
           });
         }
-
+        
         // Trigger box highlighting update for worker box highlighting
         if (onWorkerBoxUpdate && message.data.boxNumber && message.data.userId) {
           onWorkerBoxUpdate(
@@ -259,29 +212,41 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             message.data.workerStaffId as string
           );
         }
-
+        
         // CRITICAL FIX: Invalidate box-requirements to update Box Details Modal individual product progress bars
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         break;
-
+      
       case "undo_event":
         // Undo event handling - update UI in real-time
         console.log("[WebSocket] Undo event received:", message.data);
-
+        
         // Call the worker's handleUndoSuccess function if it exists (for worker scanner UI)
         if (typeof window !== 'undefined' && (window as any).handleUndoSuccess) {
           (window as any).handleUndoSuccess(message.data);
         }
-
-        // PERFORMANCE FIX: Minimal invalidations for undo events
+        
+        // Invalidate query cache to update all monitoring interfaces
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // Manager Dashboard progress bars
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] }); // Supervisor View progress bars
+        
+        // Invalidate worker performance data if we know which user performed the undo
+        if (message.data.userId) {
+          queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "worker-performance", message.data.userId] });
+        }
+        
+        // Invalidate extra items query to update Extra Items modal
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "extra-items"] });
+        
+        // CRITICAL FIX: Invalidate box-requirements to update Box Details Modal individual product progress bars
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         break;
-
+        
       case "undo_update":
         // PHASE 1 OPTIMIZATION: Direct data update for undo operations
         console.log("[WebSocket] Optimized undo update received:", message.data);
-
+        
         // Update job products data directly
         if (message.data.products) {
           queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
@@ -289,25 +254,25 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             products: message.data.products
           }));
         }
-
+        
         // Update worker performance data directly
         if (message.data.performance && message.data.userId) {
           queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", message.data.userId], {
             performance: message.data.performance
           });
         }
-
+        
         // CRITICAL FIX: Invalidate box-requirements to update Box Details Modal individual product progress bars
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         break;
-
+      
       case "job_status_update":
         // Job status changed
         console.log("[WebSocket] Job status update received:", message.data);
         queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", message.data.jobId] });
         break;
-
+      
       case "check_count_update":
         // CheckCount corrections applied - update all monitoring interfaces
         console.log("[WebSocket] CheckCount update received:", message.data);
@@ -315,11 +280,11 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
         queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
         queryClient.invalidateQueries({ queryKey: ["/api/check-sessions"] });
-
+        
         // CRITICAL FIX: Invalidate box-requirements and CheckCount sessions with jobId
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/check-sessions?jobId=${jobId}`] });
-
+        
         // Show user feedback about the CheckCount correction
         if (message.data && message.data.applyCorrections && Array.isArray(message.data.corrections) && message.data.corrections.length > 0) {
           console.log(`[CheckCount] Box ${message.data.boxNumber} corrections applied by ${message.data.userName}`);
@@ -345,7 +310,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         // Worker session terminated due to job locking
         console.log("[WebSocket] Session terminated - job locked:", message.data);
         queryClient.invalidateQueries({ queryKey: ["/api/users/me/assignments"] });
-
+        
         // Handle session termination (could redirect to worker selection or show notification)
         if (typeof window !== 'undefined' && window.location.pathname.includes('/worker-scanner')) {
           // If worker is currently in scanning interface, redirect them
@@ -371,12 +336,12 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
           });
         }
         break;
-
+      
       case "box_transferred":
         // Handle box transfer events - OPTION 1: Direct data injection (like scan_update)
         console.log("[WebSocket] Box transfer event received:", message.data);
         console.log("[WebSocket] Box transferred - injecting updated data for instant UI refresh");
-
+        
         // Direct data injection (follows proven scan_update pattern)
         if (message.data.products) {
           queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
@@ -384,22 +349,22 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             products: message.data.products  // NEW DATA PROVIDED - instant UI update
           }));
         }
-
+        
         // Still invalidate other queries for additional components
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
         queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // Manager Dashboard
-
+        
         // Force worker view re-render by invalidating worker-specific queries
         queryClient.invalidateQueries({ queryKey: ["/api/users/me/assignments"] });
         queryClient.invalidateQueries({ queryKey: ["/api/scan-sessions/my-active"] });
         break;
-
+      
       case "box_emptied":
         // Handle box empty events - OPTION 1: Direct data injection (like scan_update)
         console.log("[WebSocket] Box empty event received:", message.data);
         console.log("[WebSocket] Box emptied - injecting updated data for instant UI refresh");
-
+        
         // Direct data injection (follows proven scan_update pattern)
         if (message.data.products) {
           queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => ({
@@ -407,48 +372,47 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             products: message.data.products  // NEW DATA PROVIDED - instant UI update
           }));
         }
-
+        
         // Still invalidate other queries for additional components
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/progress`] });
         queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // Manager Dashboard
-
+        
         // Force worker view re-render by invalidating worker-specific queries
         queryClient.invalidateQueries({ queryKey: ["/api/users/me/assignments"] });
         queryClient.invalidateQueries({ queryKey: ["/api/scan-sessions/my-active"] });
         break;
-
+      
       default:
         console.log("[WebSocket] Unknown message type received:", message.type, message.data);
     }
   }, [jobId, onWorkerBoxUpdate]);
 
-  const sendMessage = useCallback((message: WSMessage) => {
+  const sendMessage = (message: WSMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       console.log(`[WebSocket] Sending message:`, message);
       wsRef.current.send(JSON.stringify(message));
     } else {
       console.warn(`[WebSocket] Cannot send message - connection not open. ReadyState: ${wsRef.current?.readyState}`, message);
     }
-  }, []);
+  };
 
-  const disconnect = useCallback(() => {
+  const disconnect = () => {
     console.log(`[WebSocket] Manual disconnection requested`);
-
+    
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = undefined;
     }
-
+    
     if (wsRef.current) {
       // Close with code 1000 (normal closure) to prevent reconnection
       wsRef.current.close(1000, "Manual disconnect");
       wsRef.current = null;
     }
-
+    
     setIsConnected(false);
-    setReconnectAttempts(0); // Reset reconnect attempts on manual disconnect
-  }, []);
+  };
 
   useEffect(() => {
     if (user) {
@@ -458,7 +422,7 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
     return () => {
       disconnect();
     };
-  }, [connect, disconnect]); // Depend on connect and disconnect
+  }, [connect]);
 
   return {
     isConnected,

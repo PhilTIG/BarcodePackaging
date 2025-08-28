@@ -48,19 +48,7 @@ export default function WorkerScanner() {
   });
   const [showJobSelector, setShowJobSelector] = useState(false);
   const [currentBoxIndex, setCurrentBoxIndex] = useState(0);
-  // Track last scanned box number for highlighting (POC-style single box highlighting)
-  const [lastScannedBoxNumber, setLastScannedBoxNumber] = useState<number | null>(null);
-
-  // Load job data with proper loading state
-  const { data: jobData, isLoading: jobLoading, error: jobError } = useQuery({
-    queryKey: [`/api/jobs/${jobId}`],
-    enabled: !!jobId,
-    refetchOnWindowFocus: false, // Reduce excessive calls
-  });
-
-  const job = jobData?.job;
-  const products = jobData?.products || [];
-
+  const [lastScannedBoxNumber, setLastScannedBoxNumber] = useState<number | null>(null); // Track last scanned box for POC-style highlighting
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<{
     boxNumber: number | null;
@@ -92,31 +80,8 @@ export default function WorkerScanner() {
     // PHASE 1 OPTIMIZATION: No polling - WebSocket provides real-time updates
   });
 
-  // Auto-redirect logic in useEffect to prevent render-time state updates
-  useEffect(() => {
-    // Only redirect if we have assignments data and no jobId in URL
-    if (!jobId && assignmentsData?.assignments && assignmentsData.assignments.length > 0) {
-      const assignments = assignmentsData.assignments;
-      
-      if (assignments.length === 1) {
-        // Only one assignment - auto-redirect to that job
-        const assignment = assignments[0];
-        if (assignment.job && assignment.job.id) {
-          console.log(`[WorkerScanner] Auto-redirecting to job: ${assignment.job.id}`);
-          setLocation(`/scanner/${assignment.job.id}`);
-          return;
-        }
-      } else if (assignments.length > 1) {
-        // Multiple assignments - will show job selector below
-        setShowJobSelector(true);
-      }
-    }
-  }, [jobId, assignmentsData, setLocation]);
-
   // Fetch job details
-  // The jobData is already fetched above, so this query might be redundant or need adjustment
-  // based on how jobData is intended to be used. For now, keeping it as is.
-  const { data: currentJobDetails } = useQuery({
+  const { data: jobData } = useQuery({
     queryKey: ["/api/jobs", jobId],
     enabled: !!jobId && !!user,
   });
@@ -134,7 +99,7 @@ export default function WorkerScanner() {
     // PHASE 1 OPTIMIZATION: No polling - WebSocket provides real-time performance updates
   });
 
-  // Connect to WebSocket
+  // Connect to WebSocket 
   const { sendMessage, isConnected } = useWebSocket(jobId);
 
   // Auto-focus barcode input
@@ -148,7 +113,7 @@ export default function WorkerScanner() {
   useEffect(() => {
     const handleUndoSuccess = (data: any) => {
       if (data.undoneEvents && Array.isArray(data.undoneEvents)) {
-        // Transform undone events into display format
+        // Transform undone events into display format  
         const undoItems = data.undoneEvents.map((event: any) => ({
           productName: event.productName,
           barCode: event.barCode,
@@ -185,26 +150,16 @@ export default function WorkerScanner() {
     if (!user || user.role !== "worker" || !assignmentsData || jobId) return;
 
     const assignments = (assignmentsData as any)?.assignments || [];
-    console.log('[WorkerScanner] Processing assignments:', { assignments, jobId, user: user.staffId });
 
     if (assignments.length === 0) {
       // No assignments - stay on scanner page and show no assignments message
       setShowJobSelector(false);
-      console.log('[WorkerScanner] No assignments found for worker');
       return;
     } else if (assignments.length === 1) {
       // Only one assignment - auto-redirect to that job
-      const assignment = assignments[0];
-      if (assignment.job && assignment.job.id) {
-        console.log(`[WorkerScanner] Single assignment found, redirecting to job: ${assignment.job.id}`);
-        setLocation(`/scanner/${assignment.job.id}`);
-      } else {
-        console.error('[WorkerScanner] Assignment found but job is null:', assignment);
-        setShowJobSelector(false);
-      }
+      setLocation(`/scanner/${assignments[0].jobId}`);
     } else {
       // Multiple assignments - show job selector
-      console.log(`[WorkerScanner] Multiple assignments found (${assignments.length}), showing job selector`);
       setShowJobSelector(true);
     }
   }, [user, assignmentsData, jobId, setLocation]);
@@ -309,7 +264,7 @@ export default function WorkerScanner() {
       }
 
       if (data.scanEvent.eventType === 'put_aside') {
-        // Handle put aside items
+        // Handle put aside items 
         setScanError(`🔶\nPut Aside Required\nItem: ${data.scanEvent.productName || data.scanEvent.barCode}\nNeeds to be allocated to an available box\nItem added to Put Aside list`);
 
         // After 3 seconds, clear error but keep put aside info until next scan
@@ -642,57 +597,6 @@ export default function WorkerScanner() {
     );
   }
 
-  // Handle job loading states
-  if (jobLoading) {
-    return (
-      <div className="container mx-auto p-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading job...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (jobError || (!job && jobId)) {
-    console.error('[WorkerScanner] Job loading error:', { jobError, job, jobId, assignmentsData });
-    
-    return (
-      <div className="container mx-auto p-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <div className="text-red-500 mb-4">
-                {jobError ? 'Error loading job' : 'Job not found'}
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                {jobError 
-                  ? 'There was an error loading the job details. Please try again.' 
-                  : 'The requested job could not be found or you may not have access to it.'
-                }
-              </p>
-              <div className="space-y-2">
-                <Button onClick={() => setLocation('/scanner')} variant="outline">
-                  View My Jobs
-                </Button>
-                <Button onClick={() => {
-                  logout();
-                  setLocation("/login");
-                }} variant="ghost">
-                  Back to Login
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   // Show job selection interface when no jobId and multiple assignments
   if (!jobId) {
     if (isAssignmentsLoading || !assignmentsData) {
@@ -752,8 +656,6 @@ export default function WorkerScanner() {
     }
 
     if (assignments.length > 1 || showJobSelector) {
-      console.log('[WorkerScanner] Showing job selector with assignments:', assignments);
-      
       return (
         <div className="min-h-screen bg-gray-50">
           <header className="bg-white shadow-sm border-b border-gray-200">
@@ -765,7 +667,7 @@ export default function WorkerScanner() {
                   </div>
                   <div>
                     <h1 className="text-xl font-bold text-gray-900">Select Job</h1>
-                    <p className="text-sm text-gray-600">Choose a job to work on ({assignments.length} available)</p>
+                    <p className="text-sm text-gray-600">Choose a job to work on</p>
                   </div>
                 </div>
                 <Button
@@ -787,21 +689,6 @@ export default function WorkerScanner() {
               <div className="grid gap-4">
                 {assignments.map((assignment: any) => {
                   const job = assignment.job;
-                  console.log('[WorkerScanner] Rendering assignment:', { assignmentId: assignment.id, job });
-                  
-                  if (!job) {
-                    return (
-                      <Card key={assignment.id} className="bg-red-50 border-red-200">
-                        <CardContent className="p-6">
-                          <div className="text-red-600">
-                            <h3 className="font-semibold">Job Error</h3>
-                            <p className="text-sm">Job details could not be loaded for assignment {assignment.id}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  }
-                  
                   const completionPercentage = job ? Math.round((job.completedItems / job.totalProducts) * 100) : 0;
 
                   return (
@@ -809,10 +696,7 @@ export default function WorkerScanner() {
                       <CardContent className="p-6">
                         <div
                           className="flex items-center justify-between"
-                          onClick={() => {
-                            console.log(`[WorkerScanner] Navigating to job: ${assignment.jobId}`);
-                            setLocation(`/scanner/${assignment.jobId}`);
-                          }}
+                          onClick={() => setLocation(`/scanner/${assignment.jobId}`)}
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
@@ -834,9 +718,9 @@ export default function WorkerScanner() {
                                 <p className="text-sm text-gray-600 mb-2">
                                   {job.totalProducts} total items • {completionPercentage}% complete
                                 </p>
-                                <Progress
-                                  value={completionPercentage}
-                                  className="h-2"
+                                <Progress 
+                                  value={completionPercentage} 
+                                  className="h-2" 
                                   data-testid={`job-progress-${assignment.jobId}`}
                                 />
                               </>
@@ -858,7 +742,19 @@ export default function WorkerScanner() {
     }
   }
 
+  if (!(jobData as any)?.job) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading job details...</p>
+        </div>
+      </div>
+    );
+  }
 
+  const { job, products } = jobData as any;
+  // Use activeSession first (from mutations), fallback to sessionData (from queries)
   const session = activeSession || (sessionData as any)?.session;
   const workerAssignment = getWorkerAssignment();
 
@@ -1051,7 +947,7 @@ export default function WorkerScanner() {
               {!session ? (
                 <div className="text-center py-4">
                   <p className="text-gray-600 mb-4 text-sm">
-                    {(job?.isActive === false)
+                    {(jobData as any)?.job?.isActive === false
                       ? "Scanning is paused by manager"
                       : "Getting session ready..."
                     }
@@ -1067,8 +963,8 @@ export default function WorkerScanner() {
                       <Input
                         ref={barcodeInputRef}
                         placeholder={
-                          job?.status !== 'completed' && !job?.isActive
-                            ? "Scanning is paused..."
+                          job?.status !== 'completed' && !job?.isActive 
+                            ? "Scanning is paused..." 
                             : "Scan or type barcode here..."
                         }
                         className="text-lg font-mono h-12"
@@ -1097,8 +993,8 @@ export default function WorkerScanner() {
 
                   {/* Camera scanner only on larger screens */}
                   <div className="hidden lg:block">
-                    <BarcodeScanner
-                      onScan={job?.status !== 'completed' && !job?.isActive ? undefined : handleBarcodeSubmit}
+                    <BarcodeScanner 
+                      onScan={job?.status !== 'completed' && !job?.isActive ? undefined : handleBarcodeSubmit} 
                     />
                   </div>
 
@@ -1192,10 +1088,10 @@ export default function WorkerScanner() {
 
                   {/* Box tile on the right - Orange for Extra Items */}
                   <div className="flex-shrink-0">
-                    <div
+                    <div 
                       className={`border rounded-lg p-3 relative transition-all duration-200 ${
-                        scanResult.isExtraItem
-                          ? 'bg-orange-100 border-orange-300'
+                        scanResult.isExtraItem 
+                          ? 'bg-orange-100 border-orange-300' 
                           : 'bg-green-100 border-green-300'
                       }`}
                       style={{ minHeight: '150px', width: '192px' }}
@@ -1260,7 +1156,7 @@ export default function WorkerScanner() {
 
                       {/* Red-styled box tile on the right */}
                       <div className="flex-shrink-0">
-                        <div
+                        <div 
                           className="border border-red-300 bg-red-100 rounded-lg p-3 relative transition-all duration-200"
                           style={{ minHeight: '150px', width: '192px' }}
                         >
@@ -1314,7 +1210,7 @@ export default function WorkerScanner() {
                       const isComplete = totalQty > 0 && scannedQty === totalQty;
 
                       return (
-                        <div
+                        <div 
                           className="border rounded-lg p-3 relative bg-green-100 border-green-300 transition-all duration-200 cursor-pointer hover:shadow-lg"
                           style={{ minHeight: '150px', width: '192px' }}
                         >
@@ -1358,7 +1254,7 @@ export default function WorkerScanner() {
 
                             {/* Centered progress bar */}
                             <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div
+                              <div 
                                 className="h-full bg-green-500 transition-all duration-300"
                                 style={{ width: `${completionPercentage}%` }}
                               ></div>
@@ -1392,10 +1288,6 @@ export default function WorkerScanner() {
               onBoxScanUpdate={(boxNumber, workerId, workerColor) => {
                 // POC-style single box highlighting - only one box highlighted at a time
                 setLastScannedBoxNumber(boxNumber);
-              }}
-              onBoxClick={(boxNumber, customerName, products) => {
-                // Box click handler for worker view - could show box details
-                console.log(`Box ${boxNumber} clicked for customer ${customerName}`);
               }}
               onCheckCount={(boxNumber, jobId) => {
                 // Navigate to dedicated CheckCount page

@@ -165,7 +165,7 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
   - **COMPLETED**: Removed 15-second polling interval from manager dashboard
   - Files: Job list components, manager dashboard
 
-#### **Step 2: Remove Client-Side Query Invalidations (HIGH PRIORITY)** ✅ **COMPLETED**
+#### **Step 2: Remove Client-Side Query Invalidations (HIGH PRIORITY)**
 - [x] **Task 4.2.1**: Identify mutation-triggered invalidations **COMPLETED**
   - Search for React Query `invalidateQueries` calls in scan mutations
   - Document which mutations trigger broad invalidations
@@ -179,10 +179,9 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
   - **⚠️ PUT ASIDE REMINDER**: Verified Put Aside mutations use WebSocket-only updates
   - Files: worker-scanner.tsx, manager-dashboard.tsx, supervisor-view.tsx
 
-- [x] **Task 4.2.3**: Fix double data fetching **COMPLETED**
+- [ ] **Task 4.2.3**: Fix double data fetching
   - Prevent both mutation response AND WebSocket events from triggering same data fetches
   - Implement WebSocket-only data flow for real-time operations
-  - **COMPLETED**: Verified no duplicate API calls in console logs, WebSocket-only updates working
   - Files: WebSocket hooks, mutation response handlers
 
 #### **Step 3: Optimize WebSocket Message Payloads (MEDIUM PRIORITY)**
@@ -191,12 +190,11 @@ This plan addresses TypeScript errors, redundant database structures, API endpoi
   - Real-time updates broadcasting `scan_update`, `box_emptied`, `box_transferred` events
   - Client integration complete with TypeScript interfaces
 
-- [x] **Task 4.3.2**: Implement delta updates **COMPLETED**
+- [ ] **Task 4.3.2**: Implement delta updates
   - Send only changed box data instead of full products array (currently 40+ objects per update)
   - Reduce WebSocket message size by 70-80%
-  - **COMPLETED**: Implemented delta updates sending only changed product data instead of full arrays
-  - **⚠️ PUT ASIDE REMINDER**: Verified no references to removed table
-  - Files: `server/routes.ts` WebSocket broadcasting, `client/src/hooks/use-websocket.tsx`
+  - **⚠️ PUT ASIDE REMINDER**: Ensure delta updates don't reference removed table
+  - Files: `server/routes.ts` WebSocket broadcasting, message optimization
 
 - [ ] **Task 4.3.3**: Optimize message structure
   - Remove redundant data from WebSocket messages

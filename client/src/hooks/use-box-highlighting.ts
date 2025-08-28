@@ -19,7 +19,7 @@ interface UseBoxHighlightingOptions {
 
 export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
   const { workerMode = false } = options;
-
+  
   const [highlighting, setHighlighting] = useState<BoxHighlighting>({
     lastScannedBoxNumber: null,
     workerColors: new Map(),
@@ -51,7 +51,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
         // Manager/Supervisor Mode: Keep all worker highlighting, replace only for same worker
         newWorkerColors.clear();
         newWorkerStaffIds.clear();
-
+        
         // Copy existing data
         prev.workerColors.forEach((color, box) => newWorkerColors.set(box, color));
         prev.workerStaffIds.forEach((staffId, box) => newWorkerStaffIds.set(box, staffId));
@@ -64,7 +64,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
             newWorkerColors.delete(previousBox);
             newWorkerStaffIds.delete(previousBox);
           }
-
+          
           // Set current box as this worker's active box
           newActiveWorkerBoxes.set(workerId, boxNumber);
         }
@@ -84,14 +84,14 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
         activeWorkerBoxes: newActiveWorkerBoxes,
         workerStaffIds: newWorkerStaffIds,
       };
-
+      
       console.log(`[useBoxHighlighting] Updated highlighting for box ${boxNumber} (${workerMode ? 'Worker' : 'Manager'} mode):`, {
-        workerId,
-        workerColor,
+        workerId, 
+        workerColor, 
         workerStaffId,
         highlighting: newHighlighting
       });
-
+      
       return newHighlighting;
     });
   }, [workerMode]);
@@ -120,7 +120,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
   } => {
     const workerColor = highlighting.workerColors.get(boxNumber);
     const workerStaffId = highlighting.workerStaffIds.get(boxNumber);
-
+    
     // Priority: Worker Color (50% transparent) > Empty Box > Complete > Default
     // Worker color IS the "just scanned" state now
     if (workerColor) {
@@ -136,7 +136,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
         };
       }
     }
-
+    
     // Empty box styling (grey background with black circle)
     if (customerName === 'Empty' || customerName === 'Unassigned' || !customerName) {
       return {
@@ -146,7 +146,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
         badgeColor: '#000000', // Black circle for empty box numbers
       };
     }
-
+    
     if (isComplete) {
       return {
         backgroundColor: 'bg-red-50',
@@ -155,7 +155,7 @@ export function useBoxHighlighting(options: UseBoxHighlightingOptions = {}) {
         badgeColor: 'bg-red-400',
       };
     }
-
+    
     // Default grey for normal boxes
     return {
       backgroundColor: 'bg-gray-50',
@@ -187,10 +187,10 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 function hexToTailwindColor(hexColor: string): string {
   const colorMap: { [key: string]: string } = {
     '#3b82f6': 'blue',    // Worker 1 - blue
-    '#ef4444': 'red',     // Worker 2 - red
+    '#ef4444': 'red',     // Worker 2 - red  
     '#10b981': 'emerald', // Worker 3 - green
     '#f59e0b': 'amber',   // Worker 4 - yellow
   };
-
+  
   return colorMap[hexColor?.toLowerCase()] || 'gray';
 }
