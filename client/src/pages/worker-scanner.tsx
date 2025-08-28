@@ -689,7 +689,7 @@ export default function WorkerScanner() {
               <div className="grid gap-4">
                 {assignments.map((assignment: any) => {
                   const job = assignment.job;
-                  // Progress calculation: completedItems includes ALL customer items (allocated + unallocated)
+                  // Unified progress calculation: includes items from ALL transfer sequences
                   const completionPercentage = job ? Math.round((job.completedItems / job.totalProducts) * 100) : 0;
 
                   return (

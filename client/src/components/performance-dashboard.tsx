@@ -26,7 +26,7 @@ interface PerformanceDashboardProps {
 }
 
 export function PerformanceDashboard({ jobId, supervisorView = false }: PerformanceDashboardProps) {
-  // Progress data includes ALL customer items (allocated + unallocated) for accurate percentage
+  // Unified progress data includes items from ALL transfer sequences for accurate percentage
   const { data: progressData } = useQuery({
     queryKey: ["/api/jobs", jobId, "progress"],
     enabled: !!jobId,

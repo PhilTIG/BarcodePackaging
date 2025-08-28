@@ -945,7 +945,7 @@ export default function ManagerDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(jobsData as any)?.jobs?.map((job: any) => {
-                  // Progress calculation now considers ALL items, not just box-based
+                  // Unified progress calculation: includes items from ALL transfer sequences
                   const progressPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
                   const isCompleted = progressPercentage === 100;
 

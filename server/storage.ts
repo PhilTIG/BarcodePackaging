@@ -387,7 +387,7 @@ export class DatabaseStorage implements IStorage {
       let completedItems = 0;
 
       if (boxRequirements.length > 0) {
-        // PROGRESS CALCULATION: Include ALL customer items (allocated + unallocated)
+        // UNIFIED PROGRESS CALCULATION: Include items from ALL transfer sequences
         totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
         completedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
       } else {
@@ -528,8 +528,9 @@ export class DatabaseStorage implements IStorage {
       // Get job with products
       const job = await this.getJobById(id);
 
-      // PROGRESS CALCULATION: Include ALL customer items (allocated + unallocated)
+      // UNIFIED PROGRESS CALCULATION: Include items from ALL transfer sequences
       // This gives the true progress: items scanned vs all items from original CSV
+      // Including archived/transferred customers in the total calculation
       const [progressStats] = await this.db
         .select({
           totalItems: sql<number>`COALESCE(SUM(${boxRequirements.requiredQty}), 0)`,
@@ -538,7 +539,7 @@ export class DatabaseStorage implements IStorage {
           completedBoxes: sql<number>`COUNT(DISTINCT CASE WHEN ${boxRequirements.isComplete} = true THEN ${boxRequirements.boxNumber} END)`
         })
         .from(boxRequirements)
-        .where(eq(boxRequirements.jobId, id)); // Include ALL items (allocated + unallocated)
+        .where(eq(boxRequirements.jobId, id)); // Include ALL transfer sequences
 
       const totalItems = progressStats.totalItems || 0;
       const scannedItems = progressStats.scannedItems || 0;
@@ -596,14 +597,14 @@ export class DatabaseStorage implements IStorage {
 
       // Calculate completed customers (customers where ALL their items are 100% fulfilled)
       // Group by customer and check if all items have scannedQty >= requiredQty
-      // This includes both active and archived (emptied/transferred) customers
+      // This includes items from ALL transfer sequences (active, archived, transferred)
       const customerCompletionData = await this.db
         .select({
           customerName: boxRequirements.customerName,
           allComplete: sql<boolean>`BOOL_AND(${boxRequirements.scannedQty} >= ${boxRequirements.requiredQty})`
         })
         .from(boxRequirements)
-        .where(eq(boxRequirements.jobId, id))
+        .where(eq(boxRequirements.jobId, id)) // Include ALL transfer sequences
         .groupBy(boxRequirements.customerName);
 
       const completedCustomers = customerCompletionData.filter((c: any) => c.allComplete).length;
@@ -684,7 +685,7 @@ export class DatabaseStorage implements IStorage {
           let totalItems = 0;
 
           if (boxRequirements.length > 0) {
-            // PROGRESS CALCULATION: Include ALL customer items (allocated + unallocated)
+            // UNIFIED PROGRESS CALCULATION: Include items from ALL transfer sequences
             totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
             completedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
 
@@ -1668,10 +1669,7 @@ export class DatabaseStorage implements IStorage {
     return await this.db
       .select()
       .from(boxRequirements)
-      .where(and(
-        eq(boxRequirements.jobId, jobId),
-        eq(boxRequirements.transferSequence, 0) // Only show active assignments
-      ))
+      .where(eq(boxRequirements.jobId, jobId)) // Include ALL transfer sequences
       .orderBy(boxRequirements.boxNumber, boxRequirements.barCode);
   }
 
@@ -3290,6 +3288,7 @@ export class DatabaseStorage implements IStorage {
   async getCustomerProgressData(jobId: string): Promise<any> {
     try {
       // Get all customers with their progress, state, and group information
+      // Include items from ALL transfer sequences for complete visibility
       const customerData = await this.db
         .select({
           customerName: boxRequirements.customerName,
@@ -3302,7 +3301,7 @@ export class DatabaseStorage implements IStorage {
           allItemsComplete: sql<boolean>`BOOL_AND(${boxRequirements.scannedQty} >= ${boxRequirements.requiredQty})`
         })
         .from(boxRequirements)
-        .where(eq(boxRequirements.jobId, jobId))
+        .where(eq(boxRequirements.jobId, jobId)) // Include ALL transfer sequences
         .groupBy(
           boxRequirements.customerName,
           boxRequirements.groupName,
