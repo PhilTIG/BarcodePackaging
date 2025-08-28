@@ -150,16 +150,20 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
               ...oldData,
               boxes: oldData.boxes.map((box: any) => {
                 if (box.number === message.data.boxNumber) {
-                  // Update only the changed product using delta data
-                  const updatedProducts = box.products.map((product: any) => {
-                    if (product.id === message.data.changedProduct.id) {
-                      return {
-                        ...product,
-                        ...message.data.changedProduct
-                      };
-                    }
-                    return product;
-                  });
+                  let updatedProducts = box.products;
+                  
+                  // Update only the changed product using delta data if available
+                  if (message.data.changedProduct) {
+                    updatedProducts = box.products.map((product: any) => {
+                      if (product.id === message.data.changedProduct.id) {
+                        return {
+                          ...product,
+                          ...message.data.changedProduct
+                        };
+                      }
+                      return product;
+                    });
+                  }
 
                   return {
                     ...box,

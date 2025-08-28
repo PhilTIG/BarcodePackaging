@@ -1054,6 +1054,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { jobId, sessionId, ...scanEventData } = req.body; // Destructure to get jobId and sessionId
 
+      console.log('[Scan Event Debug] Request data:', req.body);
+
       const eventData = {
         ...scanEventData,
         jobId: jobId,
@@ -1063,7 +1065,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workerStaffId: req.user!.staffId
       };
 
+      console.log('[Scan Event Debug] Event data being sent to storage:', eventData);
+
       const scanEvent = await storage.createScanEvent(eventData);
+      
+      console.log('[Scan Event Debug] Created scan event:', scanEvent);
 
       // Update session statistics
       await storage.updateScanSessionStats(sessionId);
@@ -1127,8 +1133,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get worker performance data
       const workerPerformance = await storage.getJobWorkerPerformance(jobId, req.user!.id);
 
-      // Find the specific requirement that was just updated
-      const updatedRequirement = updatedBoxRequirements.find(req => req.id === scanEvent.boxRequirementId);
+      // Find the specific requirement that was just updated - handle case where boxRequirementId might be undefined
+      let updatedRequirement = null;
+      if (scanEvent.boxRequirementId) {
+        updatedRequirement = updatedBoxRequirements.find(req => req.id === scanEvent.boxRequirementId);
+      }
+      
+      // If we don't have a specific requirement, find by box number and barcode as fallback
+      if (!updatedRequirement && scanEvent.boxNumber && scanEvent.barCode) {
+        updatedRequirement = updatedBoxRequirements.find(req => 
+          req.boxNumber === scanEvent.boxNumber && req.barCode === scanEvent.barCode
+        );
+      }
+
       const box = updatedBoxRequirements.reduce((acc, curr) => {
         if (curr.boxNumber === scanEvent.boxNumber) {
           if (!acc.number) acc.number = curr.boxNumber;
@@ -1146,26 +1163,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
       // Broadcast scan update to all clients for this job with delta updates
+      const broadcastData = {
+        jobId,
+        boxNumber: box.number,
+        customerName: box.customerName,
+        isComplete: box.isComplete,
+        totalItems: box.totalItems,
+        scannedItems: box.scannedItems,
+        completionPercentage: box.completionPercentage,
+        scannerId: workerId
+      };
+
+      // Only include changedProduct if we have a valid updated requirement
+      if (updatedRequirement) {
+        broadcastData.changedProduct = {
+          id: updatedRequirement.id,
+          productName: updatedRequirement.productName,
+          scannedQty: updatedRequirement.scannedQty,
+          targetQty: updatedRequirement.targetQty || updatedRequirement.requiredQty,
+          barcode: updatedRequirement.barCode
+        };
+      }
+
       broadcastToJob(jobId, {
         type: 'scan_update',
-        data: {
-          jobId,
-          boxNumber: box.number,
-          customerName: box.customerName,
-          // Send only the changed product instead of full products array
-          changedProduct: {
-            id: updatedRequirement.id,
-            productName: updatedRequirement.productName,
-            scannedQty: updatedRequirement.scannedQty,
-            targetQty: updatedRequirement.targetQty,
-            barcode: updatedRequirement.barcode
-          },
-          isComplete: box.isComplete,
-          totalItems: box.totalItems,
-          scannedItems: box.scannedItems,
-          completionPercentage: box.completionPercentage,
-          scannerId: workerId
-        }
+        data: broadcastData
       });
 
       res.json({ scanEvent });
