@@ -2543,7 +2543,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // BOX LIMIT: Get customer product details for unallocated customers
+  // Get customer product details for any customer (allocated or unallocated)
   async getCustomerProductDetails(jobId: string, customerName: string): Promise<BoxRequirement[]> {
     try {
       return await this.db
@@ -2551,8 +2551,7 @@ export class DatabaseStorage implements IStorage {
         .from(boxRequirements)
         .where(and(
           eq(boxRequirements.jobId, jobId),
-          eq(boxRequirements.customerName, customerName),
-          sql`${boxRequirements.boxNumber} IS NULL`
+          eq(boxRequirements.customerName, customerName)
         ))
         .orderBy(boxRequirements.productName);
     } catch (error) {
