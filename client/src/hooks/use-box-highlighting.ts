@@ -33,44 +33,37 @@ export function useBoxHighlighting(currentUser?: { role: string; id: string }) {
       highlighting
     });
 
-    setHighlighting(prev => {
-      const newState = {
-        ...prev,
-        lastScannedBoxNumber: boxNumber,
-        workerColors: workerColor ? {
-          ...prev.workerColors,
-          [boxNumber]: workerColor
-        } : prev.workerColors,
-        activeWorkerBoxes: {
-          ...prev.activeWorkerBoxes,
-          [workerId]: boxNumber
-        },
-        workerStaffIds: workerStaffId ? {
-          ...prev.workerStaffIds,
-          [boxNumber]: workerStaffId
-        } : prev.workerStaffIds
-      };
-
-      console.log(`[useBoxHighlighting] New highlighting state - worker colors will persist:`, {
-        newWorkerColors: newState.workerColors,
-        newWorkerStaffIds: newState.workerStaffIds
-      });
-      return newState;
-    });
+    setHighlighting(prev => ({
+      ...prev,
+      lastScannedBoxNumber: boxNumber,
+      workerColors: workerColor ? {
+        ...prev.workerColors,
+        [boxNumber]: workerColor
+      } : prev.workerColors,
+      activeWorkerBoxes: {
+        ...prev.activeWorkerBoxes,
+        [workerId]: boxNumber
+      },
+      workerStaffIds: workerStaffId ? {
+        ...prev.workerStaffIds,
+        [boxNumber]: workerStaffId
+      } : prev.workerStaffIds
+    }));
   }, [currentUser]);
 
   const clearHighlighting = useCallback((boxNumber: number) => {
-    setHighlighting(prev => {
-      const { [boxNumber]: removedColor, ...remainingColors } = prev.workerColors;
-      const { [boxNumber]: removedStaffId, ...remainingStaffIds } = prev.workerStaffIds;
-      
-      return {
-        ...prev,
-        lastScannedBoxNumber: prev.lastScannedBoxNumber === boxNumber ? null : prev.lastScannedBoxNumber,
-        workerColors: remainingColors,
-        workerStaffIds: remainingStaffIds
-      };
-    });
+    setHighlighting(prev => ({
+      ...prev,
+      lastScannedBoxNumber: prev.lastScannedBoxNumber === boxNumber ? null : prev.lastScannedBoxNumber,
+      workerColors: {
+        ...prev.workerColors,
+        [boxNumber]: undefined
+      },
+      workerStaffIds: {
+        ...prev.workerStaffIds,
+        [boxNumber]: undefined
+      }
+    }));
   }, []);
 
   const clearAllHighlighting = useCallback(() => {
@@ -82,24 +75,18 @@ export function useBoxHighlighting(currentUser?: { role: string; id: string }) {
     });
   }, []);
 
-  // Auto-clear green highlighting after 3 seconds for manager/supervisor views
-  // Note: Worker colors should persist indefinitely - only the green "just scanned" highlight gets cleared
+  // Auto-clear highlighting after 3 seconds for manager/supervisor views
   useEffect(() => {
     if (!currentUser || currentUser.role === 'worker') return;
     if (!highlighting.lastScannedBoxNumber) return;
 
     const timer = setTimeout(() => {
-      console.log(`[useBoxHighlighting] Auto-clearing green highlight for box ${highlighting.lastScannedBoxNumber} while preserving worker colors:`, highlighting.workerColors);
-      setHighlighting(prev => {
-        // Create new state preserving all worker color data
-        const newState = {
-          ...prev,
-          lastScannedBoxNumber: null
-          // Explicitly keep workerColors and workerStaffIds - DO NOT clear them
-        };
-        console.log(`[useBoxHighlighting] Timer cleared - preserved worker colors:`, newState.workerColors);
-        return newState;
-      });
+      setHighlighting(prev => ({
+        ...prev,
+        lastScannedBoxNumber: null,
+        workerColors: {},
+        workerStaffIds: {}
+      }));
     }, 3000);
 
     return () => clearTimeout(timer);

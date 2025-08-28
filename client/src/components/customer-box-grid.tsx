@@ -65,20 +65,18 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       workerColor,
       workerStaffId,
       supervisorView,
-      currentUser: user?.id,
-      currentHighlighting: highlighting
+      currentUser: user?.id
     });
 
     if (supervisorView && workerColor && workerStaffId) {
       // Managers/Supervisors: Show all worker colors
       updateHighlighting(boxNumber, workerId, workerColor, workerStaffId);
-      console.log(`[CustomerBoxGrid] Updated manager highlighting for box ${boxNumber} with worker color ${workerColor}`);
     } else if (!supervisorView && workerColor && workerStaffId && workerId === user?.id) {
       // Workers: Only show their own color background
       updateHighlighting(boxNumber, workerId, workerColor, workerStaffId);
     }
     // Note: All numerical updates (box counts, percentages) happen via React Query invalidation
-  }, [supervisorView, user?.id, updateHighlighting, highlighting]);
+  }, [supervisorView, user?.id, updateHighlighting]);
 
   // Connect WebSocket for all views (workers need numerical updates, supervisors need highlighting)
   useWebSocket(jobId, handleWebSocketUpdate);
@@ -111,13 +109,9 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
 
   // Helper function to determine box background color and styling
   const getBoxHighlight = useCallback((boxNumber: number, products: any[], isComplete: boolean, lastWorkerColor: string | null, lastWorkerUserId: string | null) => {
-    // Check if box is empty (no scanned items and no products assigned)
-    const isEmptyBox = !products.some(p => p.scannedQty > 0);
-
     // Priority 1: WORKER COLOR WITH 60% TRANSPARENCY - Just scanned (highest priority)
     if (highlighting.lastScannedBoxNumber === boxNumber) {
       const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
-      const workerStaffId = highlighting.workerStaffIds[boxNumber] || lastWorkerUserId;
       if (workerColor) {
         // Convert hex to rgba with 60% opacity
         const hex = workerColor.replace('#', '');
@@ -128,8 +122,8 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
           backgroundColor: `rgba(${r}, ${g}, ${b}, 0.6)`, // 60% transparency
           borderColor: workerColor,
           textColor: 'black',
-          workerStaffId: workerStaffId,
-          numberCircleColor: workerColor
+          workerStaffId: highlighting.workerStaffIds[boxNumber],
+          numberCircleColor: workerColor // Keep circle color solid
         };
       }
       // Fallback if no worker color
@@ -137,8 +131,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         backgroundColor: 'rgba(34, 197, 94, 0.6)', // Green with 60% transparency
         borderColor: '#16a34a',
         textColor: 'black',
-        workerStaffId: highlighting.workerStaffIds[boxNumber],
-        numberCircleColor: isEmptyBox ? '#6b7280' : undefined // Grey for empty boxes only
+        workerStaffId: highlighting.workerStaffIds[boxNumber]
       };
     }
 
@@ -151,38 +144,16 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       };
     }
 
-    // Priority 3: WORKER COLOR BACKGROUND WITH 40% TRANSPARENCY - Box has items but not just scanned
-    // Use both WebSocket state AND database fallback to ensure persistence
-    const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
-    const workerStaffId = highlighting.workerStaffIds[boxNumber] || lastWorkerUserId;
-    
-    // Filter products for this specific box to check if it has scanned items
-    const boxProducts = products.filter(p => p.boxNumber === boxNumber);
-    const hasScannedItems = boxProducts.some(p => p.scannedQty > 0);
-    
-    // Debug logging for persistence
-    if (boxNumber === 6 || boxNumber === 2) { // Debug specific boxes
-      console.log(`[BoxHighlight] Box ${boxNumber} worker color logic:`, {
-        hasScannedItems,
-        websocketWorkerColor: highlighting.workerColors[boxNumber],
-        databaseWorkerColor: lastWorkerColor,
-        finalWorkerColor: workerColor,
-        workerStaffId: workerStaffId
-      });
-    }
-    
-    if (workerColor && hasScannedItems) {
-      // Convert hex to rgba with 40% opacity for persistent worker color background
-      const hex = workerColor.replace('#', '');
-      const r = parseInt(hex.substr(0, 2), 16);
-      const g = parseInt(hex.substr(2, 2), 16);
-      const b = parseInt(hex.substr(4, 2), 16);
+    // Priority 3: NO BACKGROUND COLOR - Box has items but not just scanned (third priority)
+    // The number circle should keep the worker color, but no background highlight
+    const workerColor = lastWorkerColor;
+    if (workerColor && products.some(p => p.scannedQty > 0)) {
       return {
-        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.4)`, // 40% transparency for persistent display
-        borderColor: workerColor,
+        backgroundColor: '#f3f4f6', // Gray-100 (default)
+        borderColor: '#d1d5db', // Gray-300 (default)
         textColor: 'black',
-        workerStaffId: workerStaffId,
-        numberCircleColor: workerColor
+        workerStaffId: lastWorkerUserId,
+        numberCircleColor: workerColor // Keep the worker color on number circle
       };
     }
 
@@ -190,8 +161,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     return {
       backgroundColor: '#f3f4f6', // Gray-100
       borderColor: '#d1d5db', // Gray-300
-      textColor: 'black',
-      numberCircleColor: '#6b7280' // Grey circle for empty boxes only
+      textColor: 'black'
     };
   }, [highlighting]);
 
@@ -242,22 +212,12 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       boxes[product.boxNumber].isComplete = boxes[product.boxNumber].totalQty > 0 &&
                                            boxes[product.boxNumber].scannedQty === boxes[product.boxNumber].totalQty;
 
-      // Update worker color and staffId tracking - ensure we capture the latest worker info
+      // Update worker color and staffId tracking
       if (product.lastWorkerColor) {
         boxes[product.boxNumber].lastWorkerColor = product.lastWorkerColor;
       }
       if (product.lastWorkerStaffId) {
         boxes[product.boxNumber].lastWorkerStaffId = product.lastWorkerStaffId;
-      }
-      
-      // Debug logging for worker color tracking
-      if (product.boxNumber === 6) { // Debug box 6 specifically
-        console.log(`[BoxData] Box ${product.boxNumber} worker tracking:`, {
-          productId: product.id,
-          lastWorkerColor: product.lastWorkerColor,
-          lastWorkerStaffId: product.lastWorkerStaffId,
-          scannedQty: product.scannedQty
-        });
       }
     });
 
