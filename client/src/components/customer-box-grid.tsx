@@ -135,7 +135,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         backgroundColor: workerColor,
         borderColor: workerColor,
         textColor: 'white',
-        workerStaffId: highlighting.workerStaffIds[boxNumber]
+        workerStaffId: highlighting.workerStaffIds[boxNumber] || lastWorkerUserId
       };
     }
 
@@ -145,7 +145,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       borderColor: '#d1d5db', // Gray-300
       textColor: 'black'
     };
-  }, [highlighting]); // Use highlighting from hook instead of lastScannedBoxNumber
+  }, [highlighting]);
 
   // Choose between filtered data (from box requirements) or legacy product data
   const boxData = useMemo(() => {
@@ -274,7 +274,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         const boxHighlighting = getBoxHighlight(box.boxNumber, products, box.isComplete, box.lastWorkerColor, box.lastWorkerStaffId);
 
         // Handle custom background colors (rgba) vs Tailwind classes
-        const customStyle = boxHighlighting.backgroundColor.startsWith('rgba') ? {
+        const customStyle = boxHighlighting.backgroundColor.startsWith('rgba') || boxHighlighting.backgroundColor.startsWith('#') ? {
           backgroundColor: boxHighlighting.backgroundColor,
           borderColor: boxHighlighting.borderColor,
         } : {};
@@ -293,8 +293,8 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         const boxClasses = [
           "border rounded-lg relative transition-all duration-200 cursor-pointer hover:shadow-lg group",
           getPadding(),
-          !boxHighlighting.backgroundColor.startsWith('rgba') ? boxHighlighting.backgroundColor : '',
-          !boxHighlighting.borderColor.startsWith('rgba') ? boxHighlighting.borderColor : '',
+          !boxHighlighting.backgroundColor.startsWith('rgba') && !boxHighlighting.backgroundColor.startsWith('#') ? boxHighlighting.backgroundColor : '',
+          !boxHighlighting.borderColor.startsWith('rgba') && !boxHighlighting.borderColor.startsWith('#') ? boxHighlighting.borderColor : '',
         ].filter(Boolean).join(" ");
 
         const handleBoxClick = () => {
@@ -341,10 +341,10 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                   <div className="flex-shrink-0 mt-1">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border border-white shadow text-white ${
-                        box.lastWorkerColor ? '' : 'bg-primary'
+                        (box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? '' : 'bg-primary'
                       }`}
-                      style={box.lastWorkerColor ? {
-                        backgroundColor: box.lastWorkerColor
+                      style={(box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? {
+                        backgroundColor: box.lastWorkerColor || highlighting.workerColors[box.boxNumber]
                       } : undefined}
                     >
                       {box.boxNumber}
@@ -415,12 +415,10 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
                 <div className="absolute top-10 right-2">
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white shadow-lg text-white ${
-                      highlighting.badgeColor?.startsWith('#') ? '' : highlighting.badgeColor || 'bg-primary'
+                      (box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? '' : 'bg-primary'
                     }`}
-                    style={highlighting.badgeColor?.startsWith('#') ? {
-                      backgroundColor: highlighting.badgeColor
-                    } : box.lastWorkerColor ? {
-                      backgroundColor: box.lastWorkerColor
+                    style={(box.lastWorkerColor || highlighting.workerColors[box.boxNumber]) ? {
+                      backgroundColor: box.lastWorkerColor || highlighting.workerColors[box.boxNumber]
                     } : undefined}
                   >
                     {box.boxNumber}
