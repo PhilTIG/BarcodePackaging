@@ -387,7 +387,7 @@ export class DatabaseStorage implements IStorage {
       let completedItems = 0;
 
       if (boxRequirements.length > 0) {
-        // NEW SYSTEM: Use box requirements
+        // PROGRESS CALCULATION: Include ALL customer items (allocated + unallocated)
         totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
         completedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
       } else {
@@ -528,8 +528,8 @@ export class DatabaseStorage implements IStorage {
       // Get job with products
       const job = await this.getJobById(id);
 
-      // OPTIMIZED: Use direct database aggregation instead of loading all records
-      // BOX LIMIT FIX: Filter out NULL boxNumber entries entirely
+      // PROGRESS CALCULATION: Include ALL customer items (allocated + unallocated)
+      // This gives the true progress: items scanned vs all items from original CSV
       const [progressStats] = await this.db
         .select({
           totalItems: sql<number>`COALESCE(SUM(${boxRequirements.requiredQty}), 0)`,
@@ -538,13 +538,13 @@ export class DatabaseStorage implements IStorage {
           completedBoxes: sql<number>`COUNT(DISTINCT CASE WHEN ${boxRequirements.isComplete} = true THEN ${boxRequirements.boxNumber} END)`
         })
         .from(boxRequirements)
-        .where(and(eq(boxRequirements.jobId, id), isNotNull(boxRequirements.boxNumber)));
+        .where(eq(boxRequirements.jobId, id)); // Include ALL items (allocated + unallocated)
 
       const totalItems = progressStats.totalItems || 0;
       const scannedItems = progressStats.scannedItems || 0;
 
       // Get box data efficiently with aggregation query
-      // BOX LIMIT FIX: Filter out NULL boxNumber entries entirely
+      // DISPLAY: Only show allocated boxes (boxNumber NOT NULL) for UI grid
       const boxData = await this.db
         .select({
           customerName: boxRequirements.customerName,
@@ -684,30 +684,33 @@ export class DatabaseStorage implements IStorage {
           let totalItems = 0;
 
           if (boxRequirements.length > 0) {
-            // NEW SYSTEM: Use box requirements
+            // PROGRESS CALCULATION: Include ALL customer items (allocated + unallocated)
             totalItems = boxRequirements.reduce((sum, req) => sum + req.requiredQty, 0);
             completedItems = boxRequirements.reduce((sum, req) => sum + Math.min(req.scannedQty || 0, req.requiredQty), 0);
 
-            // Transform to products format for box completion calculation
+            // Transform to products format for box completion calculation (only allocated boxes for UI)
             const productMap = new Map();
             boxRequirements.forEach(req => {
-              const key = `${req.customerName}-${req.boxNumber}`;
-              if (!productMap.has(key)) {
-                productMap.set(key, {
-                  customerName: req.customerName,
-                  qty: 0,
-                  scannedQty: 0,
-                  boxNumber: req.boxNumber,
-                  isComplete: true
-                });
+              // Only include allocated boxes (boxNumber NOT NULL) for UI display
+              if (req.boxNumber !== null) {
+                const key = `${req.customerName}-${req.boxNumber}`;
+                if (!productMap.has(key)) {
+                  productMap.set(key, {
+                    customerName: req.customerName,
+                    qty: 0,
+                    scannedQty: 0,
+                    boxNumber: req.boxNumber,
+                    isComplete: true
+                  });
+                }
+                const product = productMap.get(key);
+                product.qty += req.requiredQty;
+                product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
+                product.isComplete = product.isComplete && req.isComplete;
               }
-              const product = productMap.get(key);
-              product.qty += req.requiredQty;
-              product.scannedQty += Math.min(req.scannedQty || 0, req.requiredQty);
-              product.isComplete = product.isComplete && req.isComplete;
             });
             products = Array.from(productMap.values());
-            totalProducts = totalItems; // Use total items, not product count
+            totalProducts = totalItems; // Use total items from ALL customers (allocated + unallocated)
           } else {
             // All jobs should have box requirements - this case should not happen
             console.warn(`No box requirements found for job ${job.id}`);

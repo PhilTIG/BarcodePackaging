@@ -945,6 +945,7 @@ export default function ManagerDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(jobsData as any)?.jobs?.map((job: any) => {
+                  // Progress calculation now considers ALL items, not just box-based
                   const progressPercentage = Math.round((job.completedItems / job.totalProducts) * 100);
                   const isCompleted = progressPercentage === 100;
 
@@ -1273,99 +1274,66 @@ export default function ManagerDashboard() {
                     const patternDescriptions = {
                       'ascending': 'Ascending: Boxes 1, 2, 3, 4... (Worker 1)',
                       'descending': 'Descending: Boxes 100, 99, 98, 97... (Worker 2)',
-                      'middle_up': 'Middle Up: Boxes 50, 51, 52, 53... (Worker 3)',
-                      'middle_down': 'Middle Down: Boxes 49, 48, 47, 46... (Worker 4)'
+                      'middle_up': 'Middle-Up: Boxes 50, 51, 52, 53... (Worker 3)',
+                      'middle_down': 'Middle-Down: Boxes 49, 48, 47, 46... (Worker 4)'
                     };
 
                     return (
-                      <div className="flex items-center space-x-2 text-sm text-gray-700">
-                        <div
-                          className="w-4 h-4 rounded-full border"
-                          style={{ backgroundColor: assignForm.assignedColor }}
-                        />
-                        <span className="font-medium">
-                          {patternDescriptions[pattern as keyof typeof patternDescriptions]}
-                        </span>
+                      <div className="text-sm text-gray-600">
+                        <strong>Pattern:</strong> {patternDescriptions[pattern as keyof typeof patternDescriptions]}
                       </div>
                     );
                   })()}
-                  <p className="text-xs text-gray-500 mt-1">
-                    Allocation patterns ensure workers don't conflict when scanning boxes
-                  </p>
                 </div>
               </div>
             )}
-
-            {/* Color Preview */}
-            <div className="border border-gray-200 rounded-lg p-3">
-              <Label className="text-sm font-medium">Preview</Label>
-              <div className="flex items-center space-x-2 mt-2">
-                <div
-                  className="w-4 h-4 rounded-full border"
-                  style={{ backgroundColor: assignForm.assignedColor }}
-                ></div>
-                <span className="text-sm text-gray-600">
-                  {assignForm.userId ? (workersData as any)?.workers?.find((w: any) => w.id === assignForm.userId)?.name || "Selected Worker" : "Worker Name"}
-                </span>
-              </div>
-            </div>
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setAssignDialogOpen(false)}
-              data-testid="button-cancel-assign"
-            >
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
               Cancel
             </Button>
             <Button
               onClick={handleAssignWorker}
-              disabled={!assignForm.userId || assignWorkerMutation.isPending}
+              disabled={assignWorkerMutation.isPending || !assignForm.userId}
               data-testid="button-confirm-assign"
             >
-              {assignWorkerMutation.isPending ? "Assigning..." : "Assign Worker"}
+              {assignWorkerMutation.isPending ? 'Assigning...' : 'Assign Worker'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Extra Items Modal */}
-      {extraItemsJobId && (
-        <ExtraItemsModal
-          isOpen={isExtraItemsModalOpen}
-          onClose={() => {
-            setIsExtraItemsModalOpen(false);
-            setExtraItemsJobId(null);
-          }}
-          jobId={extraItemsJobId}
-        />
-      )}
-
-      {/* Customer Progress Modal */}
-      {customerProgressJobId && (
-        <CustomerProgressModal
-          isOpen={isCustomerProgressModalOpen}
-          onClose={() => {
-            setIsCustomerProgressModalOpen(false);
-            setCustomerProgressJobId(null);
-          }}
-          jobId={customerProgressJobId}
-          jobName={(jobsData as any)?.jobs?.find((job: any) => job.id === customerProgressJobId)?.name}
-        />
-      )}
+      <ExtraItemsModal
+        isOpen={isExtraItemsModalOpen}
+        onClose={() => {
+          setIsExtraItemsModalOpen(false);
+          setExtraItemsJobId(null);
+        }}
+        jobId={extraItemsJobId!}
+      />
 
       {/* Put Aside Modal */}
-      {putAsideJobId && (
-        <PutAsideModal
-          isOpen={isPutAsideModalOpen}
-          onClose={() => {
-            setIsPutAsideModalOpen(false);
-            setPutAsideJobId(null);
-          }}
-          jobId={putAsideJobId}
-        />
-      )}
+      <PutAsideModal
+        isOpen={isPutAsideModalOpen}
+        onClose={() => {
+          setIsPutAsideModalOpen(false);
+          setPutAsideJobId(null);
+        }}
+        jobId={putAsideJobId!}
+      />
+
+      {/* Customer Progress Modal */}
+      <CustomerProgressModal
+        isOpen={isCustomerProgressModalOpen}
+        onClose={() => {
+          setIsCustomerProgressModalOpen(false);
+          setCustomerProgressJobId(null);
+        }}
+        jobId={customerProgressJobId!}
+        jobName={(jobsData as any)?.jobs?.find((j: any) => j.id === customerProgressJobId)?.name}
+      />
     </div>
   );
 }
