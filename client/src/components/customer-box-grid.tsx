@@ -115,6 +115,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     // Priority 1: WORKER COLOR WITH 60% TRANSPARENCY - Just scanned (highest priority)
     if (highlighting.lastScannedBoxNumber === boxNumber) {
       const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
+      const workerStaffId = highlighting.workerStaffIds[boxNumber] || lastWorkerUserId;
       if (workerColor) {
         // Convert hex to rgba with 60% opacity
         const hex = workerColor.replace('#', '');
@@ -125,7 +126,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
           backgroundColor: `rgba(${r}, ${g}, ${b}, 0.6)`, // 60% transparency
           borderColor: workerColor,
           textColor: 'black',
-          workerStaffId: highlighting.workerStaffIds[boxNumber],
+          workerStaffId: workerStaffId,
           numberCircleColor: workerColor
         };
       }
@@ -150,13 +151,16 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
 
     // Priority 3: NO BACKGROUND COLOR - Box has items but not just scanned (third priority)
     // The number circle should keep the worker color, but no background highlight
-    const workerColor = lastWorkerColor;
+    // Use highlighting state worker color if available, otherwise fallback to database worker color
+    const workerColor = highlighting.workerColors[boxNumber] || lastWorkerColor;
+    const workerStaffId = highlighting.workerStaffIds[boxNumber] || lastWorkerUserId;
+    
     if (workerColor && products.some(p => p.scannedQty > 0)) {
       return {
         backgroundColor: '#f3f4f6', // Gray-100 (default)
         borderColor: '#d1d5db', // Gray-300 (default)
         textColor: 'black',
-        workerStaffId: lastWorkerUserId,
+        workerStaffId: workerStaffId,
         numberCircleColor: workerColor // Keep the worker color on number circle
       };
     }

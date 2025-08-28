@@ -52,18 +52,17 @@ export function useBoxHighlighting(currentUser?: { role: string; id: string }) {
   }, [currentUser]);
 
   const clearHighlighting = useCallback((boxNumber: number) => {
-    setHighlighting(prev => ({
-      ...prev,
-      lastScannedBoxNumber: prev.lastScannedBoxNumber === boxNumber ? null : prev.lastScannedBoxNumber,
-      workerColors: {
-        ...prev.workerColors,
-        [boxNumber]: undefined
-      },
-      workerStaffIds: {
-        ...prev.workerStaffIds,
-        [boxNumber]: undefined
-      }
-    }));
+    setHighlighting(prev => {
+      const { [boxNumber]: removedColor, ...remainingColors } = prev.workerColors;
+      const { [boxNumber]: removedStaffId, ...remainingStaffIds } = prev.workerStaffIds;
+      
+      return {
+        ...prev,
+        lastScannedBoxNumber: prev.lastScannedBoxNumber === boxNumber ? null : prev.lastScannedBoxNumber,
+        workerColors: remainingColors,
+        workerStaffIds: remainingStaffIds
+      };
+    });
   }, []);
 
   const clearAllHighlighting = useCallback(() => {
