@@ -108,9 +108,11 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
   };
 
   // Helper function to determine box background color and styling
-  const getBoxHighlight = useCallback((boxNumber: number, products: any[], isComplete: boolean, lastWorkerColor: string | null, lastWorkerUserId: string | null) => {
-    // Check if box is empty (no scanned items and no products assigned)
-    const isEmptyBox = !products.some(p => p.scannedQty > 0);
+  const getBoxHighlight = useCallback((boxNumber: number, customerName: string, scannedQty: number, totalQty: number, isComplete: boolean, lastWorkerColor: string | null, lastWorkerUserId: string | null) => {
+    // Check if box is truly empty (no customer assigned)
+    const isTrulyEmpty = customerName === "Empty" || customerName === "Unassigned" || !customerName;
+    // Check if box has customer but no scanned items
+    const isUnfilledCustomerBox = !isTrulyEmpty && scannedQty === 0 && totalQty > 0;
 
     // Priority 1: WORKER COLOR WITH 60% TRANSPARENCY - Just scanned (highest priority)
     if (highlighting.lastScannedBoxNumber === boxNumber) {
@@ -126,7 +128,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
           borderColor: workerColor,
           textColor: 'black',
           workerStaffId: highlighting.workerStaffIds[boxNumber],
-          numberCircleColor: isEmptyBox ? '#6b7280' : workerColor // Grey for empty, worker color for non-empty
+          numberCircleColor: isTrulyEmpty ? '#6b7280' : workerColor // Grey for empty, worker color for non-empty
         };
       }
       // Fallback if no worker color
@@ -135,7 +137,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
         borderColor: '#16a34a',
         textColor: 'black',
         workerStaffId: highlighting.workerStaffIds[boxNumber],
-        numberCircleColor: isEmptyBox ? '#6b7280' : undefined // Grey for empty boxes
+        numberCircleColor: isTrulyEmpty ? '#6b7280' : undefined // Grey for empty boxes
       };
     }
 
@@ -151,7 +153,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     // Priority 3: WHITE BACKGROUND + WORKER COLOR - Box has items scanned (third priority)
     // The number circle should keep the worker color, but white background (original color)
     const workerColor = lastWorkerColor;
-    if (workerColor && products.some(p => p.scannedQty > 0)) {
+    if (workerColor && scannedQty > 0) {
       return {
         backgroundColor: '#ffffff', // White background (original color)
         borderColor: '#e5e7eb', // Gray-200 border
@@ -162,7 +164,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
     }
 
     // Priority 4: WHITE BACKGROUND + 50% GREY CIRCLE - Customer assigned but no scans yet
-    if (!isEmptyBox && products.every(p => p.scannedQty === 0)) {
+    if (isUnfilledCustomerBox) {
       return {
         backgroundColor: '#ffffff', // White background (active box)
         borderColor: '#e5e7eb', // Gray-200 border  
@@ -255,7 +257,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
 
         // POC-style highlighting with worker color support
         const isLastScanned = highlighting.lastScannedBoxNumber === box.boxNumber;
-        const boxHighlighting = getBoxHighlight(box.boxNumber, products, box.isComplete, box.lastWorkerColor, box.lastWorkerStaffId);
+        const boxHighlighting = getBoxHighlight(box.boxNumber, box.customerName, box.scannedQty, box.totalQty, box.isComplete, box.lastWorkerColor, box.lastWorkerStaffId);
 
         // Handle custom background colors (rgba) vs Tailwind classes
         const customStyle = boxHighlighting.backgroundColor.startsWith('rgba') || boxHighlighting.backgroundColor.startsWith('#') ? {
