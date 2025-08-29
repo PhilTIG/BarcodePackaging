@@ -533,15 +533,27 @@ export class DatabaseStorage implements IStorage {
       const [progressStats] = await this.db
         .select({
           totalItems: sql<number>`COALESCE(SUM(${boxRequirements.requiredQty}), 0)`,
-          scannedItems: sql<number>`COALESCE(SUM(LEAST(${boxRequirements.scannedQty}, ${boxRequirements.requiredQty})), 0)`,
           totalBoxes: sql<number>`COUNT(DISTINCT ${boxRequirements.boxNumber})`,
           completedBoxes: sql<number>`COUNT(DISTINCT CASE WHEN ${boxRequirements.isComplete} = true THEN ${boxRequirements.boxNumber} END)`
         })
         .from(boxRequirements)
         .where(eq(boxRequirements.jobId, id)); // Include ALL items (allocated + unallocated)
 
+      // FIX: Count scanned items from scan_events (source of truth) instead of boxRequirements.scannedQty
+      // This preserves scan history even when boxes are emptied/transferred
+      const [scannedStats] = await this.db
+        .select({
+          scannedItems: sql<number>`COALESCE(COUNT(*), 0)`
+        })
+        .from(scanEvents)
+        .where(and(
+          eq(scanEvents.jobId, id),
+          eq(scanEvents.eventType, 'scan'),
+          eq(scanEvents.isExtraItem, false)
+        ));
+
       const totalItems = progressStats.totalItems || 0;
-      const scannedItems = progressStats.scannedItems || 0;
+      const scannedItems = scannedStats.scannedItems || 0;
 
       // Get box data efficiently with aggregation query
       // DISPLAY: Only show allocated boxes (boxNumber NOT NULL) for UI grid
