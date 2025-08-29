@@ -148,13 +148,13 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       };
     }
 
-    // Priority 3: NO BACKGROUND COLOR - Box has items but not just scanned (third priority)
-    // The number circle should keep the worker color, but no background highlight
+    // Priority 3: WHITE BACKGROUND - Box has items but not just scanned (third priority)
+    // The number circle should keep the worker color, but white background (original color)
     const workerColor = lastWorkerColor;
     if (workerColor && products.some(p => p.scannedQty > 0)) {
       return {
-        backgroundColor: '#f3f4f6', // Gray-100 (default)
-        borderColor: '#d1d5db', // Gray-300 (default)
+        backgroundColor: '#ffffff', // White background (original color)
+        borderColor: '#e5e7eb', // Gray-200 border
         textColor: 'black',
         workerStaffId: lastWorkerUserId,
         numberCircleColor: workerColor // Keep the worker color on number circle
@@ -264,15 +264,22 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
           return preferences.maxBoxesPerRow <= 32 ? 'p-2' : 'p-1';
         };
 
+        // Check if box is empty for conditional rendering
+        const isEmptyBox = box.customerName === "Empty" || box.customerName === "Unassigned" || !box.customerName;
+
         const boxClasses = [
-          "border rounded-lg relative transition-all duration-200 cursor-pointer hover:shadow-lg group",
+          "border rounded-lg relative transition-all duration-200",
+          // Remove interactive styling for empty boxes
+          isEmptyBox ? "" : "cursor-pointer hover:shadow-lg group",
           getPadding(),
           !boxHighlighting.backgroundColor.startsWith('rgba') && !boxHighlighting.backgroundColor.startsWith('#') ? boxHighlighting.backgroundColor : '',
           !boxHighlighting.borderColor.startsWith('rgba') && !boxHighlighting.borderColor.startsWith('#') ? boxHighlighting.borderColor : '',
         ].filter(Boolean).join(" ");
 
         const handleBoxClick = () => {
-          // Allow all users to click boxes and view details
+          // Only allow clicking non-empty boxes
+          if (isEmptyBox) return;
+          
           setSelectedBox({
             boxNumber: box.boxNumber,
             customerName: box.customerName,
@@ -282,9 +289,6 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
             lastWorkerColor: box.lastWorkerColor
           });
         };
-
-        // Check if box is empty for conditional rendering
-        const isEmptyBox = box.customerName === "Empty" || box.customerName === "Unassigned" || !box.customerName;
 
         return (
           <div
