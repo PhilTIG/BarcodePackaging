@@ -148,7 +148,7 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       };
     }
 
-    // Priority 3: WHITE BACKGROUND - Box has items but not just scanned (third priority)
+    // Priority 3: WHITE BACKGROUND + WORKER COLOR - Box has items scanned (third priority)
     // The number circle should keep the worker color, but white background (original color)
     const workerColor = lastWorkerColor;
     if (workerColor && products.some(p => p.scannedQty > 0)) {
@@ -161,7 +161,17 @@ const CustomerBoxGridComponent = memo(function CustomerBoxGrid({ products, jobId
       };
     }
 
-    // Priority 4: GREY - Empty box (lowest priority)
+    // Priority 4: WHITE BACKGROUND + 50% GREY CIRCLE - Customer assigned but no scans yet
+    if (!isEmptyBox && products.every(p => p.scannedQty === 0)) {
+      return {
+        backgroundColor: '#ffffff', // White background (active box)
+        borderColor: '#e5e7eb', // Gray-200 border  
+        textColor: 'black',
+        numberCircleColor: '#b5b9c0' // 50% between white and empty box grey
+      };
+    }
+
+    // Priority 5: GREY - Empty box (lowest priority)
     return {
       backgroundColor: '#f3f4f6', // Gray-100
       borderColor: '#d1d5db', // Gray-300
