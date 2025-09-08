@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useErrorContext } from "@/lib/error-context";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Trash2, Plus, Edit3, Users, Settings as SettingsIcon, Palette, Package, ChevronDown } from "lucide-react";
+import { ArrowLeft, Trash2, Plus, Edit3, Users, Settings as SettingsIcon, Palette, Package, ChevronDown, RotateCcw } from "lucide-react";
 import { z } from "zod";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -428,8 +428,21 @@ export default function Settings() {
                 <p className="text-sm text-gray-600">System configuration and user management</p>
               </div>
             </div>
-            <div className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-medium">
-              {user.staffId}
+            <div className="flex items-center space-x-2">
+              {user.role === "worker" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation("/scanner")}
+                  data-testid="button-switch-job"
+                >
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Switch Job
+                </Button>
+              )}
+              <div className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-sm font-medium">
+                {user.staffId}
+              </div>
             </div>
           </div>
         </div>

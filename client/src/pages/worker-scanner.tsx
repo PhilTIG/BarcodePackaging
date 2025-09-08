@@ -670,16 +670,26 @@ export default function WorkerScanner() {
                     <p className="text-sm text-gray-600">Choose a job to work on</p>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    logout();
-                    setLocation("/login");
-                  }}
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLocation("/settings")}
+                    data-testid="button-settings-select-job"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      logout();
+                      setLocation("/login");
+                    }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </header>
@@ -779,7 +789,7 @@ export default function WorkerScanner() {
         onScan={handleBarcodeSubmit}
         isPaused={job?.status !== 'completed' && !job?.isActive}
         onUndo={() => undoMutation.mutate(1)}
-        onSwitchSession={() => setLocation('/scanner')}
+        onSwitchSession={() => setLocation('/settings')}
         isUndoAvailable={(jobPerformanceData?.performance?.totalScans || 0) > 0}
         isConnected={isConnected}
         scanError={scanError}
