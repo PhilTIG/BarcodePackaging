@@ -793,6 +793,7 @@ export default function WorkerScanner() {
         isUndoAvailable={(jobPerformanceData?.performance?.totalScans || 0) > 0}
         isConnected={isConnected}
         scanError={scanError}
+        hasMultipleAssignments={(assignmentsData as any)?.assignments && (assignmentsData as any).assignments.length > 1}
         scanResult={scanResult}
         undoDisplay={undoDisplay}
         runtimeSingleBoxMode={runtimeSingleBoxMode}

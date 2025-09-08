@@ -54,6 +54,7 @@ interface MobileScannerInterfaceProps {
   onLogout?: () => void;
   userStaffId: string;
   isPaused?: boolean;
+  hasMultipleAssignments?: boolean;
 }
 
 export function MobileScannerInterface({
@@ -78,6 +79,7 @@ export function MobileScannerInterface({
   onLogout,
   userStaffId,
   isPaused = false,
+  hasMultipleAssignments = false,
 }: MobileScannerInterfaceProps) {
   const [, setLocation] = useLocation();
   const { preferences, updatePreference } = useUserPreferences();
@@ -171,12 +173,24 @@ export function MobileScannerInterface({
                 <input
                   type="checkbox"
                   checked={runtimeSingleBoxMode}
-                  onChange={(e) => onRuntimeToggle(e.target.checked)}
+                  onChange={(e) => onRuntimeToggle && onRuntimeToggle(e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
               </label>
             </div>
+
+            {hasMultipleAssignments && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation('/scanner')}
+                data-testid="button-switch-job"
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Switch Job
+              </Button>
+            )}
 
             <Button
               variant="ghost"
@@ -217,15 +231,6 @@ export function MobileScannerInterface({
             Undo
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onSwitchSession}
-            data-testid="button-switch-session"
-          >
-            <RefreshCw className="w-4 h-4 mr-1" />
-            Switch Session
-          </Button>
         </div>
       </div>
 
