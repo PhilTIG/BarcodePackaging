@@ -408,7 +408,7 @@ export function MobileScannerInterface({
             return (
               <div className="text-center">
                 <div className="inline-flex items-center px-4 py-2 bg-green-100 border-2 border-green-300 rounded-full">
-                  <span className="text-lg font-medium text-green-800" data-testid="progress-indicator">
+                  <span className="font-medium text-green-800 text-[30px]" data-testid="progress-indicator">
                     {currentBoxProgress.completed}/{currentBoxProgress.total} items
                   </span>
                 </div>
