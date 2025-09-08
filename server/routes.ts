@@ -1706,11 +1706,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (role && typeof role === 'string') {
         // Filter by role if specified
         const users = await storage.getUsersByRole(role);
+        console.log(`[DEBUG] getUsersByRole(${role}) returned ${users.length} users:`, users.map(u => ({ id: u.id, staffId: u.staffId, name: u.name, isActive: u.isActive })));
         // Always return consistent format: {users: [...]}
         res.json({ users });
       } else {
         // Return all users with preferences for management interface
         const users = await storage.getAllUsersWithPreferences();
+        console.log(`[DEBUG] getAllUsersWithPreferences() returned ${users.length} users:`, users.map(u => ({ id: u.id, staffId: u.staffId, name: u.name, isActive: u.isActive })));
         res.json({ users });
       }
     } catch (error) {
