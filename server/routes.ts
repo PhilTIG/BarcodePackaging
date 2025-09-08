@@ -1706,12 +1706,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (role && typeof role === 'string') {
         // Filter by role if specified
         const users = await storage.getUsersByRole(role);
-        // For backward compatibility, return workers array if filtering for workers
-        if (role === 'worker') {
-          res.json({ workers: users });
-        } else {
-          res.json({ users });
-        }
+        // Always return consistent format: {users: [...]}
+        res.json({ users });
       } else {
         // Return all users with preferences for management interface
         const users = await storage.getAllUsersWithPreferences();
