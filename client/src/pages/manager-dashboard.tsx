@@ -327,9 +327,19 @@ export default function ManagerDashboard() {
   // Connect to WebSocket for real-time updates on all active jobs
   useWebSocket();
 
-  // Fetch users for assignment
+  // Fetch workers only for assignment
   const { data: workersData } = useQuery({
-    queryKey: ["/api/users?role=worker"],
+    queryKey: ["/api/users", { role: "worker" }],
+    queryFn: async () => {
+      const response = await fetch("/api/users?role=worker", {
+        headers: { 
+          "Authorization": `Bearer ${user?.id}`,
+          "Content-Type": "application/json"
+        }
+      });
+      if (!response.ok) throw new Error("Failed to fetch workers");
+      return response.json();
+    },
     enabled: !!user,
   });
 
@@ -1222,6 +1232,9 @@ export default function ManagerDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   {(workersData as any)?.users?.filter((worker: any) => {
+                    // Only show workers (not managers or supervisors)
+                    if (worker.role !== 'worker') return false;
+                    
                     // Filter out workers already assigned to this job
                     const currentJob = (jobsData as any)?.jobs?.find((job: any) => job.id === selectedJobId);
                     const assignedWorkerIds = currentJob?.assignments?.map((assignment: any) => assignment.assignee.id) || [];
