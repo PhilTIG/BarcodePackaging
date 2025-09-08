@@ -1,0 +1,112 @@
+2025-09-08 15:30:33.39
+ebf99857
+User
+type: 'authenticate',
+2025-09-08 15:30:33.39
+ebf99857
+User
+data: { userId: '60fe776a-e5cb-44df-a5d6-2fd2e6b6647d' }
+2025-09-08 15:30:33.39
+ebf99857
+User
+}
+2025-09-08 15:30:33.39
+ebf99857
+User
+[WebSocket Server] Client 35mi authenticated as user 60fe776a-e5cb-44df-a5d6-2fd2e6b6647d
+2025-09-08 15:30:36.10
+ebf99857
+User
+[WebSocket Server] Client 35mi disconnected. Code: 1000, Reason: Manual disconnect
+2025-09-08 15:30:39.56
+ebf99857
+User
+5:30:39 AM [express] GET /api/users/me/preferences 401 in 0ms :: {"message":"Authentication required…
+2025-09-08 15:30:47.65
+ebf99857
+User
+hint: undefined,
+2025-09-08 15:30:47.65
+ebf99857
+User
+position: '158',
+2025-09-08 15:30:47.65
+ebf99857
+User
+internalPosition: undefined,
+2025-09-08 15:30:47.65
+ebf99857
+User
+internalQuery: undefined,
+2025-09-08 15:30:47.65
+ebf99857
+User
+where: undefined,
+2025-09-08 15:30:47.65
+ebf99857
+User
+schema: undefined,
+2025-09-08 15:30:47.65
+ebf99857
+User
+table: undefined,
+2025-09-08 15:30:47.65
+ebf99857
+User
+column: undefined,
+2025-09-08 15:30:47.65
+ebf99857
+User
+dataType: undefined,
+2025-09-08 15:30:47.65
+ebf99857
+User
+constraint: undefined,
+2025-09-08 15:30:47.65
+ebf99857
+User
+file: 'parse_relation.c',
+2025-09-08 15:30:47.65
+ebf99857
+User
+line: '3722',
+2025-09-08 15:30:47.65
+ebf99857
+User
+routine: 'errorMissingColumn'
+2025-09-08 15:30:47.65
+ebf99857
+User
+}
+2025-09-08 15:30:47.65
+ebf99857
+User
+5:30:47 AM [express] GET /api/jobs 500 in 234ms :: {"error":"Failed to fetch jobs"}
+2025-09-08 15:30:47.65
+ebf99857
+User
+Error generating QA summary: error: column "box_limit" does not exist
+2025-09-08 15:30:47.65
+ebf99857
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-09-08 15:30:47.65
+ebf99857
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-08 15:30:47.65
+ebf99857
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-09-08 15:30:47.65
+ebf99857
+User
+at async DatabaseStorage.getQASummary (file:///home/runner/workspace/dist/index.js:2013:26)
+2025-09-08 15:30:47.65
+ebf99857
+User
+at async file:///home/runner/workspace/dist/index.js:3830:23 {
+2025-09-08 15:30:47.65
+ebf99857
+User
+length: 110,
