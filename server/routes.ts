@@ -1702,22 +1702,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/users', requireAuth, requireRole(['manager']), async (req, res) => {
     try {
       const { role } = req.query;
-      console.log(`[PRODUCTION DEBUG] /api/users called with role=${role} by user ${req.user?.id}`);
 
       if (role && typeof role === 'string') {
         // Filter by role if specified
         const users = await storage.getUsersByRole(role);
-        console.log(`[PRODUCTION DEBUG] getUsersByRole(${role}) returned ${users.length} users:`, users.map(u => ({ id: u.id?.slice(-8), staffId: u.staffId, name: u.name, isActive: u.isActive })));
         // Always return consistent format: {users: [...]}
         res.json({ users });
       } else {
         // Return all users with preferences for management interface
         const users = await storage.getAllUsersWithPreferences();
-        console.log(`[PRODUCTION DEBUG] getAllUsersWithPreferences() returned ${users.length} users:`, users.map(u => ({ id: u.id?.slice(-8), staffId: u.staffId, name: u.name, isActive: u.isActive })));
         res.json({ users });
       }
     } catch (error) {
-      console.error('[PRODUCTION DEBUG] Failed to fetch users:', error);
+      console.error('Failed to fetch users:', error);
       res.status(500).json({ message: 'Failed to fetch users' });
     }
   });

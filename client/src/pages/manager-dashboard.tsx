@@ -1221,7 +1221,7 @@ export default function ManagerDashboard() {
                   <SelectValue placeholder="Choose a worker..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {(workersData as any)?.workers?.filter((worker: any) => {
+                  {(workersData as any)?.users?.filter((worker: any) => {
                     // Filter out workers already assigned to this job
                     const currentJob = (jobsData as any)?.jobs?.find((job: any) => job.id === selectedJobId);
                     const assignedWorkerIds = currentJob?.assignments?.map((assignment: any) => assignment.assignee.id) || [];
