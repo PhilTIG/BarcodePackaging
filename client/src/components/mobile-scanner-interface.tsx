@@ -111,12 +111,12 @@ export function MobileScannerInterface({
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Red Error Screen Overlay */}
+      {/* Error/Status Screen Overlay */}
       {scanError && (
-        <div className="fixed inset-0 bg-red-500 bg-opacity-95 z-50 flex items-center justify-center">
+        <div className={`fixed inset-0 ${scanError.startsWith('Creating session') ? 'bg-green-500' : 'bg-red-500'} bg-opacity-95 z-50 flex items-center justify-center`}>
           <div className="text-center text-white p-8">
-            <div className="text-6xl mb-4">⚠️</div>
-            <div className="text-3xl font-bold mb-4">Scan Error</div>
+            <div className="text-6xl mb-4">{scanError.startsWith('Creating session') ? '✅' : '⚠️'}</div>
+            <div className="text-3xl font-bold mb-4">{scanError.startsWith('Creating session') ? 'Scanner Activated' : 'Scan Error'}</div>
             <div className="text-xl mb-6">{scanError}</div>
             <Button
               onClick={() => {
@@ -125,7 +125,7 @@ export function MobileScannerInterface({
                   barcodeInputRef.current.focus();
                 }
               }}
-              className="bg-white text-red-500 hover:bg-gray-100"
+              className={`bg-white ${scanError.startsWith('Creating session') ? 'text-green-500 hover:bg-gray-100' : 'text-red-500 hover:bg-gray-100'}`}
               data-testid="button-error-dismiss"
             >
               Continue Scanning

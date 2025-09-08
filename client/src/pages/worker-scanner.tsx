@@ -457,7 +457,7 @@ export default function WorkerScanner() {
     // Auto-create session if none exists
     if (!activeSession) {
       autoCreateSessionMutation.mutate();
-      setScanError("Creating session - please try scanning again");
+      setScanError("Creating session - ready to start scanning");
       setTimeout(() => setScanError(null), 2000);
       return;
     }
