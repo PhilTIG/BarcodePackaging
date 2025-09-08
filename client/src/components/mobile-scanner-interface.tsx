@@ -83,6 +83,10 @@ export function MobileScannerInterface({
   const { preferences, updatePreference } = useUserPreferences();
   const [barcodeInput, setBarcodeInput] = useState("");
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  
+  // State for same-box scan orange flash effect
+  const [previousBoxNumber, setPreviousBoxNumber] = useState<number | null>(null);
+  const [showOrangeFlash, setShowOrangeFlash] = useState(false);
 
   // Auto-focus input for mobile scanning
   useEffect(() => {
@@ -90,6 +94,21 @@ export function MobileScannerInterface({
       barcodeInputRef.current.focus();
     }
   }, [lastScanEvent]);
+
+  // Detect same-box scans for orange flash effect
+  useEffect(() => {
+    if (lastScanEvent && lastScanEvent.boxNumber) {
+      // Check if this is a successful scan to the same box as previous scan
+      if (previousBoxNumber !== null && previousBoxNumber === lastScanEvent.boxNumber) {
+        // Same box - trigger orange flash for 4 seconds
+        setShowOrangeFlash(true);
+        const timeout = setTimeout(() => setShowOrangeFlash(false), 4000);
+        return () => clearTimeout(timeout);
+      }
+      // Update previous box number for next comparison
+      setPreviousBoxNumber(lastScanEvent.boxNumber);
+    }
+  }, [lastScanEvent, previousBoxNumber]);
 
   // Handle barcode input submission
   const handleBarcodeSubmit = (e: React.FormEvent) => {
@@ -407,7 +426,7 @@ export function MobileScannerInterface({
             // Regular scan or returning to view - show current box progress
             return (
               <div className="text-center">
-                <div className="inline-flex items-center px-4 py-2 bg-green-100 border-2 border-green-300 rounded-full">
+                <div className={`inline-flex items-center px-4 py-2 border-2 rounded-full ${showOrangeFlash ? 'bg-orange-100 border-orange-300' : 'bg-green-100 border-green-300'}`}>
                   <span className="font-medium text-green-800 text-[30px]" data-testid="progress-indicator">
                     {currentBoxProgress.completed}/{currentBoxProgress.total} items
                   </span>
