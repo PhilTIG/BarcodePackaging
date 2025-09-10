@@ -1100,10 +1100,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedProducts: any[] = []; // Explicitly type
       const productMap = new Map();
 
+      // PERFORMANCE FIX: Batch fetch all unique workers to eliminate N+1 queries
+      const uniqueWorkerIds = [...new Set(updatedBoxRequirements
+        .map(req => req.lastWorkerUserId)
+        .filter(id => id !== null))];
+      
+      const workerMap = new Map();
+      if (uniqueWorkerIds.length > 0) {
+        const workers = await storage.getUsersByIds(uniqueWorkerIds);
+        workers.forEach(worker => workerMap.set(worker.id, worker));
+      }
+
       for (const req of updatedBoxRequirements) {
         const key = `${req.customerName}-${req.boxNumber}`;
         if (!productMap.has(key)) {
-          const worker = req.lastWorkerUserId ? await storage.getUserById(req.lastWorkerUserId) : null;
+          const worker = req.lastWorkerUserId ? workerMap.get(req.lastWorkerUserId) : null;
           productMap.set(key, {
             id: `${req.customerName}-${req.boxNumber}`,
             customerName: req.customerName,

@@ -90,6 +90,7 @@ export interface IStorage {
   deleteUser(id: string): Promise<boolean>;
   getAllUsers(): Promise<User[]>;
   getUsersByRole(role: string): Promise<User[]>;
+  getUsersByIds(ids: string[]): Promise<User[]>;
   getAllUsersWithPreferences(): Promise<(User & { preferences?: any })[]>;
 
   // Job methods
@@ -238,6 +239,11 @@ export class DatabaseStorage implements IStorage {
   async getUserByStaffId(staffId: string): Promise<User | undefined> {
     const [user] = await this.db.select().from(users).where(eq(users.staffId, staffId));
     return user || undefined;
+  }
+
+  async getUsersByIds(ids: string[]): Promise<User[]> {
+    if (ids.length === 0) return [];
+    return await this.db.select().from(users).where(inArray(users.id, ids));
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
