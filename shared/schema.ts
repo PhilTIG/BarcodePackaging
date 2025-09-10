@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, decimal, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, decimal, uuid, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -50,7 +50,12 @@ export const boxRequirements = pgTable("box_requirements", {
   // Worker tracking fields for color highlighting
   lastWorkerUserId: varchar("last_worker_user_id").references(() => users.id),
   lastWorkerColor: text("last_worker_color"),
-});
+}, (table) => ({
+  // Performance indexes for critical queries
+  jobIdIdx: index("box_requirements_job_id_idx").on(table.jobId),
+  barCodeJobIdx: index("box_requirements_barcode_job_idx").on(table.barCode, table.jobId),
+  boxNumberJobIdx: index("box_requirements_box_job_idx").on(table.boxNumber, table.jobId),
+}));
 
 // Products table removed - all functionality moved to box_requirements system
 
@@ -91,7 +96,12 @@ export const scanEvents = pgTable("scan_events", {
   // Put Aside functionality (NEW) - PHASE 2 CLEANUP: These fields overlap with putAsideItems table functionality
   allocatedToBox: integer("allocated_to_box"), // Box number when Put Aside item is allocated
   allocatedAt: timestamp("allocated_at"), // Timestamp when Put Aside item is allocated
-});
+}, (table) => ({
+  // Performance indexes for critical queries
+  sessionIdIdx: index("scan_events_session_id_idx").on(table.sessionId),
+  scanTimeIdx: index("scan_events_scan_time_idx").on(table.scanTime),
+  eventTypeIdx: index("scan_events_event_type_idx").on(table.eventType),
+}));
 
 export const jobTypes = pgTable("job_types", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
