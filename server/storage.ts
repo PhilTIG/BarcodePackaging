@@ -3364,7 +3364,7 @@ export class DatabaseStorage implements IStorage {
 
       // Get summary statistics
       const totalCustomers = customers.length;
-      const completedCustomers = customers.filter(c => 
+      const completedCustomers = customers.filter((c: any) => 
         ['Completed', 'Transferred', 'Archived'].includes(c.status)
       ).length;
       const completionPercentage = totalCustomers > 0 ? 
@@ -3512,8 +3512,8 @@ export class DatabaseStorage implements IStorage {
         .orderBy(boxRequirements.boxNumber, boxRequirements.productName); // Sort by box number ascending, then product name
 
       // Get summary statistics
-      const totalUnscannedItems = nonScannedData.reduce((sum, item) => sum + item.quantityRequired, 0);
-      const totalBoxesWithUnscanned = new Set(nonScannedData.map(item => item.boxNumber)).size;
+      const totalUnscannedItems = nonScannedData.reduce((sum: number, item: any) => sum + item.quantityRequired, 0);
+      const totalBoxesWithUnscanned = new Set(nonScannedData.map((item: any) => item.boxNumber)).size;
       const totalProductTypes = nonScannedData.length;
 
       return {

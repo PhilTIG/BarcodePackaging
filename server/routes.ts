@@ -1101,9 +1101,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const productMap = new Map();
 
       // PERFORMANCE FIX: Batch fetch all unique workers to eliminate N+1 queries
-      const uniqueWorkerIds = [...new Set(updatedBoxRequirements
+      const uniqueWorkerIds = Array.from(new Set(updatedBoxRequirements
         .map(req => req.lastWorkerUserId)
-        .filter(id => id !== null))];
+        .filter(id => id !== null)));
       
       const workerMap = new Map();
       if (uniqueWorkerIds.length > 0) {
