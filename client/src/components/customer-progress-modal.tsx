@@ -90,13 +90,28 @@ export function CustomerProgressModal({ isOpen, onClose, jobId, jobName }: Custo
           comparison = a.completionPercentage - b.completionPercentage;
           break;
         case 'box':
-          // Handle null box numbers - put them at the end
-          if (a.boxNumber == null && b.boxNumber == null) return 0;
-          if (a.boxNumber == null) return 1;
-          if (b.boxNumber == null) return -1;
-          comparison = a.boxNumber - b.boxNumber;
-          break;
-      }
+          // Robust numeric comparison for box numbers
+          const aBoxNum = a.boxNumber == null ? -1 : Number(a.boxNumber);
+          const bBoxNum = b.boxNumber == null ? -1 : Number(b.boxNumber);
+          
+          // Handle NaN cases (treat as -1 for unassigned)
+          const aNum = isNaN(aBoxNum) ? -1 : aBoxNum;
+          const bNum = isNaN(bBoxNum) ? -1 : bBoxNum;
+          
+          // Sort logic: null/unassigned boxes (-1) go to end in ascending order
+          if (aNum === -1 && bNum === -1) {
+            comparison = 0;
+          } else if (aNum === -1) {
+            comparison = sortOrder === 'asc' ? 1 : -1;
+          } else if (bNum === -1) {
+            comparison = sortOrder === 'asc' ? -1 : 1;
+          } else {
+            comparison = aNum - bNum;
+          }
+          
+          // Return early for box sorting to handle null placement correctly
+          return sortOrder === 'asc' ? comparison : -comparison;
+        }
       
       return sortOrder === 'asc' ? comparison : -comparison;
     });
