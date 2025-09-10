@@ -80,7 +80,8 @@ export function NonScannedReportModal({ isOpen, onClose, jobId, jobName }: NonSc
       
       switch (sortBy) {
         case 'box':
-          comparison = a.boxNumber - b.boxNumber;
+          // Ensure numeric comparison for box numbers
+          comparison = Number(a.boxNumber) - Number(b.boxNumber);
           break;
         case 'product':
           comparison = a.productName.localeCompare(b.productName);
