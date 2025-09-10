@@ -147,21 +147,21 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         console.log("[WebSocket] Scan update received:", message.data);
 
         // Check if this uses the new delta format (affectedBoxes) or legacy format
-        const isDeltaFormat = message.data.affectedBoxes && (message.data as any).scanEvent;
+        const isDeltaFormat = (message.data as any).affectedBoxes && (message.data as any).scanEvent;
 
         if (isDeltaFormat) {
           // PERFORMANCE OPTIMIZATION: Delta update with minimal data
-          console.log("[WebSocket] Delta scan update with affected boxes:", message.data.affectedBoxes.length);
+          console.log("[WebSocket] Delta scan update with affected boxes:", (message.data as any).affectedBoxes.length);
 
           // Update only affected boxes in the job products data
-          if (message.data.affectedBoxes && message.data.affectedBoxes.length > 0) {
+          if ((message.data as any).affectedBoxes && (message.data as any).affectedBoxes.length > 0) {
             queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => {
               if (!oldData?.products) return oldData;
               
               const updatedProducts = [...oldData.products];
               
               // Update each affected box
-              message.data.affectedBoxes.forEach((updatedBox: any) => {
+              (message.data as any).affectedBoxes.forEach((updatedBox: any) => {
                 const index = updatedProducts.findIndex(p => p.id === updatedBox.id);
                 if (index !== -1) {
                   updatedProducts[index] = { ...updatedProducts[index], ...updatedBox };
