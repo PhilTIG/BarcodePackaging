@@ -6,12 +6,13 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { Settings, LogOut, Users, Package, ChevronLeft } from "lucide-react";
+import { Settings, LogOut, Users, Package, ChevronLeft, FileBarChart } from "lucide-react";
 import { CustomerBoxGrid } from "@/components/customer-box-grid";
 import { PerformanceDashboard } from "@/components/performance-dashboard";
 import { ExtraItemsModal } from "@/components/extra-items-modal";
 import { CustomerQueueModal } from "@/components/customer-queue-modal";
 import { CustomerProgressModal } from "@/components/customer-progress-modal";
+import { NonScannedReportModal } from "@/components/non-scanned-report-modal";
 import { ItemFilter } from "@/components/item-filter";
 import { GroupFilter } from "@/components/group-filter";
 import { useFilteredBoxData } from "@/hooks/use-filtered-box-data";
@@ -96,6 +97,7 @@ export default function SupervisorView() {
   const [isCustomerQueueModalOpen, setIsCustomerQueueModalOpen] = useState(false);
   const [isPutAsideModalOpen, setIsPutAsideModalOpen] = useState(false);
   const [isCustomerProgressModalOpen, setIsCustomerProgressModalOpen] = useState(false);
+  const [isNonScannedReportOpen, setIsNonScannedReportOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
@@ -408,6 +410,16 @@ export default function SupervisorView() {
                       onSelectionChange={setSelectedGroups}
                       placeholder="Filter by group..."
                     />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsNonScannedReportOpen(true)}
+                      className="flex items-center gap-2"
+                      data-testid="non-scanned-report-button"
+                    >
+                      <FileBarChart className="w-4 h-4" />
+                      Non Scanned Report
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -600,6 +612,14 @@ export default function SupervisorView() {
       <CustomerProgressModal
         isOpen={isCustomerProgressModalOpen}
         onClose={() => setIsCustomerProgressModalOpen(false)}
+        jobId={jobId!}
+        jobName={job?.name}
+      />
+
+      {/* Non Scanned Report Modal */}
+      <NonScannedReportModal
+        isOpen={isNonScannedReportOpen}
+        onClose={() => setIsNonScannedReportOpen(false)}
         jobId={jobId!}
         jobName={job?.name}
       />
