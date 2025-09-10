@@ -1636,13 +1636,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/jobs/:id/non-scanned-report', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
     try {
       const nonScannedData = await storage.getNonScannedItems(req.params.id);
-      
-      // DEBUG: Log the calculation details
-      console.log(`[NON-SCANNED DEBUG] Job ID: ${req.params.id}`);
-      console.log(`[NON-SCANNED DEBUG] Total items found: ${nonScannedData.items?.length || 0}`);
-      console.log(`[NON-SCANNED DEBUG] Summary:`, JSON.stringify(nonScannedData.summary, null, 2));
-      console.log(`[NON-SCANNED DEBUG] Individual quantities:`, nonScannedData.items?.map(item => item.quantityRequired).slice(0, 10));
-      
       res.json(nonScannedData);
     } catch (error) {
       console.error('Failed to fetch non-scanned items data:', error);

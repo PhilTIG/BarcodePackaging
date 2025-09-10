@@ -27,6 +27,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/manager" component={ManagerDashboard} />
       <Route path="/supervisor/:jobId?" component={SupervisorView} />
+      <Route path="/supervisor-view/:jobId?" component={SupervisorView} />
       <Route path="/scanner/:jobId?" component={WorkerScanner} />
       <Route path="/check-count/:jobId/:boxNumber" component={CheckCountPage} />
       <Route path="/qa-dashboard/:jobId?" component={QADashboard} />
