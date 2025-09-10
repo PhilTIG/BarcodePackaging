@@ -1636,25 +1636,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/jobs/:id/non-scanned-report', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
     try {
       const nonScannedData = await storage.getNonScannedItems(req.params.id);
-      
-      // TEMPORARY DEBUG: Find the 10x multiplication issue
-      console.log(`[DEBUG 10x BUG] Job: ${req.params.id}`);
-      console.log(`[DEBUG 10x BUG] Items count: ${nonScannedData.items?.length}`);
-      console.log(`[DEBUG 10x BUG] totalUnscannedItems: ${nonScannedData.summary?.totalUnscannedItems}`);
-      console.log(`[DEBUG 10x BUG] putAsideCount: ${nonScannedData.summary?.putAsideCount}`);
-      console.log(`[DEBUG 10x BUG] totalRequired: ${nonScannedData.summary?.totalRequired}`);
-      console.log(`[DEBUG 10x BUG] First 5 quantityRequired values:`, 
-        nonScannedData.items?.slice(0, 5).map(item => ({
-          productName: item.productName,
-          quantityRequired: item.quantityRequired,
-          boxNumber: item.boxNumber
-        })));
-      
-      // Disable caching for debugging
-      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.set('Pragma', 'no-cache');
-      res.set('Expires', '0');
-      
       res.json(nonScannedData);
     } catch (error) {
       console.error('Failed to fetch non-scanned items data:', error);

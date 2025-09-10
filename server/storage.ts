@@ -1864,7 +1864,9 @@ export class DatabaseStorage implements IStorage {
         eq(scanEvents.jobId, jobId),
         eq(scanEvents.isExtraItem, true)
       ));
-    return result[0]?.count || 0;
+    // FIX: Ensure the count is returned as a number, not a string
+    const count = result[0]?.count || 0;
+    return typeof count === 'string' ? parseInt(count, 10) : count;
   }
 
   async getExtraItemsDetails(jobId: string): Promise<any[]> {
@@ -3270,7 +3272,9 @@ export class DatabaseStorage implements IStorage {
         isNull(scanEvents.allocatedAt) // Only unallocated items
       ));
 
-    return result[0]?.count || 0;
+    // FIX: Ensure the count is returned as a number, not a string
+    const count = result[0]?.count || 0;
+    return typeof count === 'string' ? parseInt(count, 10) : count;
   }
 
   // Group Management Implementation
@@ -3487,7 +3491,9 @@ export class DatabaseStorage implements IStorage {
         isNull(scanEvents.allocatedAt) // Only unallocated items
       ));
 
-    return result[0]?.count || 0;
+    // FIX: Ensure the count is returned as a number, not a string
+    const count = result[0]?.count || 0;
+    return typeof count === 'string' ? parseInt(count, 10) : count;
   }
 
   async getNonScannedItems(jobId: string): Promise<any> {
@@ -3519,18 +3525,8 @@ export class DatabaseStorage implements IStorage {
       const totalBoxesWithUnscanned = new Set(nonScannedData.map((item: any) => item.boxNumber)).size;
       const totalProductTypes = nonScannedData.length;
 
-      // TEMPORARY DEBUG: Trace the 10x multiplication issue
-      console.log(`[TRACE 10x BUG] Before totalRequired calculation:`);
-      console.log(`[TRACE 10x BUG] totalUnscannedItems: ${totalUnscannedItems} (type: ${typeof totalUnscannedItems})`);
-      console.log(`[TRACE 10x BUG] putAsideCount: ${putAsideCount} (type: ${typeof putAsideCount})`);
-      console.log(`[TRACE 10x BUG] First 3 quantityRequired values:`, nonScannedData.slice(0, 3).map(item => ({ productName: item.productName, quantityRequired: item.quantityRequired, type: typeof item.quantityRequired })));
-
       // Total required = unscanned items in boxes + put aside items (not allocated to boxes yet)
       const totalRequired = totalUnscannedItems + putAsideCount;
-
-      console.log(`[TRACE 10x BUG] After calculation:`);
-      console.log(`[TRACE 10x BUG] totalRequired: ${totalRequired} (type: ${typeof totalRequired})`);
-      console.log(`[TRACE 10x BUG] Manual calculation: ${totalUnscannedItems} + ${putAsideCount} = ${totalUnscannedItems + putAsideCount}`);
 
       return {
         items: nonScannedData,
