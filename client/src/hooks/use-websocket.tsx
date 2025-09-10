@@ -143,15 +143,73 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
         break;
 
       case "scan_update":
-        // Handle both optimized format (with complete data) and simplified format
+        // Handle optimized delta format
         console.log("[WebSocket] Scan update received:", message.data);
 
-        // Check if this is the new complete format or old simplified format
-        const hasCompleteData = message.data.products && (message.data as any).scanEvent;
+        // Check if this uses the new delta format (affectedBoxes) or legacy format
+        const isDeltaFormat = message.data.affectedBoxes && (message.data as any).scanEvent;
 
-        if (hasCompleteData) {
-          // PHASE 1 OPTIMIZATION: Direct data update for complete format
-          console.log("[WebSocket] Optimized scan update with complete data");
+        if (isDeltaFormat) {
+          // PERFORMANCE OPTIMIZATION: Delta update with minimal data
+          console.log("[WebSocket] Delta scan update with affected boxes:", message.data.affectedBoxes.length);
+
+          // Update only affected boxes in the job products data
+          if (message.data.affectedBoxes && message.data.affectedBoxes.length > 0) {
+            queryClient.setQueryData(["/api/jobs", jobId], (oldData: any) => {
+              if (!oldData?.products) return oldData;
+              
+              const updatedProducts = [...oldData.products];
+              
+              // Update each affected box
+              message.data.affectedBoxes.forEach((updatedBox: any) => {
+                const index = updatedProducts.findIndex(p => p.id === updatedBox.id);
+                if (index !== -1) {
+                  updatedProducts[index] = { ...updatedProducts[index], ...updatedBox };
+                }
+              });
+              
+              return {
+                ...oldData,
+                products: updatedProducts
+              };
+            });
+          }
+
+          // Update worker performance data directly
+          if (message.data.performance && (message.data as any).scanEvent.userId) {
+            queryClient.setQueryData(["/api/jobs", jobId, "worker-performance", (message.data as any).scanEvent.userId], {
+              performance: message.data.performance
+            });
+          }
+
+          // Trigger box highlighting update for real-time visual feedback
+          if (onWorkerBoxUpdate && (message.data as any).scanEvent.boxNumber && (message.data as any).scanEvent.userId) {
+            const scanEvent = (message.data as any).scanEvent;
+            onWorkerBoxUpdate(
+              Number(scanEvent.boxNumber),
+              String(scanEvent.userId),
+              scanEvent.workerColor || '',
+              scanEvent.workerStaffId || ''
+            );
+          }
+
+          // CRITICAL: Handle Put Aside events - invalidate Put Aside count query
+          if ((message.data as any).scanEvent.eventType === 'put_aside') {
+            console.log("[WebSocket] Put Aside scan event - invalidating Put Aside count queries");
+            queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside/count`] });
+            queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside`] });
+          }
+
+          // CRITICAL: Handle Put Aside consumption - when scanning consumes a Put Aside item
+          if ((message.data as any).scanEvent.eventType === 'scan' && (message.data as any).scanEvent.consumedPutAside) {
+            console.log("[WebSocket] Put Aside consumed - invalidating Put Aside count queries");
+            queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside/count`] });
+            queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside`] });
+          }
+
+        } else if (message.data.products && (message.data as any).scanEvent) {
+          // Legacy complete format - full data update
+          console.log("[WebSocket] Legacy complete scan update");
 
           // Update job products data directly
           if (message.data.products) {

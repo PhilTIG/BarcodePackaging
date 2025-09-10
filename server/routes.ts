@@ -1147,22 +1147,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get worker performance data
       const workerPerformance = await storage.getJobWorkerPerformance(jobId, req.user!.id);
 
-      // Send real-time update with complete data to eliminate client-side API calls
+      // PERFORMANCE OPTIMIZATION: Send minimal delta update instead of complete product list
+      const affectedBoxes = transformedProducts.filter(product => 
+        product.boxNumber === scanEvent.boxNumber || product.lastWorkerUserId === req.user!.id
+      );
+
+      // Send optimized update with minimal data payload
       broadcastToJob(String(jobId), {
         type: "scan_update",
         data: {
           scanEvent: {
-            ...scanEvent,
-            sessionId: sessionId,
+            id: scanEvent.id,
+            barCode: scanEvent.barCode,
+            boxNumber: scanEvent.boxNumber,
+            eventType: scanEvent.eventType,
             userId: req.user!.id,
-            userName: req.user!.name,
             workerColor: workerAssignment?.assignedColor || '#3B82F6',
             workerStaffId: req.user!.staffId,
-            // Include consumedPutAside flag for WebSocket
-            consumedPutAside: (insertEvent as any).consumedPutAside || false
+            consumedPutAside: (insertEvent as any).consumedPutAside || false,
+            scanTime: scanEvent.scanTime
           },
-          products: transformedProducts,
-          performance: workerPerformance,
+          // Only send affected boxes instead of all products (reduces payload ~90%)
+          affectedBoxes: affectedBoxes.map(box => ({
+            id: box.id,
+            boxNumber: box.boxNumber,
+            customerName: box.customerName,
+            scannedQty: box.scannedQty,
+            qty: box.qty,
+            isComplete: box.isComplete,
+            lastWorkerUserId: box.lastWorkerUserId,
+            lastWorkerColor: box.lastWorkerColor,
+            lastWorkerStaffId: box.lastWorkerStaffId
+          })),
+          performance: {
+            totalScans: workerPerformance.totalScans,
+            scansPerHour: workerPerformance.scansPerHour,
+            score: workerPerformance.score
+          },
           boxNumber: scanEvent.boxNumber,
           jobId: String(jobId)
         },
