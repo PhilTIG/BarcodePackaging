@@ -226,6 +226,9 @@ export interface IStorage {
 
   // Customer progress methods
   getCustomerProgressData(jobId: string): Promise<any>;
+  
+  // Non-scanned report methods
+  getNonScannedItems(jobId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3485,6 +3488,46 @@ export class DatabaseStorage implements IStorage {
       ));
 
     return result[0]?.count || 0;
+  }
+
+  async getNonScannedItems(jobId: string): Promise<any> {
+    try {
+      // Get all non-scanned items (where scannedQty < requiredQty)
+      const nonScannedData = await this.db
+        .select({
+          boxNumber: boxRequirements.boxNumber,
+          productName: boxRequirements.productName,
+          customerName: boxRequirements.customerName,
+          groupName: boxRequirements.groupName,
+          quantityRequired: sql<number>`${boxRequirements.requiredQty} - ${boxRequirements.scannedQty}`, // Remaining quantity
+          quantityTotal: boxRequirements.requiredQty,
+          barCode: boxRequirements.barCode
+        })
+        .from(boxRequirements)
+        .where(and(
+          eq(boxRequirements.jobId, jobId),
+          sql`${boxRequirements.scannedQty} < ${boxRequirements.requiredQty}`, // Only non-complete items
+          isNotNull(boxRequirements.boxNumber) // Only allocated boxes (exclude unassigned customers)
+        ))
+        .orderBy(boxRequirements.boxNumber, boxRequirements.productName); // Sort by box number ascending, then product name
+
+      // Get summary statistics
+      const totalUnscannedItems = nonScannedData.reduce((sum, item) => sum + item.quantityRequired, 0);
+      const totalBoxesWithUnscanned = new Set(nonScannedData.map(item => item.boxNumber)).size;
+      const totalProductTypes = nonScannedData.length;
+
+      return {
+        items: nonScannedData,
+        summary: {
+          totalUnscannedItems,
+          totalBoxesWithUnscanned,
+          totalProductTypes
+        }
+      };
+    } catch (error) {
+      console.error('Error getting non-scanned items:', error);
+      throw error;
+    }
   }
 }
 

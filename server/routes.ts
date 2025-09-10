@@ -1632,6 +1632,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get non-scanned items data for Non Scanned Report modal
+  app.get('/api/jobs/:id/non-scanned-report', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
+    try {
+      const nonScannedData = await storage.getNonScannedItems(req.params.id);
+      res.json(nonScannedData);
+    } catch (error) {
+      console.error('Failed to fetch non-scanned items data:', error);
+      res.status(500).json({ message: 'Failed to fetch non-scanned items data' });
+    }
+  });
+
   // Extra Items endpoints (NEW)
   app.get('/api/jobs/:id/extra-items', requireAuth, requireRole(['manager', 'supervisor']), async (req, res) => {
     try {
