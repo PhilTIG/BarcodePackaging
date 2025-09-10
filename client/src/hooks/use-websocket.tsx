@@ -271,12 +271,16 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             console.log("[WebSocket] Put Aside event detected - invalidating Put Aside queries");
             queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside/count`] });
             queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside`] });
+            // Invalidate non-scanned report for real-time button count updates
+            queryClient.invalidateQueries({ queryKey: ['/api/jobs', jobId, 'non-scanned-report'] });
           }
 
           // For all simplified format messages, invalidate relevant queries
           queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
           queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
           queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "progress"] });
+          // Invalidate non-scanned report for simplified format scan events
+          queryClient.invalidateQueries({ queryKey: ['/api/jobs', jobId, 'non-scanned-report'] });
         }
 
         // Always update job progress if available
