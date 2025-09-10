@@ -3511,17 +3511,25 @@ export class DatabaseStorage implements IStorage {
         ))
         .orderBy(boxRequirements.boxNumber, boxRequirements.productName); // Sort by box number ascending, then product name
 
+      // Get put aside count (unallocated items)
+      const putAsideCount = await this.getPutAsideCount(jobId);
+
       // Get summary statistics
       const totalUnscannedItems = nonScannedData.reduce((sum: number, item: any) => sum + item.quantityRequired, 0);
       const totalBoxesWithUnscanned = new Set(nonScannedData.map((item: any) => item.boxNumber)).size;
       const totalProductTypes = nonScannedData.length;
+
+      // Total required = unscanned items in boxes + put aside items (not allocated to boxes yet)
+      const totalRequired = totalUnscannedItems + putAsideCount;
 
       return {
         items: nonScannedData,
         summary: {
           totalUnscannedItems,
           totalBoxesWithUnscanned,
-          totalProductTypes
+          totalProductTypes,
+          putAsideCount,
+          totalRequired // NEW: Total items that still need to be scanned/allocated
         }
       };
     } catch (error) {

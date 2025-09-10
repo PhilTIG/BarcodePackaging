@@ -198,6 +198,8 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             console.log("[WebSocket] Put Aside scan event - invalidating Put Aside count queries");
             queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside/count`] });
             queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside`] });
+            // Invalidate non-scanned report for real-time button count updates
+            queryClient.invalidateQueries({ queryKey: ['/api/jobs', jobId, 'non-scanned-report'] });
           }
 
           // CRITICAL: Handle Put Aside consumption - when scanning consumes a Put Aside item
@@ -205,6 +207,8 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             console.log("[WebSocket] Put Aside consumed - invalidating Put Aside count queries");
             queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside/count`] });
             queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside`] });
+            // Invalidate non-scanned report for real-time button count updates
+            queryClient.invalidateQueries({ queryKey: ['/api/jobs', jobId, 'non-scanned-report'] });
           }
 
         } else if (message.data.products && (message.data as any).scanEvent) {
@@ -242,6 +246,8 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             console.log("[WebSocket] Put Aside scan event - invalidating Put Aside count queries");
             queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside/count`] });
             queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside`] });
+            // Invalidate non-scanned report for real-time button count updates
+            queryClient.invalidateQueries({ queryKey: ['/api/jobs', jobId, 'non-scanned-report'] });
           }
 
           // CRITICAL: Handle Put Aside consumption - when scanning consumes a Put Aside item
@@ -249,6 +255,8 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
             console.log("[WebSocket] Put Aside consumed - invalidating Put Aside count queries");
             queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside/count`] });
             queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/put-aside`] });
+            // Invalidate non-scanned report for real-time button count updates
+            queryClient.invalidateQueries({ queryKey: ['/api/jobs', jobId, 'non-scanned-report'] });
           }
 
         } else {
@@ -281,6 +289,9 @@ export function useWebSocket(jobId?: string, onWorkerBoxUpdate?: (boxNumber: num
 
         // CRITICAL FIX: Always invalidate box-requirements to update Box Details Modal
         queryClient.invalidateQueries({ queryKey: [`/api/jobs/${jobId}/box-requirements`] });
+        
+        // Invalidate non-scanned report for all scan events to update button count in real-time
+        queryClient.invalidateQueries({ queryKey: ['/api/jobs', jobId, 'non-scanned-report'] });
         break;
 
       case "scan_event":

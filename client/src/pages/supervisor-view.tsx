@@ -128,6 +128,13 @@ export default function SupervisorView() {
     // REMOVED: refetchInterval polling - WebSocket provides real-time updates
   });
 
+  // Fetch non-scanned items count for button
+  const { data: nonScannedData } = useQuery({
+    queryKey: ['/api/jobs', jobId, 'non-scanned-report'],
+    enabled: !!jobId && !!user,
+    refetchInterval: 5000, // Real-time updates for button count
+  });
+
   // Connect to WebSocket for real-time updates 
   const { isConnected } = useWebSocket(jobId);
 
@@ -416,9 +423,12 @@ export default function SupervisorView() {
                       onClick={() => setIsNonScannedReportOpen(true)}
                       className="flex items-center gap-2"
                       data-testid="non-scanned-report-button"
+                      disabled={(nonScannedData as any)?.summary?.totalRequired === 0}
                     >
                       <FileBarChart className="w-4 h-4" />
-                      Non Scanned Report
+                      {(nonScannedData as any)?.summary?.totalRequired !== undefined 
+                        ? `${(nonScannedData as any).summary.totalRequired} Required`
+                        : 'Loading...'}
                     </Button>
                   </div>
                 </div>
